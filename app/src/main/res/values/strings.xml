@@ -19,6 +19,8 @@
     <string name="mine_username">用户名：StoryTeller 用户</string>
     <string name="mine_user_id">账号：storyteller_001</string>
     <string name="mine_user_bio">简介：热爱写作的故事探索者</string>
-    <string name="hint_chat_input">输入内容...</string>
+    <string name="hint_chat_input">输入内容…</string>
     <string name="action_send">发送</string>
+    <string name="home_current_novel">当前小说：星海旧梦</string>
+    <string name="action_switch_novel">切换小说</string>
 </resources>
