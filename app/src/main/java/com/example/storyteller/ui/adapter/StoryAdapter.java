@@ -1,6 +1,7 @@
 package com.example.storyteller.ui.adapter;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,9 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.activity.StoryPreviewActivity;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 
 // 故事卡片列表适配器（占位，后续完善）
@@ -16,6 +20,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     private final Context context;
     private List<Story> storyList;
+    private final DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
 
     public StoryAdapter(Context context, List<Story> storyList) {
         this.context = context;
@@ -32,8 +37,13 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         Story story = storyList.get(position);
-        // 后续绑定数据
-        // holder.tvTitle.setText(story.getTitle());
+        holder.tvTitle.setText(story.getTitle());
+        holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
+        holder.tvContent.setText(story.getContent());
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, StoryPreviewActivity.class);
+            context.startActivity(intent);
+        });
     }
 
     @Override
@@ -49,14 +59,15 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     // ViewHolder 占位
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
-        // 示例控件，后续根据布局修改
         TextView tvTitle;
+        TextView tvTime;
         TextView tvContent;
 
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
-            // tvTitle = itemView.findViewById(R.id.tv_title);
-            // tvContent = itemView.findViewById(R.id.tv_content);
+            tvTitle = itemView.findViewById(R.id.tv_title);
+            tvTime = itemView.findViewById(R.id.tv_time);
+            tvContent = itemView.findViewById(R.id.tv_content);
         }
     }
 }
