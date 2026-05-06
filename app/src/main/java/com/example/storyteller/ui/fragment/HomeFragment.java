@@ -1,21 +1,32 @@
 package com.example.storyteller.ui.fragment;
 
+import android.content.Intent;
 import android.view.View;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.ui.activity.CharacterActivity;
+import com.example.storyteller.ui.activity.MaterialActivity;
+import com.example.storyteller.ui.activity.PlotTreeActivity;
+import com.example.storyteller.ui.activity.StoryGenerateActivity;
 
 // 首页占位Fragment
 public class HomeFragment extends BaseFragment {
 
     @Override
     protected int getLayoutId() {
-        // 后续创建 fragment_home.xml 即可
         return R.layout.fragment_home;
     }
 
     @Override
     protected void initView(View view) {
-        // 后续绑定控件
+        view.findViewById(R.id.card_story_generate)
+            .setOnClickListener(v -> startActivity(new Intent(requireContext(), StoryGenerateActivity.class)));
+        view.findViewById(R.id.card_character)
+            .setOnClickListener(v -> startActivity(new Intent(requireContext(), CharacterActivity.class)));
+        view.findViewById(R.id.card_plot_tree)
+            .setOnClickListener(v -> startActivity(new Intent(requireContext(), PlotTreeActivity.class)));
+        view.findViewById(R.id.card_material)
+            .setOnClickListener(v -> startActivity(new Intent(requireContext(), MaterialActivity.class)));
     }
 
     @Override
