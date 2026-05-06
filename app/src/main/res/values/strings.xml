@@ -15,4 +15,8 @@
     <string name="action_back_home">返回首页</string>
     <string name="action_story_preview">前往小说预览</string>
     <string name="action_settings">前往设置</string>
+    <string name="desc_avatar">用户头像</string>
+    <string name="mine_username">用户名：StoryTeller 用户</string>
+    <string name="mine_user_id">账号：storyteller_001</string>
+    <string name="mine_user_bio">简介：热爱写作的故事探索者</string>
 </resources>
