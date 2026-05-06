@@ -38,10 +38,12 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
             params.startToStart = ConstraintLayout.LayoutParams.UNSET;
             params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
             holder.tvMessage.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_END);
+            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_user);
         } else {
             params.endToEnd = ConstraintLayout.LayoutParams.UNSET;
             params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
             holder.tvMessage.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_bot);
         }
         holder.tvMessage.setLayoutParams(params);
     }

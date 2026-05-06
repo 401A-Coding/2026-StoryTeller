@@ -2,4 +2,6 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="chat_bubble_user">#FFDCEBFF</color>
+    <color name="chat_bubble_bot">#FFF3F4F6</color>
 </resources>
