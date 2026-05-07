@@ -18,6 +18,22 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_CREATE_TIME = "create_time";
     public static final String COL_STORY_IS_COLLECTED = "is_collected";
 
+    // 素材表字段
+    public static final String TABLE_MATERIAL = "material";
+    public static final String COL_MATERIAL_ID = "id";
+    public static final String COL_MATERIAL_CATEGORY = "category";
+    public static final String COL_MATERIAL_TITLE = "title";
+    public static final String COL_MATERIAL_CONTENT = "content";
+    public static final String COL_MATERIAL_CREATE_TIME = "create_time";
+
+    // 用户行为日志表字段
+    public static final String TABLE_BEHAVIOR_LOG = "behavior_log";
+    public static final String COL_LOG_ID = "id";
+    public static final String COL_LOG_ACTION = "action";
+    public static final String COL_LOG_TARGET_ID = "target_id";
+    public static final String COL_LOG_EXTRA = "extra";
+    public static final String COL_LOG_CREATE_TIME = "create_time";
+
     // 人物表字段
     public static final String TABLE_CHARACTER = "character";
     public static final String COL_CHARACTER_ID = "id";
@@ -42,11 +58,52 @@ public class DBHelper extends SQLiteOpenHelper {
     // 创建数据库表格的逻辑，后续补充逻辑
     @Override
     public void onCreate(SQLiteDatabase db) {
-        // 创建表格SQL，后续补充逻辑
+        String createStoryTable = "CREATE TABLE IF NOT EXISTS " + TABLE_STORY + " ("
+                + COL_STORY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_STORY_TITLE + " TEXT NOT NULL, "
+                + COL_STORY_CONTENT + " TEXT NOT NULL, "
+                + COL_STORY_GENRE + " TEXT, "
+                + COL_STORY_CREATE_TIME + " INTEGER, "
+                + COL_STORY_IS_COLLECTED + " INTEGER DEFAULT 0"
+                + ")";
+
+        String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
+                + COL_CHARACTER_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_CHARACTER_STORY_ID + " INTEGER NOT NULL, "
+                + COL_CHARACTER_NAME + " TEXT NOT NULL, "
+                + COL_CHARACTER_PROFILE + " TEXT, "
+                + COL_CHARACTER_AVATAR + " INTEGER DEFAULT 0, "
+                + "FOREIGN KEY(" + COL_CHARACTER_STORY_ID + ") REFERENCES " + TABLE_STORY + "(" + COL_STORY_ID + ")"
+                + ")";
+
+        String createMaterialTable = "CREATE TABLE IF NOT EXISTS " + TABLE_MATERIAL + " ("
+                + COL_MATERIAL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_MATERIAL_CATEGORY + " TEXT NOT NULL, "
+                + COL_MATERIAL_TITLE + " TEXT NOT NULL, "
+                + COL_MATERIAL_CONTENT + " TEXT NOT NULL, "
+                + COL_MATERIAL_CREATE_TIME + " INTEGER"
+                + ")";
+
+        String createBehaviorLogTable = "CREATE TABLE IF NOT EXISTS " + TABLE_BEHAVIOR_LOG + " ("
+                + COL_LOG_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_LOG_ACTION + " TEXT NOT NULL, "
+                + COL_LOG_TARGET_ID + " INTEGER DEFAULT 0, "
+                + COL_LOG_EXTRA + " TEXT, "
+                + COL_LOG_CREATE_TIME + " INTEGER"
+                + ")";
+
+        db.execSQL(createStoryTable);
+        db.execSQL(createCharacterTable);
+        db.execSQL(createMaterialTable);
+        db.execSQL(createBehaviorLogTable);
     }
     // 数据库升级逻辑，后续补充逻辑
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // 后续数据库升级逻辑（如新增表、修改字段），先留空
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_BEHAVIOR_LOG);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_MATERIAL);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CHARACTER);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_STORY);
+        onCreate(db);
     }
 }

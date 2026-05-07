@@ -32,8 +32,8 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         Story story = storyList.get(position);
-        // 后续绑定数据
-        // holder.tvTitle.setText(story.getTitle());
+        holder.tvTitle.setText(story.getTitle());
+        holder.tvContent.setText(story.getContent());
     }
 
     @Override
@@ -55,8 +55,8 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
-            // tvTitle = itemView.findViewById(R.id.tv_title);
-            // tvContent = itemView.findViewById(R.id.tv_content);
+            tvTitle = itemView.findViewById(R.id.tv_title);
+            tvContent = itemView.findViewById(R.id.tv_content);
         }
     }
 }
