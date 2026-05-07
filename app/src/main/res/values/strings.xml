@@ -23,4 +23,7 @@
     <string name="action_send">发送</string>
     <string name="home_current_novel">当前小说：星海旧梦</string>
     <string name="action_switch_novel">切换小说</string>
+    <string name="api_key">API Key:</string>
+    <string name="enter_your_deepseek_api_key">输入 DeepSeek API Key</string>
+    <string name="save_api_key">保存 API Key</string>
 </resources>
