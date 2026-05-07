@@ -25,5 +25,37 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <TextView
+        android:id="@+id/tv_api_key_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/api_key"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/btn_back_home"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp" />
 
+    <EditText
+        android:id="@+id/et_api_key"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:autofillHints=""
+        android:hint="@string/enter_your_deepseek_api_key"
+        android:inputType="textPassword"
+        app:layout_constraintTop_toBottomOf="@id/tv_api_key_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/btn_save_api_key"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/save_api_key"
+        app:layout_constraintTop_toBottomOf="@id/et_api_key"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

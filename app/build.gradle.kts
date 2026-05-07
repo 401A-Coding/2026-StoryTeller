@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gson)
     implementation(libs.recyclerview)
+    implementation(libs.security.crypto)  // 新增：用于加密SharedPreferences
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)

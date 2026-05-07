@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import android.content.Context;  // 新增导入
 
 public class ApiClient {
     // 单例模式
@@ -67,7 +68,12 @@ public class ApiClient {
     }
 
     // 生成故事的方法
-    public void generateStory(String prompt, String apiKey, Callback callback) {
+    public void generateStory(String prompt, Context context, Callback callback) {
+        String apiKey = ApiKeyManager.getApiKey(context);
+        if (apiKey.isEmpty()) {
+            callback.onFailure(new Exception("API key not set"));
+            return;
+        }
         // 构建请求体
         DeepSeekRequest request = new DeepSeekRequest();
         request.messages = List.of(new Message("user", prompt));  // 用户提示作为消息

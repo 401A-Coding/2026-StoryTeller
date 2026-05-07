@@ -66,11 +66,8 @@ public class StoryGenerateActivity extends BaseActivity {
         // 显示加载指示器
         progressBar.setVisibility(View.VISIBLE);
 
-        // 获取API密钥（示例：从SharedPreferences或常量获取，实际中请安全存储）
-        String apiKey = "sk-79f5871d5122405bab1078b900346e50";  // 替换为实际获取方式
-
         // 调用AI生成故事
-        ApiClient.getInstance().generateStory(content, apiKey, new ApiClient.Callback() {
+        ApiClient.getInstance().generateStory(content, this, new ApiClient.Callback() {
             @Override
             public void onSuccess(String story) {
                 runOnUiThread(() -> {
