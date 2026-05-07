@@ -15,7 +15,6 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 
-// 故事卡片列表适配器（占位，后续完善）
 public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHolder> {
 
     private final Context context;
@@ -51,13 +50,11 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         return storyList == null ? 0 : storyList.size();
     }
 
-    // 更新数据
     public void setData(List<Story> list) {
         this.storyList = list;
         notifyDataSetChanged();
     }
 
-    // ViewHolder 占位
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle;
         TextView tvTime;

@@ -20,7 +20,6 @@ public class MainActivity extends BaseActivity {
 
     @Override
     protected int getLayoutId() {
-        // 绑定主页面布局（后续在res/layout/activity_main.xml中实现）
         return R.layout.activity_main;
     }
 
