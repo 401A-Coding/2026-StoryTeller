@@ -22,39 +22,61 @@
 
 ```
 com.example.storyteller
-├── base                  # 基础父类（统一规范）
-│   ├── BaseActivity      // 所有 Activity 继承
-│   └── BaseFragment      // 所有 Fragment 继承
+├── base
+│   ├── BaseActivity
+│   └── BaseFragment
 ├── ui
-│   ├── activity          // 页面 Activity
-│   ├── fragment          // 碎片（首页/书架/个人中心等）
-│   └── adapter           // 列表适配器（故事/人物/素材）
-├── model                 // 数据实体类
-│   ├── Story.java        // 故事模型
-│   ├── Character.java    // 人物模型
-│   └── 后续可新增 Plot、Material 等
-├── data                  # 数据层
-│   ├── local             // 本地存储
-│   │   ├── db            // SQLite 数据库（建表、DAO）
-│   │   └── prefs         // SharedPreferences 配置存储
-│   └── remote            // 网络请求（仅大模型 API）
-├── utils                 // 通用工具类
-│   ├── JsonUtils.java    // JSON 解析
-│   ├── AudioUtils.java   // 语音输入/朗读
-│   └── 后续可新增 ToastUtils、LogUtils 等
+│   ├── activity
+│   │   ├── MainActivity
+│   │   ├── StoryGenerateActivity
+│   │   ├── CharacterActivity
+│   │   ├── PlotTreeActivity
+│   │   ├── MaterialActivity
+│   │   ├── StoryPreviewActivity
+│   │   └── SettingsActivity
+│   ├── fragment
+│   │   ├── HomeFragment
+│   │   ├── BookshelfFragment
+│   │   └── MineFragment
+│   └── adapter
+│       ├── StoryAdapter
+│       ├── CharacterAdapter
+│       └── ChatMessageAdapter
+├── model
+│   ├── Story.java
+│   ├── Character.java
+│   └── ChatMessage.java
+├── data
+│   ├── local
+│   │   ├── db/DBHelper.java
+│   │   └── prefs/PrefsUtils.java
+│   └── remote/ApiClient.java
+└── utils
+    ├── JsonUtils.java
+    └── AudioUtils.java
 ```
 
+### UI 导航与布局
+- `activity_main.xml` + `bottom_nav_menu.xml`：底部导航承载 3 个 Fragment（首页/书架/我的）
+- `fragment_home.xml`：搜索占位 + 当前小说标题 + 4 个卡片入口
+- `fragment_bookshelf.xml`：书架标题 + Story 列表
+- `fragment_mine.xml`：个人信息 + 进入设置按钮
+- `activity_story_generate.xml`：聊天列表 + 输入发送
+- `activity_character.xml`：人物列表
+- `activity_plot_tree.xml` / `activity_material.xml` / `activity_story_preview.xml` / `activity_settings.xml`：占位页面
+- 列表 item：`item_story.xml`、`item_character.xml`、`item_chat_message.xml`
 
 ## 三、当前完成情况
-- ✅ 项目初始化、GitHub 仓库搭建
-- ✅ 基础包结构建立
-- ✅ BaseActivity / BaseFragment 完成
-- ✅ 核心模型（Story、Character）完成
-- ✅ 数据库 DBHelper、配置 PrefsUtils 完成
-- ✅ API 客户端 ApiClient 完成
-- ✅ 首页 Fragment、列表适配器 StoryAdapter 占位完成
-- ✅ 通用工具类占位完成
-
+- ✅ 基础包结构建立（BaseActivity / BaseFragment）
+- ✅ 主页底部导航与 3 个 Fragment
+- ✅ 首页 4 个入口卡片与“当前小说”占位
+- ✅ 书架列表（占位 Story 数据）
+- ✅ 个人中心信息区与设置入口
+- ✅ 故事生成聊天界面（本地占位回复 hello world）
+- ✅ 人物画像列表（占位 5 人物）
+- ✅ 其余 Activity 页面占位与返回首页入口
+- ✅ 本地数据库与偏好配置工具类
+- ✅ API Client / JSON 工具类占位
 
 ## 四、后续开发指导
 ### 1. 新增页面（Activity / Fragment）
@@ -108,15 +130,13 @@ com.example.storyteller
 
 ## 六、依赖说明（已内置）
 - AndroidX + Material Design
+- RecyclerView
 - OkHttp（网络请求）
 - Gson（JSON 解析）
 - SQLite（本地数据库）
-- 系统 TTS / SpeechRecognizer（语音）
-
+- 系统 TTS / SpeechRecognizer（语音，工具类占位）
 
 ## 七、提交规范（GitHub）
 - 每周功能合并到 `main`
 - 功能分支命名：`feature/模块名`
 - 提交信息：`feat: 完成XXX` / `fix: 修复XXX` / `ui: 优化XXX`
-
-

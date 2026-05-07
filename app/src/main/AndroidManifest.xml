@@ -20,6 +20,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".ui.activity.StoryGenerateActivity" />
+        <activity android:name=".ui.activity.CharacterActivity" />
+        <activity android:name=".ui.activity.PlotTreeActivity" />
+        <activity android:name=".ui.activity.MaterialActivity" />
+        <activity android:name=".ui.activity.StoryPreviewActivity" />
+        <activity android:name=".ui.activity.SettingsActivity" />
     </application>
 
 </manifest>
