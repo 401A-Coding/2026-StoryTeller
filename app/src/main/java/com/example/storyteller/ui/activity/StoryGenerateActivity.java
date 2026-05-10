@@ -10,8 +10,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
+import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.model.ChatMessage;
+import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +25,7 @@ public class StoryGenerateActivity extends BaseActivity {
     private RecyclerView rvChat;
     private EditText etMessage;
     private ProgressBar progressBar;  // 添加加载指示器
+    private StoryDao storyDao;
 
     @Override
     protected int getLayoutId() {
@@ -52,7 +55,7 @@ public class StoryGenerateActivity extends BaseActivity {
 
     @Override
     protected void initData() {
-        // 占位
+        storyDao = new StoryDao(this);
     }
 
     private void sendMessage() {
@@ -73,6 +76,7 @@ public class StoryGenerateActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     appendMessage(new ChatMessage(story, false));
+                    saveGeneratedStory(content, story);
                 });
             }
 
@@ -90,5 +94,33 @@ public class StoryGenerateActivity extends BaseActivity {
         messages.add(message);
         adapter.notifyItemInserted(messages.size() - 1);
         rvChat.scrollToPosition(messages.size() - 1);
+    }
+
+    private void saveGeneratedStory(String prompt, String storyContent) {
+        if (storyDao == null || TextUtils.isEmpty(storyContent)) {
+            return;
+        }
+        String title = buildStoryTitle(prompt, storyContent);
+        Story story = new Story(title, storyContent, "AI生成", System.currentTimeMillis());
+        long id = storyDao.insertStory(story);
+        if (id > 0) {
+            story.setId((int) id);
+            appendMessage(new ChatMessage("故事已保存到书架：" + title, false));
+        }
+    }
+
+    private String buildStoryTitle(String prompt, String storyContent) {
+        String base = prompt;
+        if (TextUtils.isEmpty(base)) {
+            base = storyContent;
+        }
+        base = base.replaceAll("\\s+", "").trim();
+        if (base.length() > 12) {
+            base = base.substring(0, 12);
+        }
+        if (TextUtils.isEmpty(base)) {
+            base = "AI生成故事";
+        }
+        return base;
     }
 }

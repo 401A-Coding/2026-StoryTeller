@@ -13,6 +13,7 @@
     <string name="title_story_preview">小说预览</string>
     <string name="title_settings">设置</string>
     <string name="action_back_home">返回首页</string>
+    <string name="action_character_analysis">人物画像</string>
     <string name="action_story_preview">前往小说预览</string>
     <string name="action_settings">前往设置</string>
     <string name="desc_avatar">用户头像</string>

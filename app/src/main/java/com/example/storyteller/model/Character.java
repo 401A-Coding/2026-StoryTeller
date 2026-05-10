@@ -8,6 +8,8 @@ public class Character {
     private String name;
     // 人物设定/简介
     private String profile;
+    // 人物详细介绍（点击后查看）
+    private String detail;
     // 人物图片（后续可存drawable ID或本地路径）
     private int avatarResId;
 
@@ -15,6 +17,15 @@ public class Character {
         this.storyId = storyId;
         this.name = name;
         this.profile = profile;
+        this.detail = "";
+        this.avatarResId = avatarResId;
+    }
+
+    public Character(int storyId, String name, String profile, String detail, int avatarResId) {
+        this.storyId = storyId;
+        this.name = name;
+        this.profile = profile;
+        this.detail = detail;
         this.avatarResId = avatarResId;
     }
 
@@ -27,6 +38,8 @@ public class Character {
     public void setName(String name) { this.name = name; }
     public String getProfile() { return profile; }
     public void setProfile(String profile) { this.profile = profile; }
+    public String getDetail() { return detail; }
+    public void setDetail(String detail) { this.detail = detail; }
     public int getAvatarResId() { return avatarResId; }
     public void setAvatarResId(int avatarResId) { this.avatarResId = avatarResId; }
 }
