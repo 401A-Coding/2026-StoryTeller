@@ -9,6 +9,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
+import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.activity.StoryPreviewActivity;
 import java.text.DateFormat;
@@ -16,6 +17,11 @@ import java.util.Date;
 import java.util.List;
 
 public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHolder> {
+
+    public static final String PREF_SELECTED_STORY_ID = "selected_story_id";
+    public static final String PREF_SELECTED_STORY_TITLE = "selected_story_title";
+    public static final String EXTRA_STORY_ID = "extra_story_id";
+    public static final String EXTRA_STORY_TITLE = "extra_story_title";
 
     private final Context context;
     private List<Story> storyList;
@@ -40,7 +46,11 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
         holder.tvContent.setText(story.getContent());
         holder.itemView.setOnClickListener(v -> {
+            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
+            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
             Intent intent = new Intent(context, StoryPreviewActivity.class);
+            intent.putExtra(EXTRA_STORY_ID, story.getId());
+            intent.putExtra(EXTRA_STORY_TITLE, story.getTitle());
             context.startActivity(intent);
         });
     }

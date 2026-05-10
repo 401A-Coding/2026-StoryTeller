@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -40,6 +40,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_CHARACTER_STORY_ID = "story_id";
     public static final String COL_CHARACTER_NAME = "name";
     public static final String COL_CHARACTER_PROFILE = "profile";
+    public static final String COL_CHARACTER_DETAIL = "detail";
     public static final String COL_CHARACTER_AVATAR = "avatar_res_id";
 
     // 单例模式（全局只有一个数据库实例）
@@ -72,6 +73,7 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_CHARACTER_STORY_ID + " INTEGER NOT NULL, "
                 + COL_CHARACTER_NAME + " TEXT NOT NULL, "
                 + COL_CHARACTER_PROFILE + " TEXT, "
+                + COL_CHARACTER_DETAIL + " TEXT, "
                 + COL_CHARACTER_AVATAR + " INTEGER DEFAULT 0, "
                 + "FOREIGN KEY(" + COL_CHARACTER_STORY_ID + ") REFERENCES " + TABLE_STORY + "(" + COL_STORY_ID + ")"
                 + ")";
@@ -86,7 +88,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
         String createBehaviorLogTable = "CREATE TABLE IF NOT EXISTS " + TABLE_BEHAVIOR_LOG + " ("
                 + COL_LOG_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + COL_LOG_ACTION + " TEXT NOT NULL, "
+                + "\"" + COL_LOG_ACTION + "\" TEXT NOT NULL, "
                 + COL_LOG_TARGET_ID + " INTEGER DEFAULT 0, "
                 + COL_LOG_EXTRA + " TEXT, "
                 + COL_LOG_CREATE_TIME + " INTEGER"
@@ -100,10 +102,8 @@ public class DBHelper extends SQLiteOpenHelper {
     // 数据库升级逻辑，后续补充逻辑
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_BEHAVIOR_LOG);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_MATERIAL);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CHARACTER);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_STORY);
-        onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_CHARACTER + " ADD COLUMN " + COL_CHARACTER_DETAIL + " TEXT");
+        }
     }
 }
