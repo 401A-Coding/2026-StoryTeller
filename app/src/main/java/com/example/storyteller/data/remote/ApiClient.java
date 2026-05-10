@@ -114,4 +114,160 @@ public class ApiClient {
         void onSuccess(String story);
         void onFailure(Exception e);
     }
+
+    // ==================== 智能体功能 ====================
+
+    /**
+     * 智能体模式：分析用户意图并返回结构化命令
+     * @param userMessage 用户消息
+     * @param currentStoryContext 当前小说上下文（卷章结构、最近内容等）
+     * @param context Android Context
+     * @param callback 回调
+     */
+    public void processAgentCommand(String userMessage, String currentStoryContext, 
+                                     Context context, AgentCallback callback) {
+        String apiKey = ApiKeyManager.getApiKey(context);
+        if (apiKey.isEmpty()) {
+            callback.onFailure(new Exception("API key not set"));
+            return;
+        }
+
+        // 构建系统提示，告诉 AI 如何返回结构化命令
+        String systemPrompt = "你是一个小说编辑助手。请分析用户的意图，并以 JSON 格式返回要执行的操作。\n" +
+                "可用的操作类型：\n" +
+                "1. add_volume: 添加新卷\n" +
+                "2. add_chapter: 添加新章节\n" +
+                "3. edit_chapter: 编辑章节内容（支持重写、续写、修改）\n" +
+                "4. generate_plot: 生成情节建议\n" +
+                "5. create_character: 创建角色\n" +
+                "6. answer_question: 回答问题（不执行操作）\n\n" +
+                "重要说明：\n" +
+                "- volume_id 和 chapter_id 从1开始计数\n" +
+                "- 如果用户没有指定具体章节，默认编辑最后一章（最后一个卷的最后一章）\n" +
+                "- 编辑章节时必须提供 new_content（AI生成的新内容）\n" +
+                "- ⚠️ new_content 必须是纯小说正文，不要包含任何说明性文字！\n" +
+                "- ⚠️ 不要在 new_content 中写'请AI生成...'、'以下是...'等提示语\n" +
+                "- ⚠️ new_content 应该直接是小说的内容，就像你在写小说一样\n\n" +
+                "返回格式示例：\n" +
+                "添加新卷：\n" +
+                "{\n" +
+                "  \"action\": \"add_volume\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_title\": \"新的卷标题\"\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要添加一个新卷\"\n" +
+                "}\n\n" +
+                "添加章节：\n" +
+                "{\n" +
+                "  \"action\": \"add_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_title\": \"新的章节标题\",\n" +
+                "    \"chapter_content\": \"那年夏天，阳光洒在操场上...\"\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要添加一个新章节\"\n" +
+                "}\n\n" +
+                "编辑章节（重写）：\n" +
+                "{\n" +
+                "  \"action\": \"edit_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_id\": 1,\n" +
+                "    \"edit_type\": \"rewrite\",\n" +
+                "    \"new_content\": \"夜幕降临，森林中传来诡异的声音...\"\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要重写第一章\"\n" +
+                "}\n\n" +
+                "编辑章节（续写）：\n" +
+                "{\n" +
+                "  \"action\": \"edit_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_id\": 1,\n" +
+                "    \"edit_type\": \"append\",\n" +
+                "    \"new_content\": \"他小心翼翼地向前走去，突然听到身后传来脚步声...\"\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要续写第一章\"\n" +
+                "}\n\n" +
+                "❌ 错误的 new_content 示例（不要这样写）：\n" +
+                "- \"请AI生成续写内容，延续第一章的叙事...\"  ← 这是指令，不是小说内容\n" +
+                "- \"以下是续写的内容：xxx\"  ← 不要加说明性文字\n" +
+                "- \"根据用户要求，我生成了以下内容...\"  ← 不要解释\n\n" +
+                "✅ 正确的 new_content 示例：\n" +
+                "- \"他推开门，发现房间里空无一人...\"  ← 直接是小说内容\n" +
+                "- \"阳光透过窗户洒进来，照亮了 dusty 的书桌...\"  ← 纯正文\n\n" +
+                "如果不需要执行操作（只是聊天），返回：\n" +
+                "{\n" +
+                "  \"action\": \"answer_question\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"response\": \"回答内容...\"\n" +
+                "  }\n" +
+                "}";
+
+        // 重要提示：当用户提到“编辑”、“修改”、“重写”、“续写”等词时，使用 edit_chapter 操作
+
+        // 构建请求
+        DeepSeekRequest request = new DeepSeekRequest();
+        request.messages = Arrays.asList(
+                new Message("system", systemPrompt),
+                new Message("user", "当前小说上下文：\n" + currentStoryContext + "\n\n用户消息：" + userMessage)
+        );
+        request.max_tokens = 2000;  // 增加到 2000，避免 JSON 被截断
+        request.temperature = 0.3;  // 降低温度，提高结构化输出的准确性
+
+        String json = gson.toJson(request);
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+
+        Request req = new Request.Builder()
+                .url("https://api.deepseek.com/chat/completions")
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        // 异步执行
+        new Thread(() -> {
+            try (Response response = okHttpClient.newCall(req).execute()) {
+                if (response.isSuccessful()) {
+                    String responseJson = response.body().string();
+                    DeepSeekResponse apiResponse = gson.fromJson(responseJson, DeepSeekResponse.class);
+                    if (apiResponse.choices != null && !apiResponse.choices.isEmpty()) {
+                        String aiResponse = apiResponse.choices.get(0).message.content;
+                        
+                        // 尝试解析为 JSON 命令
+                        try {
+                            AgentCommand command = gson.fromJson(aiResponse, AgentCommand.class);
+                            callback.onCommandReady(command);
+                        } catch (Exception e) {
+                            // 如果解析失败，当作普通聊天处理
+                            AgentCommand fallback = new AgentCommand();
+                            fallback.action = "answer_question";
+                            fallback.parameters = new java.util.HashMap<>();
+                            fallback.parameters.put("response", aiResponse);
+                            callback.onCommandReady(fallback);
+                        }
+                    } else {
+                        callback.onFailure(new Exception("No response from AI"));
+                    }
+                } else {
+                    callback.onFailure(new Exception("API Error: " + response.code()));
+                }
+            } catch (IOException e) {
+                callback.onFailure(e);
+            }
+        }).start();
+    }
+
+    // 智能体命令模型
+    public static class AgentCommand {
+        public String action;
+        public java.util.Map<String, Object> parameters;
+        public String reasoning;
+    }
+
+    // 智能体回调接口
+    public interface AgentCallback {
+        void onCommandReady(AgentCommand command);
+        void onFailure(Exception e);
+    }
 }
