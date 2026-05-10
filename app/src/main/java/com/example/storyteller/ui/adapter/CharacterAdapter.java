@@ -1,6 +1,7 @@
 package com.example.storyteller.ui.adapter;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +15,8 @@ import java.util.List;
 public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.CharacterViewHolder> {
 
     private final Context context;
-    private final List<Character> characters;
+    private List<Character> characters;
+    private int expandedPosition = RecyclerView.NO_POSITION;
 
     public CharacterAdapter(Context context, List<Character> characters) {
         this.context = context;
@@ -33,6 +35,25 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
         Character character = characters.get(position);
         holder.tvName.setText(character.getName());
         holder.tvRole.setText(character.getProfile());
+
+        String detail = character.getDetail();
+        if (TextUtils.isEmpty(detail)) {
+            detail = "暂无详细介绍";
+        }
+        holder.tvDetail.setText(detail);
+
+        boolean expanded = position == expandedPosition;
+        holder.tvDetail.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        holder.itemView.setOnClickListener(v -> {
+            int previous = expandedPosition;
+            expandedPosition = expanded ? RecyclerView.NO_POSITION : holder.getBindingAdapterPosition();
+            if (previous != RecyclerView.NO_POSITION) {
+                notifyItemChanged(previous);
+            }
+            if (expandedPosition != RecyclerView.NO_POSITION) {
+                notifyItemChanged(expandedPosition);
+            }
+        });
     }
 
     @Override
@@ -40,14 +61,22 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
         return characters == null ? 0 : characters.size();
     }
 
+    public void setData(List<Character> list) {
+        this.characters = list;
+        this.expandedPosition = RecyclerView.NO_POSITION;
+        notifyDataSetChanged();
+    }
+
     public static class CharacterViewHolder extends RecyclerView.ViewHolder {
         final TextView tvName;
         final TextView tvRole;
+        final TextView tvDetail;
 
         CharacterViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_character_name);
             tvRole = itemView.findViewById(R.id.tv_character_role);
+            tvDetail = itemView.findViewById(R.id.tv_character_detail);
         }
     }
 }

@@ -125,6 +125,28 @@ public class StoryDao {
         return stories;
     }
 
+    public Story getLatestStory() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DBHelper.TABLE_STORY,
+                null,
+                null,
+                null,
+                null,
+                null,
+                DBHelper.COL_STORY_CREATE_TIME + " DESC",
+                "1"
+        );
+        Story story = null;
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                story = mapStory(cursor);
+            }
+            cursor.close();
+        }
+        return story;
+    }
+
     private Story mapStory(Cursor cursor) {
         int id = cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_ID));
         String title = cursor.getString(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_TITLE));
