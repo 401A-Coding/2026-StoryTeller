@@ -26,6 +26,7 @@ import com.example.storyteller.model.Volume;
 import com.example.storyteller.model.ChatMessage;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
+import com.example.storyteller.utils.JsonUtils;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,7 +56,8 @@ public class StoryGenerateActivity extends BaseActivity {
     // Data
     private final List<Volume> volumes = new ArrayList<>();
     private int volumeCount = 0;
-    private int chapterCount = 0;
+    private Story currentStory; // 当前正在编辑的故事
+    private boolean isEditMode = false; // 是否为编辑模式
 
     // Storage
     private StoryDao storyDao;
@@ -91,9 +93,13 @@ public class StoryGenerateActivity extends BaseActivity {
         btnAi.setOnClickListener(v -> toggleAiPanel());
         btnCloseAi.setOnClickListener(v -> toggleAiPanel());
 
-        // Setup save button (placeholder)
+        // Setup save button
         btnSave.setOnClickListener(v -> {
-            Toast.makeText(this, "保存功能暂未开放", Toast.LENGTH_SHORT).show();
+            if (isEditMode && currentStory != null) {
+                saveEditedStory();
+            } else {
+                Toast.makeText(this, "保存功能暂未开放", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // Setup AI chat
@@ -114,6 +120,257 @@ public class StoryGenerateActivity extends BaseActivity {
         // Data will be initialized in initView
         // Initialize DAO for saving generated stories
         storyDao = new StoryDao(this);
+        
+        // Check if we're editing an existing story
+        Intent intent = getIntent();
+        int storyId = intent.getIntExtra("story_id", -1);
+        if (storyId > 0) {
+            loadExistingStory(storyId);
+        }
+    }
+
+    /**
+     * 加载现有故事进行编辑
+     */
+    private void loadExistingStory(int storyId) {
+        currentStory = storyDao.getStoryById(storyId);
+        if (currentStory != null) {
+            isEditMode = true;
+            // Clear existing content
+            layoutContent.removeAllViews();
+            
+            // First, add the "Add Volume" button
+            Button btnAddVolumeNew = new Button(this);
+            btnAddVolumeNew.setId(R.id.btn_add_volume);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+            params.topMargin = 32;
+            params.bottomMargin = 32;
+            params.gravity = android.view.Gravity.CENTER;
+            btnAddVolumeNew.setLayoutParams(params);
+            btnAddVolumeNew.setText(getString(R.string.btn_add_volume));
+            btnAddVolumeNew.setTextColor(android.graphics.Color.parseColor("#1976D2"));
+            btnAddVolumeNew.setOnClickListener(v -> addNewVolume());
+            
+            layoutContent.addView(btnAddVolumeNew);
+            
+            // Then parse and render the story structure
+            String structureJson = currentStory.getStructure();
+            if (!TextUtils.isEmpty(structureJson)) {
+                // Load from JSON structure
+                parseStoryStructure(structureJson);
+            } else {
+                // Fallback: parse from plain text content
+                parseStoryContent(currentStory.getContent());
+            }
+        }
+    }
+
+    /**
+     * 从JSON解析卷-章结构
+     */
+    private void parseStoryStructure(String structureJson) {
+        try {
+            volumes.clear();
+            List<Volume> loadedVolumes = JsonUtils.fromJson(structureJson, 
+                new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            
+            if (loadedVolumes != null && !loadedVolumes.isEmpty()) {
+                volumes.addAll(loadedVolumes);
+                
+                // Update volume counter
+                volumeCount = volumes.size();
+                
+                // Render all volumes and chapters to UI in order
+                for (int i = 0; i < volumes.size(); i++) {
+                    Volume volume = volumes.get(i);
+                    renderVolumeToUI(volume, i + 1); // Pass the correct volume index
+                }
+            } else {
+                // Fallback to plain text parsing
+                parseStoryContent(currentStory.getContent());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback to plain text parsing
+            parseStoryContent(currentStory.getContent());
+        }
+    }
+
+    /**
+     * 将卷渲染到UI
+     * @param volume 卷对象
+     * @param volumeIndex 卷的序号（从1开始）
+     */
+    private void renderVolumeToUI(Volume volume, int volumeIndex) {
+        // Inflate volume layout
+        View volumeView = LayoutInflater.from(this).inflate(R.layout.item_volume, layoutContent, false);
+
+        // Setup volume prefix
+        TextView tvVolumePrefix = volumeView.findViewById(R.id.tv_volume_prefix);
+        tvVolumePrefix.setText("第" + volumeIndex + "卷 · ");
+
+        // Setup volume name TextView (display mode)
+        TextView tvVolumeName = volumeView.findViewById(R.id.tv_volume_name);
+        tvVolumeName.setText(volume.getTitle());
+
+        // Setup volume name EditText (edit mode)
+        EditText etVolumeName = volumeView.findViewById(R.id.et_volume_name);
+        etVolumeName.setText(volume.getTitle());
+
+        // Double tap to edit volume name inline
+        setupInlineEdit(tvVolumeName, etVolumeName, volume, false);
+
+        // Chapter container
+        LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
+
+        // Setup add chapter button
+        Button btnAddChapter = volumeView.findViewById(R.id.btn_add_chapter);
+        btnAddChapter.setOnClickListener(v -> addNewChapter(layoutChapters, volume));
+
+        // Add volume to layout - always append before the last child (btnAddVolume)
+        // Find the button and insert before it
+        int buttonIndex = -1;
+        for (int i = 0; i < layoutContent.getChildCount(); i++) {
+            if (layoutContent.getChildAt(i).getId() == R.id.btn_add_volume) {
+                buttonIndex = i;
+                break;
+            }
+        }
+        
+        if (buttonIndex >= 0) {
+            // Insert before the button
+            layoutContent.addView(volumeView, buttonIndex);
+        } else {
+            // Button not found, just append
+            layoutContent.addView(volumeView);
+        }
+
+        // Render all chapters with correct chapter index
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            Chapter chapter = volume.getChapters().get(i);
+            renderChapterToUI(layoutChapters, volume, chapter, i + 1); // Pass the correct chapter index
+        }
+    }
+
+    /**
+     * 将章节渲染到UI
+     * @param chapterContainer 章节容器
+     * @param volume 所属卷
+     * @param chapter 章节对象
+     * @param chapterIndex 章节序号（从1开始，每个卷内独立计数）
+     */
+    private void renderChapterToUI(ViewGroup chapterContainer, Volume volume, Chapter chapter, int chapterIndex) {
+        // Inflate chapter layout
+        View chapterView = LayoutInflater.from(this).inflate(R.layout.item_chapter, chapterContainer, false);
+
+        // Setup chapter prefix
+        TextView tvChapterPrefix = chapterView.findViewById(R.id.tv_chapter_prefix);
+        tvChapterPrefix.setText("第" + chapterIndex + "章 · ");
+
+        // Setup chapter name TextView (display mode)
+        TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
+        tvChapterName.setText(chapter.getTitle());
+
+        // Setup chapter name EditText (edit mode)
+        EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
+        etChapterName.setText(chapter.getTitle());
+
+        // Double tap to edit chapter name inline
+        setupInlineEdit(tvChapterName, etChapterName, chapter, true);
+
+        // Setup content editor
+        EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
+        etContent.setHint("开始写作...");
+        if (!TextUtils.isEmpty(chapter.getContent())) {
+            etContent.setText(chapter.getContent());
+        }
+        etContent.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                chapter.setContent(s.toString());
+            }
+        });
+
+        chapterContainer.addView(chapterView);
+    }
+
+    /**
+     * 解析故事内容为卷和章节结构
+     */
+    private void parseStoryContent(String content) {
+        // For now, we'll create a simple structure with one volume and one chapter
+        // In a real implementation, you might want to parse the content more intelligently
+        volumeCount = 0;
+        volumes.clear();
+        
+        // Create a default volume and chapter with the existing content
+        addNewVolume();
+        
+        // Set the content to the first chapter
+        if (!volumes.isEmpty() && !volumes.get(0).getChapters().isEmpty()) {
+            Chapter firstChapter = volumes.get(0).getChapters().get(0);
+            firstChapter.setContent(content);
+            
+            // Update the EditText in the UI
+            // Find the first volume view and its first chapter's content EditText
+            if (layoutContent.getChildCount() > 0) {
+                View firstVolumeView = layoutContent.getChildAt(0);
+                if (firstVolumeView instanceof ViewGroup) {
+                    LinearLayout layoutChapters = firstVolumeView.findViewById(R.id.layout_chapters_container);
+                    if (layoutChapters != null && layoutChapters.getChildCount() > 0) {
+                        View firstChapterView = layoutChapters.getChildAt(0);
+                        EditText etContent = firstChapterView.findViewById(R.id.et_chapter_content);
+                        if (etContent != null) {
+                            etContent.setText(content);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 保存编辑后的故事
+     */
+    private void saveEditedStory() {
+        if (currentStory == null) return;
+        
+        // Build the complete story content from all chapters
+        StringBuilder fullContent = new StringBuilder();
+        for (Volume volume : volumes) {
+            for (Chapter chapter : volume.getChapters()) {
+                if (!TextUtils.isEmpty(chapter.getTitle())) {
+                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                }
+                if (!TextUtils.isEmpty(chapter.getContent())) {
+                    fullContent.append(chapter.getContent()).append("\n\n");
+                }
+            }
+        }
+        
+        // Update the story object
+        currentStory.setContent(fullContent.toString().trim());
+        
+        // Serialize volumes structure to JSON
+        String structureJson = JsonUtils.toJson(volumes);
+        currentStory.setStructure(structureJson);
+        
+        // Save to database
+        int result = storyDao.updateStory(currentStory);
+        if (result > 0) {
+            Toast.makeText(this, "故事保存成功", Toast.LENGTH_SHORT).show();
+            // Removed finish() to keep the activity open after saving
+        } else {
+            Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -132,7 +389,6 @@ public class StoryGenerateActivity extends BaseActivity {
      */
     private void addNewVolume() {
         volumeCount++;
-        chapterCount = 0;
 
         Volume volume = new Volume(volumeCount, "新卷名");
         volumes.add(volume);
@@ -174,9 +430,10 @@ public class StoryGenerateActivity extends BaseActivity {
      * 添加新章节
      */
     private void addNewChapter(ViewGroup chapterContainer, Volume volume) {
-        chapterCount++;
+        // Calculate the new chapter index based on existing chapters in this volume
+        int newChapterIndex = volume.getChapters().size() + 1;
 
-        Chapter chapter = new Chapter(chapterCount, "新章节", "");
+        Chapter chapter = new Chapter(newChapterIndex, "新章节", "");
         volume.addChapter(chapter);
 
         // Inflate chapter layout
@@ -184,7 +441,7 @@ public class StoryGenerateActivity extends BaseActivity {
 
         // Setup chapter prefix (e.g., "第1章 · ")
         TextView tvChapterPrefix = chapterView.findViewById(R.id.tv_chapter_prefix);
-        tvChapterPrefix.setText("第" + chapterCount + "章 · ");
+        tvChapterPrefix.setText("第" + newChapterIndex + "章 · ");
 
         // Setup chapter name TextView (display mode)
         TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
@@ -200,6 +457,9 @@ public class StoryGenerateActivity extends BaseActivity {
         // Setup content editor
         EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
         etContent.setHint("开始写作...");
+        if (!TextUtils.isEmpty(chapter.getContent())) {
+            etContent.setText(chapter.getContent());
+        }
         etContent.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}

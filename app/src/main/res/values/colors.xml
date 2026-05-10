@@ -4,4 +4,6 @@
     <color name="white">#FFFFFFFF</color>
     <color name="chat_bubble_user">#FFDCEBFF</color>
     <color name="chat_bubble_bot">#FFF3F4F6</color>
+    <color name="colorPrimary">#1976D2</color>
+    <color name="colorPrimaryLight">#E3F2FD</color>
 </resources>
