@@ -48,4 +48,10 @@
     <string name="api_key">API Key:</string>
     <string name="enter_your_deepseek_api_key">输入 DeepSeek API Key</string>
     <string name="save_api_key">保存 API Key</string>
+    <string name="ask">Ask</string>
+    <string name="agent">Agent</string>
+    <string name="enter_message">输入消息...</string>
+    <string name="close">关闭</string>
+    <string name="ai_assistant">AI助手</string>
+    <string name="ai">AI助手</string>
 </resources>

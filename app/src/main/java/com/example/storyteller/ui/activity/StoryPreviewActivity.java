@@ -66,6 +66,14 @@ public class StoryPreviewActivity extends BaseActivity {
             }
             startActivity(characterIntent);
         });
+
+        findViewById(R.id.btn_edit_story).setOnClickListener(v -> {
+            Intent editIntent = new Intent(this, StoryGenerateActivity.class);
+            if (selectedStoryId > 0) {
+                editIntent.putExtra("story_id", selectedStoryId);
+            }
+            startActivity(editIntent);
+        });
     }
 
     @Override

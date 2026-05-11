@@ -25,6 +25,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_GENRE, story.getGenre());
         values.put(DBHelper.COL_STORY_CREATE_TIME, story.getCreateTime());
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
+        values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -35,6 +36,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_CONTENT, story.getContent());
         values.put(DBHelper.COL_STORY_GENRE, story.getGenre());
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
+        values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -154,6 +156,11 @@ public class StoryDao {
         String genre = cursor.getString(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_GENRE));
         long createTime = cursor.getLong(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_CREATE_TIME));
         boolean isCollected = cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_IS_COLLECTED)) == 1;
-        return new Story(id, title, content, genre, createTime, isCollected);
+        String structure = null;
+        int structureIndex = cursor.getColumnIndex(DBHelper.COL_STORY_STRUCTURE);
+        if (structureIndex >= 0 && !cursor.isNull(structureIndex)) {
+            structure = cursor.getString(structureIndex);
+        }
+        return new Story(id, title, content, genre, createTime, isCollected, structure);
     }
 }
