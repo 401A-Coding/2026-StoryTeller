@@ -11,6 +11,7 @@ constraintlayout = "2.2.1"
 okhttp = "5.3.2"
 recyclerview = "1.4.0"
 securityCrypto = "1.1.0-alpha06"
+jsoup = "1.18.3"
 
 [libraries]
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -24,6 +25,7 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
