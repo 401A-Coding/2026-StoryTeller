@@ -18,6 +18,8 @@
         android:paddingBottom="8dp"
         android:textColor="@color/black"
         android:textSize="14sp"
+        android:textIsSelectable="true"
+        android:longClickable="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
