@@ -1,11 +1,15 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
-import android.widget.CheckBox;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,11 +30,12 @@ import java.util.List;
 
 public class MaterialActivity extends BaseActivity {
 
-    private EditText etNovelUrl;
-    private CheckBox cbPersona;
-    private CheckBox cbPlot;
-    private CheckBox cbTheme;
-    private Button btnCrawl;
+    private Button btnImport;
+    private EditText etSearch;
+    private Button btnFilterAll;
+    private Button btnFilterPersona;
+    private Button btnFilterPlot;
+    private Button btnFilterTheme;
     private TextView tvCrawlStatus;
     private RecyclerView rvMaterial;
     private MaterialDao materialDao;
@@ -44,11 +49,12 @@ public class MaterialActivity extends BaseActivity {
 
     @Override
     protected void initView() {
-        etNovelUrl = findViewById(R.id.et_novel_url);
-        cbPersona = findViewById(R.id.cb_material_persona);
-        cbPlot = findViewById(R.id.cb_material_plot);
-        cbTheme = findViewById(R.id.cb_material_theme);
-        btnCrawl = findViewById(R.id.btn_crawl);
+        btnImport = findViewById(R.id.btn_import);
+        etSearch = findViewById(R.id.et_material_search);
+        btnFilterAll = findViewById(R.id.btn_filter_all);
+        btnFilterPersona = findViewById(R.id.btn_filter_persona);
+        btnFilterPlot = findViewById(R.id.btn_filter_plot);
+        btnFilterTheme = findViewById(R.id.btn_filter_theme);
         tvCrawlStatus = findViewById(R.id.tv_crawl_status);
         rvMaterial = findViewById(R.id.rv_material);
 
@@ -61,18 +67,33 @@ public class MaterialActivity extends BaseActivity {
             startActivity(intent);
         });
 
-        btnCrawl.setOnClickListener(v -> {
-            String url = etNovelUrl.getText().toString().trim();
-            if (url.isEmpty()) {
-                Toast.makeText(this, "请输入小说URL", Toast.LENGTH_SHORT).show();
-                return;
+        btnImport.setOnClickListener(v -> showImportUrlDialog());
+
+        // 搜索实时过滤
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (adapter != null) adapter.search(s == null ? null : s.toString());
             }
-            List<String> selectedTypes = getSelectedTypes();
-            if (selectedTypes.isEmpty()) {
-                Toast.makeText(this, "请至少选择一种素材类型", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            startCrawling(url, selectedTypes);
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        btnFilterAll.setOnClickListener(v -> {
+            if (adapter != null) adapter.filterByType(null);
+        });
+        btnFilterPersona.setOnClickListener(v -> {
+            if (adapter != null) adapter.filterByType(MaterialCandidateExtractor.TYPE_PERSONA);
+        });
+        btnFilterPlot.setOnClickListener(v -> {
+            if (adapter != null) adapter.filterByType(MaterialCandidateExtractor.TYPE_PLOT);
+        });
+        btnFilterTheme.setOnClickListener(v -> {
+            if (adapter != null) adapter.filterByType(MaterialCandidateExtractor.TYPE_THEME);
         });
     }
 
@@ -95,7 +116,8 @@ public class MaterialActivity extends BaseActivity {
      * 开始爬取小说
      */
     private void startCrawling(String url, List<String> selectedTypes) {
-        btnCrawl.setEnabled(false);
+        // 禁用导入按钮，避免重复提交
+        if (btnImport != null) btnImport.setEnabled(false);
         tvCrawlStatus.setVisibility(TextView.VISIBLE);
         tvCrawlStatus.setText(R.string.status_material_crawling_ai);
 
@@ -103,7 +125,7 @@ public class MaterialActivity extends BaseActivity {
             @Override
             public void onSuccess(NovelSummary summary, List<Material> materials, String rawJson) {
                 runOnUiThread(() -> {
-                    btnCrawl.setEnabled(true);
+                    if (btnImport != null) btnImport.setEnabled(true);
 
                     MaterialCandidateReviewDialogFragment dialog = MaterialCandidateReviewDialogFragment.newInstance();
                     dialog.setData(summary, materials == null ? new ArrayList<>() : materials, rawJson);
@@ -138,7 +160,7 @@ public class MaterialActivity extends BaseActivity {
             @Override
             public void onFailure(Exception e) {
                 runOnUiThread(() -> {
-                    btnCrawl.setEnabled(true);
+                    if (btnImport != null) btnImport.setEnabled(true);
                     tvCrawlStatus.setText(getString(R.string.status_material_crawl_failed, e.getMessage()));
                     Toast.makeText(MaterialActivity.this,
                             getString(R.string.status_material_crawl_failed, e.getMessage()),
@@ -148,18 +170,53 @@ public class MaterialActivity extends BaseActivity {
         });
     }
 
-    private List<String> getSelectedTypes() {
-        List<String> types = new ArrayList<>();
-        if (cbPersona != null && cbPersona.isChecked()) {
-            types.add(MaterialCandidateExtractor.TYPE_PERSONA);
-        }
-        if (cbPlot != null && cbPlot.isChecked()) {
-            types.add(MaterialCandidateExtractor.TYPE_PLOT);
-        }
-        if (cbTheme != null && cbTheme.isChecked()) {
-            types.add(MaterialCandidateExtractor.TYPE_THEME);
-        }
-        return types;
+    /**
+     * 显示导入 URL 的输入对话，用户输入后选择导入的素材类型
+     */
+    private void showImportUrlDialog() {
+        final EditText input = new EditText(this);
+        input.setHint("请输入素材来源 URL");
+        input.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
+
+        new AlertDialog.Builder(this)
+                .setTitle("导入素材")
+                .setView(input)
+                .setPositiveButton("下一步", (dialog, which) -> {
+                    String url = input.getText() == null ? "" : input.getText().toString().trim();
+                    if (url.isEmpty()) {
+                        Toast.makeText(this, "请输入 URL", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // 显示素材类型多选对话
+                    showTypeSelectionDialog(url);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showTypeSelectionDialog(String url) {
+        final String[] types = new String[]{
+                getString(R.string.material_type_persona),
+                getString(R.string.material_type_plot),
+                getString(R.string.material_type_theme)
+        };
+        final boolean[] checked = new boolean[]{true, true, true};
+        new AlertDialog.Builder(this)
+                .setTitle("选择要导入的素材类型")
+                .setMultiChoiceItems(types, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+                .setPositiveButton("导入", (dialog, which) -> {
+                    List<String> selected = new ArrayList<>();
+                    if (checked[0]) selected.add(MaterialCandidateExtractor.TYPE_PERSONA);
+                    if (checked[1]) selected.add(MaterialCandidateExtractor.TYPE_PLOT);
+                    if (checked[2]) selected.add(MaterialCandidateExtractor.TYPE_THEME);
+                    if (selected.isEmpty()) {
+                        Toast.makeText(this, "请至少选择一种素材类型", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    startCrawling(url, selected);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /**
