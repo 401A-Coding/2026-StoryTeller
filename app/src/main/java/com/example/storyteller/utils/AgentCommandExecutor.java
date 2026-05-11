@@ -816,7 +816,14 @@ public class AgentCommandExecutor {
         
         if (story != null) {
             context.append("小说标题：").append(story.getTitle()).append("\n");
-            context.append("小说类型：").append(story.getGenre()).append("\n\n");
+            context.append("小说类型：").append(story.getGenre()).append("\n");
+            
+            // 添加小说简介（如果有）
+            if (!TextUtils.isEmpty(story.getDescription())) {
+                context.append("小说简介：").append(story.getDescription()).append("\n");
+            }
+            
+            context.append("\n");
         }
 
         if (volumes != null && !volumes.isEmpty()) {

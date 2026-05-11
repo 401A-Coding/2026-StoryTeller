@@ -26,6 +26,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_CREATE_TIME, story.getCreateTime());
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
+        values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -37,6 +38,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_GENRE, story.getGenre());
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
+        values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -161,6 +163,13 @@ public class StoryDao {
         if (structureIndex >= 0 && !cursor.isNull(structureIndex)) {
             structure = cursor.getString(structureIndex);
         }
-        return new Story(id, title, content, genre, createTime, isCollected, structure);
+        
+        String description = null;
+        int descriptionIndex = cursor.getColumnIndex(DBHelper.COL_STORY_DESCRIPTION);
+        if (descriptionIndex >= 0 && !cursor.isNull(descriptionIndex)) {
+            description = cursor.getString(descriptionIndex);
+        }
+        
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description);
     }
 }
