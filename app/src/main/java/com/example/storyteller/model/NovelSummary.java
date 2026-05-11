@@ -62,11 +62,17 @@ public class NovelSummary {
         contentBuilder.append("【人物画像】").append(characterProfiles != null ? characterProfiles : "无").append("\n\n");
         contentBuilder.append("【来源】").append(sourceUrl != null ? sourceUrl : "无");
 
-        return new Material(
+        Material material = new Material(
                 "novel_summary",
                 title != null ? title : "未知小说",
                 contentBuilder.toString(),
                 createTime
         );
+        material.setSourceUrl(sourceUrl);
+        material.setSourceTitle(title);
+        material.setSourceType("novel_summary");
+        material.setAiScore(0d);
+        material.setRawJson(null);
+        return material;
     }
 }

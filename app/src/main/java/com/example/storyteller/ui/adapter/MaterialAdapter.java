@@ -18,11 +18,20 @@ import java.util.Locale;
 
 public class MaterialAdapter extends RecyclerView.Adapter<MaterialAdapter.ViewHolder> {
 
+    public interface Listener {
+        void onMaterialClick(@NonNull Material material);
+    }
+
     private List<Material> materials;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+    private Listener listener;
 
     public MaterialAdapter(List<Material> materials) {
         this.materials = materials;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     public void setData(List<Material> materials) {
@@ -47,12 +56,18 @@ public class MaterialAdapter extends RecyclerView.Adapter<MaterialAdapter.ViewHo
         // 显示内容预览（前100字）
         String content = material.getContent();
         if (content != null && content.length() > 100) {
-            holder.tvPreview.setText(content.substring(0, 100) + "...");
+            holder.tvPreview.setText(content.substring(0, 100));
         } else {
             holder.tvPreview.setText(content);
         }
 
         holder.tvTime.setText(dateFormat.format(new Date(material.getCreateTime())));
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onMaterialClick(material);
+            }
+        });
     }
 
     @Override
@@ -60,7 +75,7 @@ public class MaterialAdapter extends RecyclerView.Adapter<MaterialAdapter.ViewHo
         return materials != null ? materials.size() : 0;
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle;
         TextView tvCategory;
         TextView tvPreview;
