@@ -5,11 +5,13 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.model.Character;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.CharacterViewHolder> {
@@ -18,9 +20,19 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
     private List<Character> characters;
     private int expandedPosition = RecyclerView.NO_POSITION;
 
+    public interface Listener {
+        void onRegenerateCharacter(@NonNull Character character, int position);
+    }
+
+    private Listener listener;
+
     public CharacterAdapter(Context context, List<Character> characters) {
         this.context = context;
         this.characters = characters;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     @NonNull
@@ -44,6 +56,17 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
 
         boolean expanded = position == expandedPosition;
         holder.tvDetail.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        holder.btnRegenerate.setVisibility(expanded ? View.VISIBLE : View.GONE);
+
+        holder.btnRegenerate.setOnClickListener(v -> {
+            if (listener != null) {
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    listener.onRegenerateCharacter(characters.get(adapterPosition), adapterPosition);
+                }
+            }
+        });
+
         holder.itemView.setOnClickListener(v -> {
             int previous = expandedPosition;
             expandedPosition = expanded ? RecyclerView.NO_POSITION : holder.getBindingAdapterPosition();
@@ -67,16 +90,30 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
         notifyDataSetChanged();
     }
 
+    public List<Character> getDataSnapshot() {
+        return characters == null ? new ArrayList<>() : new ArrayList<>(characters);
+    }
+
+    public void updateItem(int position, Character character) {
+        if (characters == null || position < 0 || position >= characters.size()) {
+            return;
+        }
+        characters.set(position, character);
+        notifyItemChanged(position);
+    }
+
     public static class CharacterViewHolder extends RecyclerView.ViewHolder {
         final TextView tvName;
         final TextView tvRole;
         final TextView tvDetail;
+        final Button btnRegenerate;
 
         CharacterViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_character_name);
             tvRole = itemView.findViewById(R.id.tv_character_role);
             tvDetail = itemView.findViewById(R.id.tv_character_detail);
+            btnRegenerate = itemView.findViewById(R.id.btn_character_regenerate);
         }
     }
 }
