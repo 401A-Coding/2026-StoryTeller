@@ -56,6 +56,12 @@ public class AgentCommandExecutor {
                 case "delete_volume":
                     return handleDeleteVolume(command.parameters, currentStoryId);
                 
+                case "move_chapter":
+                    return handleMoveChapter(command.parameters, currentStoryId);
+                
+                case "merge_chapters":
+                    return handleMergeChapters(command.parameters, currentStoryId);
+                
                 case "generate_plot":
                     return handleGeneratePlot(command.parameters);
                 
@@ -496,6 +502,252 @@ public class AgentCommandExecutor {
     private CommandResult handleCreateCharacter(Map<String, Object> params) {
         // TODO: 实现角色创建逻辑
         return CommandResult.error("角色创建功能开发中...");
+    }
+
+    /**
+     * 处理移动章节命令
+     */
+    private CommandResult handleMoveChapter(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        // 解析参数
+        int fromVolumeId = params.containsKey("from_volume_id") ? 
+            ((Number) params.get("from_volume_id")).intValue() : 1;
+        int fromChapterId = params.containsKey("from_chapter_id") ? 
+            ((Number) params.get("from_chapter_id")).intValue() : 1;
+        int toVolumeId = params.containsKey("to_volume_id") ? 
+            ((Number) params.get("to_volume_id")).intValue() : fromVolumeId;
+        int toPosition = params.containsKey("to_position") ? 
+            ((Number) params.get("to_position")).intValue() : 1;
+        boolean insertAfter = !params.containsKey("insert_after") || 
+                             ((Boolean) params.get("insert_after"));
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 验证源卷ID
+        if (fromVolumeId < 1 || fromVolumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的源卷ID");
+        }
+        
+        // 验证目标卷ID
+        if (toVolumeId < 1 || toVolumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的目标卷ID");
+        }
+        
+        Volume fromVolume = volumes.get(fromVolumeId - 1);
+        Volume toVolume = volumes.get(toVolumeId - 1);
+        
+        // 验证源章节ID
+        if (fromChapterId < 1 || fromChapterId > fromVolume.getChapters().size()) {
+            return CommandResult.error("❌ 错误：无效的源章节ID");
+        }
+        
+        // 获取要移动的章节
+        Chapter movingChapter = fromVolume.getChapters().get(fromChapterId - 1);
+        String chapterTitle = movingChapter.getTitle();
+        
+        // 如果是同卷内移动，需要特殊处理
+        if (fromVolumeId == toVolumeId) {
+            // 验证目标位置
+            int maxPosition = fromVolume.getChapters().size();
+            if (toPosition < 1 || toPosition > maxPosition) {
+                return CommandResult.error("❌ 错误：目标位置超出范围（当前有 " + maxPosition + " 章）");
+            }
+            
+            // 如果目标位置就是当前位置，无需移动
+            if (fromChapterId == toPosition || fromChapterId == toPosition + 1) {
+                return CommandResult.success("✅ 章节《" + chapterTitle + "》已在目标位置，无需移动");
+            }
+            
+            // 移除原章节
+            fromVolume.removeChapter(fromChapterId - 1);
+            
+            // 计算插入位置
+            int insertIndex = insertAfter ? toPosition : toPosition - 1;
+            // 如果原章节在目标位置之前，需要调整插入索引
+            if (fromChapterId < toPosition) {
+                insertIndex--;
+            }
+            
+            // 插入到目标位置
+            movingChapter.setId(insertIndex + 1);
+            fromVolume.getChapters().add(insertIndex, movingChapter);
+            
+            // 重新编号所有章节
+            for (int i = 0; i < fromVolume.getChapters().size(); i++) {
+                fromVolume.getChapters().get(i).setId(i + 1);
+            }
+        } else {
+            // 跨卷移动
+            // 验证目标位置
+            int maxPosition = toVolume.getChapters().size() + 1;
+            if (toPosition < 1 || toPosition > maxPosition) {
+                return CommandResult.error("❌ 错误：目标位置超出范围（目标卷当前有 " + (maxPosition - 1) + " 章）");
+            }
+            
+            // 从源卷移除章节
+            fromVolume.removeChapter(fromChapterId - 1);
+            
+            // 重新编号源卷的后续章节
+            for (int i = fromChapterId - 1; i < fromVolume.getChapters().size(); i++) {
+                fromVolume.getChapters().get(i).setId(i + 1);
+            }
+            
+            // 计算插入位置
+            int insertIndex = insertAfter ? toPosition : toPosition - 1;
+            if (insertIndex > toVolume.getChapters().size()) {
+                insertIndex = toVolume.getChapters().size();
+            }
+            
+            // 插入到目标卷
+            movingChapter.setId(insertIndex + 1);
+            toVolume.getChapters().add(insertIndex, movingChapter);
+            
+            // 重新编号目标卷的后续章节
+            for (int i = insertIndex; i < toVolume.getChapters().size(); i++) {
+                toVolume.getChapters().get(i).setId(i + 1);
+            }
+        }
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        String sourceDesc = "第" + fromVolumeId + "卷";
+        String targetDesc = "第" + toVolumeId + "卷";
+        String positionDesc = insertAfter ? "之后" : "之前";
+        
+        if (fromVolumeId == toVolumeId) {
+            return CommandResult.success(
+                "✅ 已将章节《" + chapterTitle + "》移动到第" + toPosition + "章" + positionDesc,
+                "move_chapter",
+                movingChapter
+            );
+        } else {
+            return CommandResult.success(
+                "✅ 已将章节《" + chapterTitle + "》从" + sourceDesc + "移动到" + targetDesc + "的第" + toPosition + "章" + positionDesc,
+                "move_chapter",
+                movingChapter
+            );
+        }
+    }
+
+    /**
+     * 处理合并章节命令
+     */
+    private CommandResult handleMergeChapters(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        // 解析参数
+        int volumeId = params.containsKey("volume_id") ? 
+            ((Number) params.get("volume_id")).intValue() : 1;
+        
+        // 解析章节ID列表
+        @SuppressWarnings("unchecked")
+        List<Number> chapterIdsRaw = (List<Number>) params.get("chapter_ids");
+        if (chapterIdsRaw == null || chapterIdsRaw.isEmpty()) {
+            return CommandResult.error("❌ 错误：未指定要合并的章节");
+        }
+        
+        List<Integer> chapterIds = new java.util.ArrayList<>();
+        for (Number num : chapterIdsRaw) {
+            chapterIds.add(num.intValue());
+        }
+        
+        // 排序章节ID
+        java.util.Collections.sort(chapterIds);
+        
+        String newTitle = params.containsKey("new_title") ? 
+            (String) params.get("new_title") : "";
+        String mergeStrategy = params.containsKey("merge_strategy") ? 
+            (String) params.get("merge_strategy") : "concatenate";
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 验证卷ID
+        if (volumeId < 1 || volumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的卷ID");
+        }
+        
+        Volume targetVolume = volumes.get(volumeId - 1);
+        
+        // 验证章节ID有效性
+        for (int chapterId : chapterIds) {
+            if (chapterId < 1 || chapterId > targetVolume.getChapters().size()) {
+                return CommandResult.error("❌ 错误：无效的章节ID " + chapterId);
+            }
+        }
+        
+        // 验证章节是否连续
+        for (int i = 1; i < chapterIds.size(); i++) {
+            if (chapterIds.get(i) != chapterIds.get(i - 1) + 1) {
+                return CommandResult.error("❌ 错误：只能合并连续的章节");
+            }
+        }
+        
+        // 至少需要两个章节才能合并
+        if (chapterIds.size() < 2) {
+            return CommandResult.error("❌ 错误：至少需要两个章节才能合并");
+        }
+        
+        // 获取所有章节内容并合并
+        StringBuilder mergedContent = new StringBuilder();
+        List<String> chapterTitles = new java.util.ArrayList<>();
+        
+        for (int i = 0; i < chapterIds.size(); i++) {
+            Chapter chapter = targetVolume.getChapters().get(chapterIds.get(i) - 1);
+            chapterTitles.add(chapter.getTitle());
+            
+            if (!TextUtils.isEmpty(chapter.getContent())) {
+                if (i > 0) {
+                    mergedContent.append("\n\n");
+                }
+                mergedContent.append(chapter.getContent());
+            }
+        }
+        
+        // 如果没有提供新标题，使用第一个章节的标题或生成一个
+        if (TextUtils.isEmpty(newTitle)) {
+            if (chapterTitles.size() > 0) {
+                newTitle = chapterTitles.get(0) + "（合并）";
+            } else {
+                newTitle = "合并章节";
+            }
+        }
+        
+        // 根据策略处理内容（目前只实现直接拼接）
+        String finalContent = mergedContent.toString();
+        
+        // 删除原章节（从后往前删，避免索引变化）
+        for (int i = chapterIds.size() - 1; i >= 0; i--) {
+            targetVolume.removeChapter(chapterIds.get(i) - 1);
+        }
+        
+        // 在第一个位置插入合并后的新章节
+        int insertIndex = chapterIds.get(0) - 1;
+        Chapter mergedChapter = new Chapter(insertIndex + 1, newTitle, finalContent);
+        targetVolume.getChapters().add(insertIndex, mergedChapter);
+        
+        // 重新编号后续章节
+        for (int i = insertIndex; i < targetVolume.getChapters().size(); i++) {
+            targetVolume.getChapters().get(i).setId(i + 1);
+        }
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        return CommandResult.success(
+            "✅ 已成功合并 " + chapterIds.size() + " 个章节为《" + newTitle + "》",
+            "merge_chapters",
+            mergedChapter
+        );
     }
 
     /**

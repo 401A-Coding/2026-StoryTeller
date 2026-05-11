@@ -142,9 +142,6 @@ public class StoryGenerateActivity extends BaseActivity {
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
-
-        // Add initial volume and chapter
-        addNewVolume();
     }
 
     /**
@@ -178,7 +175,11 @@ public class StoryGenerateActivity extends BaseActivity {
         Intent intent = getIntent();
         int storyId = intent.getIntExtra("story_id", -1);
         if (storyId > 0) {
+            // 编辑模式：加载已有小说
             loadExistingStory(storyId);
+        } else {
+            // 新建模式：自动创建初始卷和章节
+            addNewVolume();
         }
     }
 
@@ -555,8 +556,8 @@ public class StoryGenerateActivity extends BaseActivity {
         int volumeIndex = layoutContent.getChildCount() - 1; // Insert before btnAddVolume
         layoutContent.addView(volumeView, volumeIndex);
 
-        // Add first chapter automatically
-        addNewChapter(layoutChapters, volume);
+        // Add first chapter automatically (不显示提示)
+        addNewChapterAtPosition(layoutChapters, volume, 0, false);
     }
 
     /**
@@ -565,7 +566,7 @@ public class StoryGenerateActivity extends BaseActivity {
     private void addNewChapter(ViewGroup chapterContainer, Volume volume) {
         // 直接追加到末尾
         int insertIndex = volume.getChapters().size();
-        addNewChapterAtPosition(chapterContainer, volume, insertIndex);
+        addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
     }
     
     /**
@@ -573,8 +574,9 @@ public class StoryGenerateActivity extends BaseActivity {
      * @param chapterContainer 章节容器
      * @param volume 所属卷
      * @param insertIndex 插入位置（从 0 开始）
+     * @param showToast 是否显示提示（默认true，初始化时为false）
      */
-    private void addNewChapterAtPosition(ViewGroup chapterContainer, Volume volume, int insertIndex) {
+    private void addNewChapterAtPosition(ViewGroup chapterContainer, Volume volume, int insertIndex, boolean showToast) {
         // 验证插入位置
         if (insertIndex < 0 || insertIndex > volume.getChapters().size()) {
             return;
@@ -596,7 +598,10 @@ public class StoryGenerateActivity extends BaseActivity {
             renderChapterToUI(chapterContainer, volume, chapter, i + 1);
         }
         
-        Toast.makeText(this, "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
+        // 只在用户主动操作时显示提示
+        if (showToast) {
+            Toast.makeText(this, "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -894,13 +899,13 @@ public class StoryGenerateActivity extends BaseActivity {
                 // 在当前章节上方添加
                 ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
                 int insertIndex = chapterIndex - 1; // chapterIndex 从 1 开始，转换为从 0 开始
-                addNewChapterAtPosition(chapterContainer, volume, insertIndex);
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
                 return true;
             } else if ("在下方添加章节".equals(title)) {
                 // 在当前章节下方添加
                 ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
                 int insertIndex = chapterIndex; // 在当前章节之后
-                addNewChapterAtPosition(chapterContainer, volume, insertIndex);
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
                 return true;
             } else if ("删除".equals(title)) {
                 // 确认删除

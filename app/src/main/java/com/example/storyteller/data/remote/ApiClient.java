@@ -140,9 +140,11 @@ public class ApiClient {
                 "3. edit_chapter: 编辑章节内容（支持重写、续写、修改）\n" +
                 "4. delete_chapter: 删除章节\n" +
                 "5. delete_volume: 删除卷（至少保留一个卷）\n" +
-                "6. generate_plot: 生成情节建议\n" +
-                "7. create_character: 创建角色\n" +
-                "8. answer_question: 回答问题（不执行操作）\n\n" +
+                "6. move_chapter: 移动章节到新位置（可在同卷内或跨卷）\n" +
+                "7. merge_chapters: 合并多个连续章节为一个\n" +
+                "8. generate_plot: 生成情节建议\n" +
+                "9. create_character: 创建角色\n" +
+                "10. answer_question: 回答问题（不执行操作）\n\n" +
                 "重要说明：\n" +
                 "- volume_id 和 chapter_id 从1开始计数\n" +
                 "- 如果用户没有指定具体章节，默认编辑最后一章（最后一个卷的最后一章）\n" +
@@ -224,6 +226,41 @@ public class ApiClient {
                 "    \"volume_id\": 2\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要删除第2卷\"\n" +
+                "}\n\n" +
+                "移动章节（同卷内）：\n" +
+                "{\n" +
+                "  \"action\": \"move_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"from_volume_id\": 1,\n" +
+                "    \"from_chapter_id\": 3,\n" +
+                "    \"to_volume_id\": 1,\n" +
+                "    \"to_position\": 5,\n" +
+                "    \"insert_after\": true\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想把第3章移到第5章后面\"\n" +
+                "}\n\n" +
+                "移动章节（跨卷）：\n" +
+                "{\n" +
+                "  \"action\": \"move_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"from_volume_id\": 1,\n" +
+                "    \"from_chapter_id\": 2,\n" +
+                "    \"to_volume_id\": 2,\n" +
+                "    \"to_position\": 1,\n" +
+                "    \"insert_after\": false\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想把第1卷第2章移到第2卷开头\"\n" +
+                "}\n\n" +
+                "合并章节：\n" +
+                "{\n" +
+                "  \"action\": \"merge_chapters\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_ids\": [3, 4, 5],\n" +
+                "    \"new_title\": \"合并后的新标题\",\n" +
+                "    \"merge_strategy\": \"concatenate\"\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想合并第3、4、5章\"\n" +
                 "}\n\n" +
                 "❌ 错误的 new_content 示例（不要这样写）：\n" +
                 "- \"请AI生成续写内容，延续第一章的叙事...\"  ← 这是指令，不是小说内容\n" +
