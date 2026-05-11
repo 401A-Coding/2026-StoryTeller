@@ -9,8 +9,6 @@ import com.example.storyteller.model.NovelSummary;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +28,12 @@ public class NovelCrawler {
 
     // 回调接口
     public interface CrawlCallback {
-        void onSuccess(NovelSummary summary);
+        void onSuccess(NovelSummary summary, int savedCount);
+        void onFailure(Exception e);
+    }
+
+    public interface ExtractCallback {
+        void onSuccess(NovelSummary summary, List<Material> materials, String rawJson);
         void onFailure(Exception e);
     }
 
@@ -102,7 +105,7 @@ public class NovelCrawler {
                 summary.setCharacterProfiles(generateCharacterProfiles(summary.getCharacters()));
 
                 Log.d(TAG, "爬取完成: " + summary.getTitle());
-                callback.onSuccess(summary);
+                callback.onSuccess(summary, 0);
 
             } catch (IOException e) {
                 Log.e(TAG, "爬取失败: " + e.getMessage());
@@ -115,18 +118,50 @@ public class NovelCrawler {
      * 爬取小说并直接存入素材库
      */
     public void crawlAndSave(String url, Context context, CrawlCallback callback) {
+        crawlAndExtract(url, context, null, new ExtractCallback() {
+            @Override
+            public void onSuccess(NovelSummary summary, List<Material> materials, String rawJson) {
+                MaterialDao materialDao = new MaterialDao(context);
+                List<Material> allMaterials = new ArrayList<>();
+                Material summaryMaterial = summary.toMaterial();
+                summaryMaterial.setRawJson(rawJson);
+                allMaterials.add(summaryMaterial);
+                if (materials != null) {
+                    allMaterials.addAll(materials);
+                }
+
+                long lastId = materialDao.replaceBySource(summary.getSourceUrl(), allMaterials);
+                if (lastId > 0) {
+                    Log.d(TAG, "素材已批量存入数据库，最后一条ID: " + lastId + ", 共 " + allMaterials.size() + " 条");
+                } else {
+                    Log.w(TAG, "素材批量存入数据库失败");
+                }
+                callback.onSuccess(summary, allMaterials.size());
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                callback.onFailure(e);
+            }
+        });
+    }
+
+    public void crawlAndExtract(String url, Context context, List<String> requestedTypes, ExtractCallback callback) {
         crawlNovelDetail(url, new CrawlCallback() {
             @Override
-            public void onSuccess(NovelSummary summary) {
-                MaterialDao materialDao = new MaterialDao(context);
-                Material material = summary.toMaterial();
-                long id = materialDao.insert(material);
-                if (id > 0) {
-                    Log.d(TAG, "素材已存入数据库，ID: " + id);
-                } else {
-                    Log.w(TAG, "素材存入数据库失败");
-                }
-                callback.onSuccess(summary);
+            public void onSuccess(NovelSummary summary, int ignored) {
+                MaterialCandidateExtractor extractor = new MaterialCandidateExtractor();
+                extractor.extract(summary, context, requestedTypes, new MaterialCandidateExtractor.Callback() {
+                    @Override
+                    public void onSuccess(List<Material> materials, String rawJson) {
+                        callback.onSuccess(summary, materials, rawJson);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        callback.onFailure(e);
+                    }
+                });
             }
 
             @Override
@@ -143,9 +178,9 @@ public class NovelCrawler {
         for (String url : urls) {
             crawlAndSave(url, context, new CrawlCallback() {
                 @Override
-                public void onSuccess(NovelSummary summary) {
-                    Log.d(TAG, "批量爬取完成: " + summary.getTitle());
-                    callback.onSuccess(summary);
+                public void onSuccess(NovelSummary summary, int savedCount) {
+                    Log.d(TAG, "批量爬取完成: " + summary.getTitle() + ", 存入 " + savedCount + " 条素材");
+                    callback.onSuccess(summary, savedCount);
                 }
 
                 @Override
@@ -361,3 +396,4 @@ public class NovelCrawler {
         return sb.toString();
     }
 }
+

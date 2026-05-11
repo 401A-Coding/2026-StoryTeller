@@ -1,5 +1,10 @@
 name: Android CI
 
+# 提前切换 GitHub Actions JavaScript actions 到 Node.js 24，避免 Node.js 20 弃用警告
+# 参考：GitHub Actions Node.js 20 deprecation notice
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [ "main" ]
