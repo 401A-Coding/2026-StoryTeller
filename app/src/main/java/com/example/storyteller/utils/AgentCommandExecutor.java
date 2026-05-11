@@ -10,6 +10,7 @@ import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 智能体命令执行器
@@ -96,6 +97,7 @@ public class AgentCommandExecutor {
         public int chapterId;
         public String editType;  // "rewrite" / "append" / "modify"
         public String newContent;
+        public String newTitle; // 可选：新章节标题
         public String instruction;  // 编辑指令，如“让它更悬疑”
     }
 
@@ -105,7 +107,7 @@ public class AgentCommandExecutor {
     public static AddChapterParams parseAddChapterParams(Map<String, Object> params) {
         AddChapterParams result = new AddChapterParams();
         result.volumeId = params.containsKey("volume_id") ? 
-            ((Number) params.get("volume_id")).intValue() : 1;
+            ((Number) Objects.requireNonNull(params.get("volume_id"))).intValue() : 1;
         result.chapterTitle = params.containsKey("chapter_title") ? 
             (String) params.get("chapter_title") : "新章节";
         result.chapterContent = params.containsKey("chapter_content") ? 
@@ -146,7 +148,9 @@ public class AgentCommandExecutor {
             (String) params.get("edit_type") : "rewrite";
         result.newContent = params.containsKey("new_content") ? 
             (String) params.get("new_content") : "";
-        result.instruction = params.containsKey("instruction") ? 
+        result.newTitle = params.containsKey("new_title") ?
+            (String) params.get("new_title") : "";
+        result.instruction = params.containsKey("instruction") ?
             (String) params.get("instruction") : "";
         
         // 验证编辑类型

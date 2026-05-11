@@ -16,6 +16,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.cardview.widget.CardView;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -496,10 +497,10 @@ public class StoryGenerateActivity extends BaseActivity {
      * 切换AI助手面板显示/隐藏
      */
     private void toggleAiPanel() {
-        if (drawerLayout.isDrawerOpen(Gravity.END)) {
-            drawerLayout.closeDrawer(Gravity.END);
+        if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.closeDrawer(GravityCompat.END);
         } else {
-            drawerLayout.openDrawer(Gravity.END);
+            drawerLayout.openDrawer(GravityCompat.END);
         }
     }
 
@@ -1002,6 +1003,14 @@ public class StoryGenerateActivity extends BaseActivity {
         // 更新 UI
         updateChapterUI(targetVolume, targetChapter, params.chapterId - 1);
         
+        // 如果提供了新标题，同时更新标题
+        if (!TextUtils.isEmpty(params.newTitle)) {
+            targetChapter.setTitle(params.newTitle);
+
+            // 更新UI中的标题显示
+            updateChapterTitleUI(targetVolume, targetChapter, params.chapterId - 1);
+        }
+
         // 保存到数据库
         saveEditedStory();
         
@@ -1025,6 +1034,34 @@ public class StoryGenerateActivity extends BaseActivity {
                     EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
                     if (etContent != null) {
                         etContent.setText(chapter.getContent());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新章节标题 UI
+     */
+    private void updateChapterTitleUI(Volume volume, Chapter chapter, int chapterIndex) {
+        // 找到对应的卷视图
+        int volumeIndex = volumes.indexOf(volume);
+        if (volumeIndex >= 0 && volumeIndex < layoutContent.getChildCount()) {
+            View volumeView = layoutContent.getChildAt(volumeIndex);
+            if (volumeView instanceof ViewGroup) {
+                LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
+                if (layoutChapters != null && chapterIndex < layoutChapters.getChildCount()) {
+                    View chapterView = layoutChapters.getChildAt(chapterIndex);
+
+                    // 更新标题显示
+                    TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
+                    EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
+
+                    if (tvChapterName != null) {
+                        tvChapterName.setText(chapter.getTitle());
+                    }
+                    if (etChapterName != null) {
+                        etChapterName.setText(chapter.getTitle());
                     }
                 }
             }

@@ -174,7 +174,8 @@ public class ApiClient {
                 "    \"volume_id\": 1,\n" +
                 "    \"chapter_id\": 1,\n" +
                 "    \"edit_type\": \"rewrite\",\n" +
-                "    \"new_content\": \"夜幕降临，森林中传来诡异的声音...\"\n" +
+                "    \"new_content\": \"夜幕降临，森林中传来诡异的声音...\",\n" +
+                "    \"new_title\": \"诡异的森林\"  // 可选：同时修改标题\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要重写第一章\"\n" +
                 "}\n\n" +
@@ -185,7 +186,8 @@ public class ApiClient {
                 "    \"volume_id\": 1,\n" +
                 "    \"chapter_id\": 1,\n" +
                 "    \"edit_type\": \"append\",\n" +
-                "    \"new_content\": \"他小心翼翼地向前走去，突然听到身后传来脚步声...\"\n" +
+                "    \"new_content\": \"他小心翼翼地向前走去，突然听到身后传来脚步声...\",\n" +
+                "    \"new_title\": \"新的章节标题\"  // 可选：同时修改标题\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要续写第一章\"\n" +
                 "}\n\n" +
