@@ -9,12 +9,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.cardview.widget.CardView;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
@@ -41,15 +43,17 @@ public class StoryGenerateActivity extends BaseActivity {
     private ImageView btnBack;
     private ImageView btnAi;
     private ImageView btnSave;
-    private CardView panelAi;
+    private DrawerLayout drawerLayout;
+    private LinearLayout panelAi;
     private ImageView btnCloseAi;
     private RecyclerView rvChat;
     private EditText etMessage;
-    private Button btnSend;
+    private ImageButton btnSend;
+    private Button btnAgentMode;
+    private Button btnAskMode;
     private ProgressBar progressBar;
     private LinearLayout layoutContent;
     private Button btnAddVolume;
-    private android.widget.Switch switchAgentMode; // 智能体模式开关
 
     // AI Chat
     private final List<ChatMessage> messages = new ArrayList<>();
@@ -80,13 +84,15 @@ public class StoryGenerateActivity extends BaseActivity {
         btnAi = findViewById(R.id.btn_ai);
         btnSave = findViewById(R.id.btn_save);
 
-        // AI Panel
+        // AI Panel with DrawerLayout
+        drawerLayout = findViewById(R.id.drawer_layout);
         panelAi = findViewById(R.id.panel_ai);
         btnCloseAi = findViewById(R.id.btn_close_ai);
         rvChat = findViewById(R.id.rv_chat);
         etMessage = findViewById(R.id.et_message);
         btnSend = findViewById(R.id.btn_send);
-        switchAgentMode = findViewById(R.id.switch_agent_mode);
+        btnAgentMode = findViewById(R.id.btn_agent_mode);
+        btnAskMode = findViewById(R.id.btn_ask_mode);
 
         // Content
         layoutContent = findViewById(R.id.layout_content);
@@ -117,21 +123,45 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat.setAdapter(adapter);
         btnSend.setOnClickListener(v -> sendMessage());
 
-        // Setup agent mode switch
-        if (switchAgentMode != null) {
-            switchAgentMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                isAgentMode = isChecked;
-                Toast.makeText(this, 
-                    isChecked ? "已启用智能体模式" : "已切换到普通聊天模式", 
-                    Toast.LENGTH_SHORT).show();
-            });
-        }
+        // Setup agent mode buttons
+        updateAgentModeButtons(); // Initialize button states
+        
+        btnAgentMode.setOnClickListener(v -> {
+            isAgentMode = true;
+            updateAgentModeButtons();
+            Toast.makeText(this, "已启用 Agent 模式", Toast.LENGTH_SHORT).show();
+        });
+        
+        btnAskMode.setOnClickListener(v -> {
+            isAgentMode = false;
+            updateAgentModeButtons();
+            Toast.makeText(this, "已切换到 Ask 模式", Toast.LENGTH_SHORT).show();
+        });
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
 
         // Add initial volume and chapter
         addNewVolume();
+    }
+
+    /**
+     * 更新 Agent 模式按钮的选中状态
+     */
+    private void updateAgentModeButtons() {
+        if (isAgentMode) {
+            // Agent 模式选中
+            btnAgentMode.setTextColor(getResources().getColor(R.color.colorPrimary, null));
+            btnAgentMode.setBackgroundResource(R.drawable.bg_chat_bubble_user);
+            btnAskMode.setTextColor(getResources().getColor(R.color.colorGray, null));
+            btnAskMode.setBackground(null);
+        } else {
+            // Ask 模式选中
+            btnAskMode.setTextColor(getResources().getColor(R.color.colorPrimary, null));
+            btnAskMode.setBackgroundResource(R.drawable.bg_chat_bubble_user);
+            btnAgentMode.setTextColor(getResources().getColor(R.color.colorGray, null));
+            btnAgentMode.setBackground(null);
+        }
     }
 
     @Override
@@ -466,10 +496,10 @@ public class StoryGenerateActivity extends BaseActivity {
      * 切换AI助手面板显示/隐藏
      */
     private void toggleAiPanel() {
-        if (panelAi.getVisibility() == View.VISIBLE) {
-            panelAi.setVisibility(View.GONE);
+        if (drawerLayout.isDrawerOpen(Gravity.END)) {
+            drawerLayout.closeDrawer(Gravity.END);
         } else {
-            panelAi.setVisibility(View.VISIBLE);
+            drawerLayout.openDrawer(Gravity.END);
         }
     }
 
