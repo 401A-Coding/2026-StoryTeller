@@ -92,6 +92,21 @@ public class BookshelfFragment extends BaseFragment {
             
             // Create empty story
             Story newStory = new Story(title, "", TextUtils.isEmpty(seriesName) ? "创作" : seriesName, System.currentTimeMillis());
+            if (!TextUtils.isEmpty(description)) {
+                newStory.setDescription(description);
+            }
+            
+            // Initialize with one volume and one chapter
+            java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
+            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "第一卷");
+            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "第一章", "");
+            volume.addChapter(chapter);
+            volumes.add(volume);
+            
+            // Save structure as JSON
+            String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
+            newStory.setStructure(structureJson);
+            
             long id = storyDao.insertStory(newStory);
             
             if (id > 0) {
