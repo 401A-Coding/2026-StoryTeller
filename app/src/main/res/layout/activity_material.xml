@@ -104,20 +104,6 @@
 
     </LinearLayout>
 
-
-    <!-- 爬取状态显示 -->
-    <TextView
-        android:id="@+id/tv_crawl_status"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text=""
-        android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/btn_import"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
     <!-- 素材列表区域 -->
     <TextView
         android:id="@+id/tv_material_list_title"
