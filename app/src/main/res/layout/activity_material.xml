@@ -15,97 +15,94 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 爬取功能区域 -->
-    <TextView
-        android:id="@+id/tv_crawl_section"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/material_crawl_section_title"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/tv_material_title"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/tv_crawl_type_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/material_crawl_type_label"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/tv_crawl_section"
-        app:layout_constraintStart_toStartOf="parent" />
-
+    <!-- 顶部导入 / 搜索 / 筛选 区域，使用垂直 LinearLayout 以避免控件重叠 -->
     <LinearLayout
-        android:id="@+id/layout_crawl_types"
+        android:id="@+id/layout_top_section"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/tv_crawl_type_label"
+        android:orientation="vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/tv_material_title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <CheckBox
-            android:id="@+id/cb_material_persona"
+        <TextView
+            android:id="@+id/tv_crawl_section"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/material_type_persona" />
+            android:text="@string/material_crawl_section_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <CheckBox
-            android:id="@+id/cb_material_plot"
+        <TextView
+            android:id="@+id/tv_crawl_type_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:checked="true"
-            android:text="@string/material_type_plot" />
+            android:layout_marginTop="8dp"
+            android:text="@string/material_crawl_type_label"
+            android:textStyle="bold" />
 
-        <CheckBox
-            android:id="@+id/cb_material_theme"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btn_import"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:checked="true"
-            android:text="@string/material_type_theme" />
+            android:layout_marginTop="8dp"
+            android:text="导入素材" />
+
+        <EditText
+            android:id="@+id/et_material_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="搜索素材标题或内容"
+            android:padding="10dp"
+            android:background="@android:drawable/editbox_background" />
+
+        <LinearLayout
+            android:id="@+id/layout_filters"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_filter_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="全部" />
+
+            <Button
+                android:id="@+id/btn_filter_persona"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/material_type_persona" />
+
+            <Button
+                android:id="@+id/btn_filter_plot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/material_type_plot" />
+
+            <Button
+                android:id="@+id/btn_filter_theme"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/material_type_theme" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_crawl_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text=""
+            android:textSize="14sp"
+            android:visibility="gone" />
+
     </LinearLayout>
-
-    <EditText
-        android:id="@+id/et_novel_url"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:hint="请输入番茄小说详情页URL"
-        android:inputType="textUri"
-        android:padding="12dp"
-        android:background="@android:drawable/editbox_background"
-        app:layout_constraintTop_toBottomOf="@id/layout_crawl_types"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <Button
-        android:id="@+id/btn_crawl"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="爬取并存入素材库"
-        app:layout_constraintTop_toBottomOf="@id/et_novel_url"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- 爬取状态显示 -->
-    <TextView
-        android:id="@+id/tv_crawl_status"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text=""
-        android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/btn_crawl"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 素材列表区域 -->
     <TextView
@@ -116,7 +113,7 @@
         android:text="已存素材"
         android:textSize="18sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/tv_crawl_status"
+        app:layout_constraintTop_toBottomOf="@id/layout_top_section"
         app:layout_constraintStart_toStartOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
