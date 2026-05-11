@@ -13,6 +13,8 @@ public class Story {
     private long createTime;
     // 是否加入书架
     private boolean isCollected;
+    // 卷-章结构的JSON数据
+    private String structure;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -21,6 +23,7 @@ public class Story {
         this.genre = genre;
         this.createTime = createTime;
         this.isCollected = false;
+        this.structure = null;
     }
 
     // 数据库查询用构造方法
@@ -31,6 +34,18 @@ public class Story {
         this.genre = genre;
         this.createTime = createTime;
         this.isCollected = isCollected;
+        this.structure = null;
+    }
+
+    // 完整构造方法
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.genre = genre;
+        this.createTime = createTime;
+        this.isCollected = isCollected;
+        this.structure = structure;
     }
 
     // Getter & Setter（后续所有属性都需要，可通过Android Studio自动生成）
@@ -46,4 +61,6 @@ public class Story {
     public void setCreateTime(long createTime) { this.createTime = createTime; }
     public boolean isCollected() { return isCollected; }
     public void setCollected(boolean collected) { isCollected = collected; }
+    public String getStructure() { return structure; }
+    public void setStructure(String structure) { this.structure = structure; }
 }
