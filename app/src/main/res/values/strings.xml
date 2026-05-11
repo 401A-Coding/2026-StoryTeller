@@ -68,7 +68,6 @@
     <string name="desc_volume_icon">卷图标</string>
     <string name="desc_chapter_icon">章节图标</string>
     <string name="desc_more">更多操作</string>
-    <string name="desc_expand">展开/收起</string>
     <string name="desc_ai_icon">AI助手图标</string>
     <string name="hint_start_writing">开始写作...</string>
     <string name="btn_add_chapter">+ 添加章节</string>

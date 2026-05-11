@@ -22,7 +22,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
-import com.example.storyteller.data.local.db.StoryDao;
+import com.example.storyteller.data.repository.StoryRepository;
+import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Volume;
@@ -71,7 +72,7 @@ public class StoryGenerateActivity extends BaseActivity {
     private boolean isAgentMode = false; // 是否启用智能体模式
 
     // Storage
-    private StoryDao storyDao;
+    private StoryRepository storyRepository;
 
     @Override
     protected int getLayoutId() {
@@ -141,9 +142,6 @@ public class StoryGenerateActivity extends BaseActivity {
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
-
-        // Add initial volume and chapter
-        addNewVolume();
     }
 
     /**
@@ -167,18 +165,21 @@ public class StoryGenerateActivity extends BaseActivity {
 
     @Override
     protected void initData() {
-        // Data will be initialized in initView
-        // Initialize DAO for saving generated stories
-        storyDao = new StoryDao(this);
+        // Initialize Repository for data access
+        storyRepository = new StoryRepositoryImpl(this);
         
-        // Initialize Agent Command Executor
-        commandExecutor = new AgentCommandExecutor(this);
+        // Initialize Agent Command Executor with repository
+        commandExecutor = new AgentCommandExecutor(storyRepository);
         
         // Check if we're editing an existing story
         Intent intent = getIntent();
         int storyId = intent.getIntExtra("story_id", -1);
         if (storyId > 0) {
+            // 编辑模式：加载已有小说
             loadExistingStory(storyId);
+        } else {
+            // 新建模式：自动创建初始卷和章节
+            addNewVolume();
         }
     }
 
@@ -186,7 +187,7 @@ public class StoryGenerateActivity extends BaseActivity {
      * 加载现有故事进行编辑
      */
     private void loadExistingStory(int storyId) {
-        currentStory = storyDao.getStoryById(storyId);
+        currentStory = storyRepository.getStoryById(storyId);
         if (currentStory != null) {
             isEditMode = true;
             // Clear existing content
@@ -281,6 +282,12 @@ public class StoryGenerateActivity extends BaseActivity {
         // Setup add chapter button
         Button btnAddChapter = volumeView.findViewById(R.id.btn_add_chapter);
         btnAddChapter.setOnClickListener(v -> addNewChapter(layoutChapters, volume));
+        
+        // Setup more button for volume
+        ImageView btnMoreVolume = volumeView.findViewById(R.id.btn_more_volume);
+        final Volume finalVolume = volume;
+        final int finalVolumeIndex = volumeIndex;
+        btnMoreVolume.setOnClickListener(v -> showVolumeMenu(finalVolume, finalVolumeIndex, volumeView));
 
         // Add volume to layout - always append before the last child (btnAddVolume)
         // Find the button and insert before it
@@ -332,6 +339,13 @@ public class StoryGenerateActivity extends BaseActivity {
 
         // Double tap to edit chapter name inline
         setupInlineEdit(tvChapterName, etChapterName, chapter, true);
+        
+        // Setup more button for chapter
+        ImageView btnMoreChapter = chapterView.findViewById(R.id.btn_more_chapter);
+        final Volume finalVolume = volume;
+        final Chapter finalChapter = chapter;
+        final int finalChapterIndex = chapterIndex;
+        btnMoreChapter.setOnClickListener(v -> showChapterMenu(finalVolume, finalChapter, finalChapterIndex, chapterView));
 
         // Setup content editor
         EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
@@ -416,8 +430,8 @@ public class StoryGenerateActivity extends BaseActivity {
         String structureJson = JsonUtils.toJson(volumes);
         currentStory.setStructure(structureJson);
         
-        // Save to database
-        int result = storyDao.updateStory(currentStory);
+        // Save to database via repository
+        int result = storyRepository.updateStory(currentStory);
         if (result > 0) {
             Toast.makeText(this, "故事保存成功", Toast.LENGTH_SHORT).show();
             // Removed finish() to keep the activity open after saving
@@ -470,8 +484,8 @@ public class StoryGenerateActivity extends BaseActivity {
         String structureJson = JsonUtils.toJson(volumes);
         newStory.setStructure(structureJson);
         
-        // Save to database
-        long id = storyDao.insertStory(newStory);
+        // Save to database via repository
+        long id = storyRepository.insertStory(newStory);
         if (id > 0) {
             newStory.setId((int) id);
             Toast.makeText(this, "小说创建成功！", Toast.LENGTH_SHORT).show();
@@ -542,58 +556,52 @@ public class StoryGenerateActivity extends BaseActivity {
         int volumeIndex = layoutContent.getChildCount() - 1; // Insert before btnAddVolume
         layoutContent.addView(volumeView, volumeIndex);
 
-        // Add first chapter automatically
-        addNewChapter(layoutChapters, volume);
+        // Add first chapter automatically (不显示提示)
+        addNewChapterAtPosition(layoutChapters, volume, 0, false);
     }
 
     /**
-     * 添加新章节
+     * 添加新章节（直接追加到末尾 - 快捷键）
      */
     private void addNewChapter(ViewGroup chapterContainer, Volume volume) {
-        // Calculate the new chapter index based on existing chapters in this volume
-        int newChapterIndex = volume.getChapters().size() + 1;
-
-        Chapter chapter = new Chapter(newChapterIndex, "新章节", "");
-        volume.addChapter(chapter);
-
-        // Inflate chapter layout
-        View chapterView = LayoutInflater.from(this).inflate(R.layout.item_chapter, chapterContainer, false);
-
-        // Setup chapter prefix (e.g., "第1章 · ")
-        TextView tvChapterPrefix = chapterView.findViewById(R.id.tv_chapter_prefix);
-        tvChapterPrefix.setText("第" + newChapterIndex + "章 · ");
-
-        // Setup chapter name TextView (display mode)
-        TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
-        tvChapterName.setText(chapter.getTitle());
-
-        // Setup chapter name EditText (edit mode)
-        EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
-        etChapterName.setText(chapter.getTitle());
-
-        // Double tap to edit chapter name inline
-        setupInlineEdit(tvChapterName, etChapterName, chapter, true);
-
-        // Setup content editor
-        EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
-        etContent.setHint("开始写作...");
-        if (!TextUtils.isEmpty(chapter.getContent())) {
-            etContent.setText(chapter.getContent());
+        // 直接追加到末尾
+        int insertIndex = volume.getChapters().size();
+        addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
+    }
+    
+    /**
+     * 在指定位置添加新章节
+     * @param chapterContainer 章节容器
+     * @param volume 所属卷
+     * @param insertIndex 插入位置（从 0 开始）
+     * @param showToast 是否显示提示（默认true，初始化时为false）
+     */
+    private void addNewChapterAtPosition(ViewGroup chapterContainer, Volume volume, int insertIndex, boolean showToast) {
+        // 验证插入位置
+        if (insertIndex < 0 || insertIndex > volume.getChapters().size()) {
+            return;
         }
-        etContent.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(android.text.Editable s) {
-                chapter.setContent(s.toString());
-            }
-        });
-
-        chapterContainer.addView(chapterView);
+        
+        // 创建新章节
+        Chapter newChapter = new Chapter(insertIndex + 1, "新章节", "");
+        volume.getChapters().add(insertIndex, newChapter);
+        
+        // 重新编号后续章节
+        for (int i = insertIndex; i < volume.getChapters().size(); i++) {
+            volume.getChapters().get(i).setId(i + 1);
+        }
+        
+        // 清空容器并重新渲染所有章节
+        chapterContainer.removeAllViews();
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            Chapter chapter = volume.getChapters().get(i);
+            renderChapterToUI(chapterContainer, volume, chapter, i + 1);
+        }
+        
+        // 只在用户主动操作时显示提示
+        if (showToast) {
+            Toast.makeText(this, "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -694,46 +702,18 @@ public class StoryGenerateActivity extends BaseActivity {
                         runOnUiThread(() -> {
                             progressBar.setVisibility(View.GONE);
                             
-                            // 检查是否是添加章节命令
-                            if ("add_chapter".equals(command.action)) {
-                                // 解析参数并执行添加
-                                AgentCommandExecutor.AddChapterParams params = 
-                                    AgentCommandExecutor.parseAddChapterParams(command.parameters);
-                                
-                                // 在 Activity 中执行添加逻辑
-                                executeAddChapter(params);
-                                
-                                appendMessage(new ChatMessage("✅ 已成功添加章节：《" + params.chapterTitle + "》", false));
-                            } else if ("add_volume".equals(command.action)) {
-                                // 解析参数并执行添加卷
-                                AgentCommandExecutor.AddVolumeParams params = 
-                                    AgentCommandExecutor.parseAddVolumeParams(command.parameters);
-                                
-                                // 在 Activity 中执行添加卷逻辑
-                                executeAddVolume(params);
-                                
-                                appendMessage(new ChatMessage("✅ 已成功添加卷：《" + params.volumeTitle + "》", false));
-                            } else if ("edit_chapter".equals(command.action)) {
-                                // 解析参数并执行编辑章节
-                                AgentCommandExecutor.EditChapterParams params = 
-                                    AgentCommandExecutor.parseEditChapterParams(command.parameters);
-                                
-                                // 在 Activity 中执行编辑逻辑
-                                String result = executeEditChapter(params);
-                                
-                                appendMessage(new ChatMessage(result, false));
-                            } else {
-                                // 其他命令由 Executor 处理
-                                String result = commandExecutor.executeCommand(command, currentStory.getId());
-                                
-                                if (!TextUtils.isEmpty(result)) {
-                                    appendMessage(new ChatMessage(result, false));
-                                }
-                                
-                                // 如果执行了操作，刷新 UI
-                                if (!"answer_question".equals(command.action)) {
-                                    refreshStoryView();
-                                }
+                            // 使用 AgentCommandExecutor 执行命令
+                            AgentCommandExecutor.CommandResult result = 
+                                commandExecutor.executeCommand(command, currentStory.getId());
+                            
+                            // 显示结果消息
+                            if (!TextUtils.isEmpty(result.message)) {
+                                appendMessage(new ChatMessage(result.message, false));
+                            }
+                            
+                            // 如果执行成功且不是问答操作，刷新 UI
+                            if (result.success && !"answer_question".equals(command.action)) {
+                                refreshStoryView();
                             }
                         });
                     }
@@ -784,16 +764,16 @@ public class StoryGenerateActivity extends BaseActivity {
         // 在编辑模式下，AI 生成的内容应该通过智能体命令来添加到当前小说
         if (isEditMode) {
             // 编辑模式：不自动创建新故事，只提示用户如何操作
-            appendMessage(new ChatMessage("💡 提示：在编辑模式下，请使用智能体模式来添加内容到当前小说。\n开启智能体模式后，可以说“帮我添加一个章节”", false));
+            appendMessage(new ChatMessage("💡 提示：在编辑模式下，请使用智能体模式来添加内容到当前小说。\n开启智能体模式后，可以说'帮我添加一个章节'", false));
             return;
         }
-        
-        if (storyDao == null || TextUtils.isEmpty(storyContent)) {
+            
+        if (storyRepository == null || TextUtils.isEmpty(storyContent)) {
             return;
         }
         String title = buildStoryTitle(prompt, storyContent);
         Story story = new Story(title, storyContent, "AI生成", System.currentTimeMillis());
-        long id = storyDao.insertStory(story);
+        long id = storyRepository.insertStory(story);
         if (id > 0) {
             story.setId((int) id);
             appendMessage(new ChatMessage("故事已保存到书架：" + title, false));
@@ -821,7 +801,7 @@ public class StoryGenerateActivity extends BaseActivity {
     private void refreshStoryView() {
         // Reload story data from database
         if (currentStory != null) {
-            currentStory = storyDao.getStoryById(currentStory.getId());
+            currentStory = storyRepository.getStoryById(currentStory.getId());
         }
         
         // Clear and rebuild the content view
@@ -855,232 +835,158 @@ public class StoryGenerateActivity extends BaseActivity {
         
         Toast.makeText(this, "已更新小说内容", Toast.LENGTH_SHORT).show();
     }
-
+    
     /**
-     * 执行添加章节操作（由智能体命令触发）
+     * 显示卷的更多操作菜单
      */
-    private void executeAddChapter(AgentCommandExecutor.AddChapterParams chapterParams) {
-        if (volumes.isEmpty()) {
-            // 如果没有卷，先创建一个
-            addNewVolume();
-        }
+    private void showVolumeMenu(Volume volume, int volumeIndex, View anchorView) {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, anchorView);
+        popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("删除");
         
-        // 获取目标卷（默认使用最后一个卷）
-        int targetVolumeIndex = Math.max(0, volumes.size() - 1);
-        Volume targetVolume = volumes.get(targetVolumeIndex);
-        
-        // 找到对应的 UI 容器
-        if (layoutContent.getChildCount() > targetVolumeIndex) {
-            View volumeView = layoutContent.getChildAt(targetVolumeIndex);
-            if (volumeView instanceof ViewGroup) {
-                LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
-                if (layoutChapters != null) {
-                    // 在 UI 中添加新章节
-                    addNewChapter(layoutChapters, targetVolume);
-                    
-                    // 设置章节标题和内容
-                    Chapter newChapter = targetVolume.getChapters().get(targetVolume.getChapters().size() - 1);
-                    newChapter.setTitle(chapterParams.chapterTitle);
-                    newChapter.setContent(chapterParams.chapterContent);
-                    
-                    // 更新 UI
-                    TextView tvChapterName = layoutChapters.getChildAt(layoutChapters.getChildCount() - 1)
-                        .findViewById(R.id.tv_chapter_name);
-                    EditText etChapterName = layoutChapters.getChildAt(layoutChapters.getChildCount() - 1)
-                        .findViewById(R.id.et_chapter_name);
-                    EditText etContent = layoutChapters.getChildAt(layoutChapters.getChildCount() - 1)
-                        .findViewById(R.id.et_chapter_content);
-                    
-                    if (tvChapterName != null) {
-                        tvChapterName.setText(chapterParams.chapterTitle);
-                    }
-                    if (etChapterName != null) {
-                        etChapterName.setText(chapterParams.chapterTitle);
-                    }
-                    if (etContent != null) {
-                        etContent.setText(chapterParams.chapterContent);
-                    }
-                }
-            }
-        }
-        
-        // 保存到数据库
-        saveEditedStory();
-    }
-
-    /**
-     * 执行添加卷操作（由智能体命令触发）
-     */
-    private void executeAddVolume(AgentCommandExecutor.AddVolumeParams volumeParams) {
-        // 调用现有的 addNewVolume 方法创建新卷
-        addNewVolume();
-        
-        // 获取刚创建的卷（最后一个）
-        if (!volumes.isEmpty()) {
-            Volume newVolume = volumes.get(volumes.size() - 1);
-            
-            // 设置卷标题
-            newVolume.setTitle(volumeParams.volumeTitle);
-            
-            // 找到对应的 UI 并更新
-            int volumeIndex = volumes.size() - 1;
-            if (layoutContent.getChildCount() > volumeIndex) {
-                View volumeView = layoutContent.getChildAt(volumeIndex);
+        popupMenu.setOnMenuItemClickListener(item -> {
+            String title = item.getTitle().toString();
+            if ("重命名".equals(title)) {
+                // 触发编辑模式
+                View volumeView = findVolumeViewByIndex(volumeIndex);
                 if (volumeView != null) {
                     TextView tvVolumeName = volumeView.findViewById(R.id.tv_volume_name);
                     EditText etVolumeName = volumeView.findViewById(R.id.et_volume_name);
-                    
-                    if (tvVolumeName != null) {
-                        tvVolumeName.setText(volumeParams.volumeTitle);
-                    }
-                    if (etVolumeName != null) {
-                        etVolumeName.setText(volumeParams.volumeTitle);
+                    if (tvVolumeName != null && etVolumeName != null) {
+                        tvVolumeName.performClick();
                     }
                 }
+                return true;
+            } else if ("删除".equals(title)) {
+                // 确认删除
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("确认删除")
+                    .setMessage("确定要删除第" + volumeIndex + "卷《" + volume.getTitle() + "》吗？\n该卷包含 " + volume.getChapters().size() + " 章。")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        deleteVolume(volumeIndex);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+                return true;
             }
+            return false;
+        });
+        
+        popupMenu.show();
+    }
+    
+    /**
+     * 显示章节的更多操作菜单
+     */
+    private void showChapterMenu(Volume volume, Chapter chapter, int chapterIndex, View anchorView) {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, anchorView);
+        popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("在上方添加章节");
+        popupMenu.getMenu().add("在下方添加章节");
+        popupMenu.getMenu().add("删除");
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            String title = item.getTitle().toString();
+            if ("重命名".equals(title)) {
+                // 触发编辑模式
+                TextView tvChapterName = anchorView.findViewById(R.id.tv_chapter_name);
+                EditText etChapterName = anchorView.findViewById(R.id.et_chapter_name);
+                if (tvChapterName != null && etChapterName != null) {
+                    tvChapterName.performClick();
+                }
+                return true;
+            } else if ("在上方添加章节".equals(title)) {
+                // 在当前章节上方添加
+                ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
+                int insertIndex = chapterIndex - 1; // chapterIndex 从 1 开始，转换为从 0 开始
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
+                return true;
+            } else if ("在下方添加章节".equals(title)) {
+                // 在当前章节下方添加
+                ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
+                int insertIndex = chapterIndex; // 在当前章节之后
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex, true);
+                return true;
+            } else if ("删除".equals(title)) {
+                // 确认删除
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("确认删除")
+                    .setMessage("确定要删除第" + chapterIndex + "章《" + chapter.getTitle() + "》吗？")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        deleteChapter(volume, chapterIndex);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+                return true;
+            }
+            return false;
+        });
+        
+        popupMenu.show();
+    }
+    
+    /**
+     * 根据索引查找卷视图
+     */
+    private View findVolumeViewByIndex(int volumeIndex) {
+        if (volumeIndex < 0 || volumeIndex >= layoutContent.getChildCount()) {
+            return null;
+        }
+        return layoutContent.getChildAt(volumeIndex);
+    }
+    
+    /**
+     * 删除卷
+     */
+    private void deleteVolume(int volumeIndex) {
+        if (volumes.size() <= 1) {
+            Toast.makeText(this, "至少需要保留一个卷", Toast.LENGTH_SHORT).show();
+            return;
         }
         
-        // 保存到数据库
+        // volumeIndex 是从 1 开始的显示序号，需要转换为从 0 开始的 List 索引
+        int listIndex = volumeIndex - 1;
+        
+        if (listIndex < 0 || listIndex >= volumes.size()) {
+            return;
+        }
+        
+        Volume removedVolume = volumes.remove(listIndex);
+        
+        // 重新编号
+        for (int i = 0; i < volumes.size(); i++) {
+            volumes.get(i).setId(i + 1);
+        }
+        
+        // 保存并刷新
         saveEditedStory();
+        refreshStoryView();
+        
+        Toast.makeText(this, "已删除卷：《" + removedVolume.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
-
+    
     /**
-     * 执行编辑章节操作（由智能体命令触发）
+     * 删除章节
      */
-    private String executeEditChapter(AgentCommandExecutor.EditChapterParams params) {
-        // 如果没有指定卷ID或章节ID，使用默认值（最后一个卷的最后一章）
-        if (params.volumeId < 1 || params.volumeId > volumes.size()) {
-            params.volumeId = volumes.size();  // 默认最后一个卷
+    private void deleteChapter(Volume volume, int chapterIndex) {
+        // chapterIndex 是从 1 开始的显示序号，需要转换为从 0 开始的 List 索引
+        int listIndex = chapterIndex - 1;
+        
+        if (listIndex < 0 || listIndex >= volume.getChapters().size()) {
+            return;
         }
         
-        if (params.volumeId < 1) {
-            return "❌ 错误：小说中没有卷";
+        Chapter removedChapter = volume.getChapters().remove(listIndex);
+        
+        // 重新编号章节
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            volume.getChapters().get(i).setId(i + 1);
         }
         
-        Volume targetVolume = volumes.get(params.volumeId - 1);
-        
-        if (params.chapterId < 1 || params.chapterId > targetVolume.getChapters().size()) {
-            params.chapterId = targetVolume.getChapters().size();  // 默认最后一章
-        }
-        
-        if (params.chapterId < 1) {
-            return "❌ 错误：第" + params.volumeId + "卷中没有章节";
-        }
-        
-        Chapter targetChapter = targetVolume.getChapters().get(params.chapterId - 1);
-        
-        // 验证新内容
-        if (TextUtils.isEmpty(params.newContent)) {
-            return "❌ 错误：AI 没有生成新内容，请重试";
-        }
-        
-        // 根据编辑类型执行不同操作
-        switch (params.editType) {
-            case "rewrite":
-                // 重写：完全替换内容
-                targetChapter.setContent(params.newContent);
-                break;
-                
-            case "append":
-                // 续写：追加到末尾
-                String currentContent = targetChapter.getContent();
-                if (TextUtils.isEmpty(currentContent)) {
-                    targetChapter.setContent(params.newContent);
-                } else {
-                    targetChapter.setContent(currentContent + "\n\n" + params.newContent);
-                }
-                break;
-                
-            case "modify":
-                // 修改：暂时当作重写处理（未来可以实现更智能的局部修改）
-                targetChapter.setContent(params.newContent);
-                break;
-                
-            default:
-                return "❌ 错误：未知的编辑类型";
-        }
-        
-        // 更新 UI
-        updateChapterUI(targetVolume, targetChapter, params.chapterId - 1);
-        
-        // 如果提供了新标题，同时更新标题
-        if (!TextUtils.isEmpty(params.newTitle)) {
-            targetChapter.setTitle(params.newTitle);
-
-            // 更新UI中的标题显示
-            updateChapterTitleUI(targetVolume, targetChapter, params.chapterId - 1);
-        }
-
-        // 保存到数据库
+        // 保存并刷新
         saveEditedStory();
+        refreshStoryView();
         
-        return "✅ 已成功" + getEditTypeDescription(params.editType) + "第" + params.volumeId + "卷第" + params.chapterId + "章";
-    }
-
-    /**
-     * 更新章节 UI
-     */
-    private void updateChapterUI(Volume volume, Chapter chapter, int chapterIndex) {
-        // 找到对应的卷视图
-        int volumeIndex = volumes.indexOf(volume);
-        if (volumeIndex >= 0 && volumeIndex < layoutContent.getChildCount()) {
-            View volumeView = layoutContent.getChildAt(volumeIndex);
-            if (volumeView instanceof ViewGroup) {
-                LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
-                if (layoutChapters != null && chapterIndex < layoutChapters.getChildCount()) {
-                    View chapterView = layoutChapters.getChildAt(chapterIndex);
-                    
-                    // 更新内容编辑器
-                    EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
-                    if (etContent != null) {
-                        etContent.setText(chapter.getContent());
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * 更新章节标题 UI
-     */
-    private void updateChapterTitleUI(Volume volume, Chapter chapter, int chapterIndex) {
-        // 找到对应的卷视图
-        int volumeIndex = volumes.indexOf(volume);
-        if (volumeIndex >= 0 && volumeIndex < layoutContent.getChildCount()) {
-            View volumeView = layoutContent.getChildAt(volumeIndex);
-            if (volumeView instanceof ViewGroup) {
-                LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
-                if (layoutChapters != null && chapterIndex < layoutChapters.getChildCount()) {
-                    View chapterView = layoutChapters.getChildAt(chapterIndex);
-
-                    // 更新标题显示
-                    TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
-                    EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
-
-                    if (tvChapterName != null) {
-                        tvChapterName.setText(chapter.getTitle());
-                    }
-                    if (etChapterName != null) {
-                        etChapterName.setText(chapter.getTitle());
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * 获取编辑类型的中文描述
-     */
-    private String getEditTypeDescription(String editType) {
-        switch (editType) {
-            case "rewrite":
-                return "重写";
-            case "append":
-                return "续写";
-            case "modify":
-                return "修改";
-            default:
-                return "编辑";
-        }
+        Toast.makeText(this, "已删除章节：《" + removedChapter.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
 }
