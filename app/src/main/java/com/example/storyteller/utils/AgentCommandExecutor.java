@@ -1,10 +1,8 @@
 package com.example.storyteller.utils;
 
-import android.content.Context;
 import android.text.TextUtils;
-import android.widget.Toast;
-import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
@@ -15,15 +13,14 @@ import java.util.Objects;
 /**
  * 智能体命令执行器
  * 负责解析和执行 AI 返回的结构化命令
+ * 采用命令模式，将业务逻辑与 UI 层解耦
  */
 public class AgentCommandExecutor {
 
-    private Context context;
-    private StoryDao storyDao;
+    private final StoryRepository repository;
 
-    public AgentCommandExecutor(Context context) {
-        this.context = context;
-        this.storyDao = new StoryDao(context);
+    public AgentCommandExecutor(StoryRepository repository) {
+        this.repository = repository;
     }
 
     /**
@@ -32,24 +29,32 @@ public class AgentCommandExecutor {
      * @param currentStoryId 当前编辑的小说ID
      * @return 执行结果消息
      */
-    public String executeCommand(ApiClient.AgentCommand command, int currentStoryId) {
+    public CommandResult executeCommand(ApiClient.AgentCommand command, int currentStoryId) {
         if (command == null || command.action == null) {
-            return "无效的命令";
+            return CommandResult.error("无效的命令");
         }
         
         // 安全检查：确保有有效的小说ID
         if (currentStoryId <= 0) {
-            return "错误：未选择小说，请先打开一本小说进行编辑";
+            return CommandResult.error("错误：未选择小说，请先打开一本小说进行编辑");
         }
 
         try {
             switch (command.action) {
+                case "add_volume":
+                    return handleAddVolume(command.parameters, currentStoryId);
+                
                 case "add_chapter":
-                    // 返回命令参数，由 Activity 处理添加逻辑
                     return handleAddChapter(command.parameters, currentStoryId);
                 
                 case "edit_chapter":
                     return handleEditChapter(command.parameters, currentStoryId);
+                
+                case "delete_chapter":
+                    return handleDeleteChapter(command.parameters, currentStoryId);
+                
+                case "delete_volume":
+                    return handleDeleteVolume(command.parameters, currentStoryId);
                 
                 case "generate_plot":
                     return handleGeneratePlot(command.parameters);
@@ -60,19 +65,48 @@ public class AgentCommandExecutor {
                 case "answer_question":
                     // 只是回答问题，不执行操作
                     if (command.parameters != null && command.parameters.containsKey("response")) {
-                        return (String) command.parameters.get("response");
+                        return CommandResult.success((String) command.parameters.get("response"));
                     }
-                    return "";
+                    return CommandResult.success("");
                 
                 default:
-                    return "未知操作：" + command.action;
+                    return CommandResult.error("未知操作：" + command.action);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return "执行失败：" + e.getMessage();
+            return CommandResult.error("执行失败：" + e.getMessage());
         }
     }
 
+    /**
+     * 命令执行结果
+     */
+    public static class CommandResult {
+        public final boolean success;
+        public final String message;
+        public final String action;
+        public final Object data;
+            
+        private CommandResult(boolean success, String message, String action, Object data) {
+            this.success = success;
+            this.message = message;
+            this.action = action;
+            this.data = data;
+        }
+            
+        public static CommandResult success(String message) {
+            return new CommandResult(true, message, null, null);
+        }
+            
+        public static CommandResult success(String message, String action, Object data) {
+            return new CommandResult(true, message, action, data);
+        }
+            
+        public static CommandResult error(String message) {
+            return new CommandResult(false, message, null, null);
+        }
+    }
+    
     /**
      * 获取添加章节的参数（供 Activity 调用）
      */
@@ -81,14 +115,14 @@ public class AgentCommandExecutor {
         public String chapterTitle;
         public String chapterContent;
     }
-
+    
     /**
      * 获取添加卷的参数（供 Activity 调用）
      */
     public static class AddVolumeParams {
         public String volumeTitle;
     }
-
+    
     /**
      * 获取编辑章节的参数（供 Activity 调用）
      */
@@ -98,7 +132,7 @@ public class AgentCommandExecutor {
         public String editType;  // "rewrite" / "append" / "modify"
         public String newContent;
         public String newTitle; // 可选：新章节标题
-        public String instruction;  // 编辑指令，如“让它更悬疑”
+        public String instruction;  // 编辑指令，如"让它更悬疑"
     }
 
     /**
@@ -164,44 +198,326 @@ public class AgentCommandExecutor {
     }
 
     /**
-     * 处理添加章节命令（仅返回参数，由 Activity 执行实际添加）
+     * 处理添加卷命令
      */
-    private String handleAddChapter(Map<String, Object> params, int storyId) {
-        Story story = storyDao.getStoryById(storyId);
+    private CommandResult handleAddVolume(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
         if (story == null) {
-            return "错误：小说不存在或已被删除";
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        AddVolumeParams volumeParams = parseAddVolumeParams(params);
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 创建新卷
+        Volume newVolume = new Volume(volumes.size() + 1, volumeParams.volumeTitle);
+        volumes.add(newVolume);
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        return CommandResult.success(
+            "✅ 已成功添加卷：《" + volumeParams.volumeTitle + "》",
+            "add_volume",
+            newVolume
+        );
+    }
+
+    /**
+     * 处理添加章节命令
+     */
+    private CommandResult handleAddChapter(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
         }
 
         AddChapterParams chapterParams = parseAddChapterParams(params);
         
-        // 返回特殊标记，告诉 Activity 需要执行添加操作
-        return "ADD_CHAPTER:" + chapterParams.chapterTitle + ":" + chapterParams.chapterContent;
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        if (volumes.isEmpty()) {
+            return CommandResult.error("错误：小说中没有卷，请先添加卷");
+        }
+        
+        // 获取目标卷（默认使用最后一个卷）
+        int targetVolumeIndex = Math.max(0, chapterParams.volumeId - 1);
+        if (targetVolumeIndex >= volumes.size()) {
+            targetVolumeIndex = volumes.size() - 1;
+        }
+        
+        Volume targetVolume = volumes.get(targetVolumeIndex);
+        
+        // 创建新章节
+        int newChapterId = targetVolume.getChapters().size() + 1;
+        Chapter newChapter = new Chapter(newChapterId, chapterParams.chapterTitle, chapterParams.chapterContent);
+        targetVolume.addChapter(newChapter);
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        return CommandResult.success(
+            "✅ 已成功添加章节：《" + chapterParams.chapterTitle + "》",
+            "add_chapter",
+            newChapter
+        );
     }
 
     /**
      * 处理编辑章节命令
      */
-    private String handleEditChapter(Map<String, Object> params, int storyId) {
-        // TODO: 实现章节编辑逻辑
-        return "编辑功能开发中...";
+    private CommandResult handleEditChapter(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        EditChapterParams editParams = parseEditChapterParams(params);
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 验证卷ID
+        if (editParams.volumeId < 1 || editParams.volumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的卷ID");
+        }
+        
+        Volume targetVolume = volumes.get(editParams.volumeId - 1);
+        
+        // 验证章节ID
+        if (editParams.chapterId < 1 || editParams.chapterId > targetVolume.getChapters().size()) {
+            return CommandResult.error("❌ 错误：无效的章节ID");
+        }
+        
+        Chapter targetChapter = targetVolume.getChapters().get(editParams.chapterId - 1);
+        
+        // 验证新内容
+        if (TextUtils.isEmpty(editParams.newContent)) {
+            return CommandResult.error("❌ 错误：AI 没有生成新内容，请重试");
+        }
+        
+        // 根据编辑类型执行不同操作
+        switch (editParams.editType) {
+            case "rewrite":
+                // 重写：完全替换内容
+                targetChapter.setContent(editParams.newContent);
+                break;
+                
+            case "append":
+                // 续写：追加到末尾
+                String currentContent = targetChapter.getContent();
+                if (TextUtils.isEmpty(currentContent)) {
+                    targetChapter.setContent(editParams.newContent);
+                } else {
+                    targetChapter.setContent(currentContent + "\n\n" + editParams.newContent);
+                }
+                break;
+                
+            case "modify":
+                // 修改：暂时当作重写处理（未来可以实现更智能的局部修改）
+                targetChapter.setContent(editParams.newContent);
+                break;
+                
+            default:
+                return CommandResult.error("❌ 错误：未知的编辑类型");
+        }
+        
+        // 如果提供了新标题，同时更新标题
+        if (!TextUtils.isEmpty(editParams.newTitle)) {
+            targetChapter.setTitle(editParams.newTitle);
+        }
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        String editTypeDesc = getEditTypeDescription(editParams.editType);
+        return CommandResult.success(
+            "✅ 已成功" + editTypeDesc + "第" + editParams.volumeId + "卷第" + editParams.chapterId + "章",
+            "edit_chapter",
+            targetChapter
+        );
+    }
+
+    /**
+     * 处理删除章节命令
+     */
+    private CommandResult handleDeleteChapter(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        // 解析参数
+        int volumeId = params.containsKey("volume_id") ? 
+            ((Number) params.get("volume_id")).intValue() : 1;
+        int chapterId = params.containsKey("chapter_id") ? 
+            ((Number) params.get("chapter_id")).intValue() : 1;
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 验证卷ID
+        if (volumeId < 1 || volumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的卷ID");
+        }
+        
+        Volume targetVolume = volumes.get(volumeId - 1);
+        
+        // 验证章节ID
+        if (chapterId < 1 || chapterId > targetVolume.getChapters().size()) {
+            return CommandResult.error("❌ 错误：无效的章节ID");
+        }
+        
+        // 获取要删除的章节名称（用于提示）
+        String chapterTitle = targetVolume.getChapters().get(chapterId - 1).getTitle();
+        
+        // 删除章节
+        targetVolume.removeChapter(chapterId - 1);
+        
+        // 如果卷为空，可以选择删除卷或保留空卷
+        // 这里选择保留空卷，让用户自己决定是否删除
+        
+        // 重新编号章节ID
+        for (int i = 0; i < targetVolume.getChapters().size(); i++) {
+            targetVolume.getChapters().get(i).setId(i + 1);
+        }
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        return CommandResult.success(
+            "✅ 已删除章节：《" + chapterTitle + "》",
+            "delete_chapter",
+            null
+        );
+    }
+
+    /**
+     * 处理删除卷命令
+     */
+    private CommandResult handleDeleteVolume(Map<String, Object> params, int storyId) {
+        Story story = repository.getStoryById(storyId);
+        if (story == null) {
+            return CommandResult.error("错误：小说不存在或已被删除");
+        }
+
+        // 解析参数
+        int volumeId = params.containsKey("volume_id") ? 
+            ((Number) params.get("volume_id")).intValue() : 1;
+        
+        // 解析现有结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        
+        // 验证卷ID
+        if (volumeId < 1 || volumeId > volumes.size()) {
+            return CommandResult.error("❌ 错误：无效的卷ID");
+        }
+        
+        // 至少保留一个卷
+        if (volumes.size() <= 1) {
+            return CommandResult.error("❌ 错误：至少需要保留一个卷");
+        }
+        
+        // 获取要删除的卷名称（用于提示）
+        String volumeTitle = volumes.get(volumeId - 1).getTitle();
+        int chapterCount = volumes.get(volumeId - 1).getChapters().size();
+        
+        // 删除卷
+        volumes.remove(volumeId - 1);
+        
+        // 重新编号卷ID
+        for (int i = 0; i < volumes.size(); i++) {
+            volumes.get(i).setId(i + 1);
+        }
+        
+        // 保存更新后的结构
+        saveVolumesToStory(story, volumes);
+        
+        String message = "✅ 已删除卷：《" + volumeTitle + "》（包含 " + chapterCount + " 章）";
+        return CommandResult.success(
+            message,
+            "delete_volume",
+            null
+        );
     }
 
     /**
      * 处理生成情节建议
      */
-    private String handleGeneratePlot(Map<String, Object> params) {
+    private CommandResult handleGeneratePlot(Map<String, Object> params) {
         if (params != null && params.containsKey("response")) {
-            return "情节建议：\n" + params.get("response");
+            return CommandResult.success("情节建议：\n" + params.get("response"));
         }
-        return "无法生成情节建议";
+        return CommandResult.error("无法生成情节建议");
     }
 
     /**
      * 处理创建角色
      */
-    private String handleCreateCharacter(Map<String, Object> params) {
+    private CommandResult handleCreateCharacter(Map<String, Object> params) {
         // TODO: 实现角色创建逻辑
-        return "角色创建功能开发中...";
+        return CommandResult.error("角色创建功能开发中...");
+    }
+
+    /**
+     * 获取编辑类型的中文描述
+     */
+    private String getEditTypeDescription(String editType) {
+        switch (editType) {
+            case "rewrite":
+                return "重写";
+            case "append":
+                return "续写";
+            case "modify":
+                return "修改";
+            default:
+                return "编辑";
+        }
+    }
+
+    /**
+     * 从故事中解析卷章结构
+     */
+    private List<Volume> parseVolumesFromStory(Story story) {
+        String structureJson = story.getStructure();
+        if (!TextUtils.isEmpty(structureJson)) {
+            try {
+                return com.example.storyteller.utils.JsonUtils.fromJson(structureJson,
+                    new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        // 如果解析失败，返回空列表
+        return new java.util.ArrayList<>();
+    }
+
+    /**
+     * 保存卷章结构到故事
+     */
+    private void saveVolumesToStory(Story story, List<Volume> volumes) {
+        String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
+        story.setStructure(structureJson);
+        
+        // 同时更新故事内容（从所有章节构建完整内容）
+        StringBuilder fullContent = new StringBuilder();
+        for (Volume volume : volumes) {
+            for (Chapter chapter : volume.getChapters()) {
+                if (!TextUtils.isEmpty(chapter.getTitle())) {
+                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                }
+                if (!TextUtils.isEmpty(chapter.getContent())) {
+                    fullContent.append(chapter.getContent()).append("\n\n");
+                }
+            }
+        }
+        story.setContent(fullContent.toString().trim());
+        
+        // 保存到数据库
+        repository.updateStory(story);
     }
 
     /**

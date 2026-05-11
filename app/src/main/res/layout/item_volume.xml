@@ -62,13 +62,16 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
+            <!-- 更多操作按钮 -->
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:contentDescription="@string/desc_expand"
-                android:rotation="270"
-                android:src="@drawable/ic_arrow_back"
-                app:tint="#999999" />
+                android:id="@+id/btn_more_volume"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/desc_more"
+                android:padding="4dp"
+                android:src="@drawable/ic_more_vert"
+                app:tint="#666666" />
         </LinearLayout>
 
         <!-- 章节容器 -->

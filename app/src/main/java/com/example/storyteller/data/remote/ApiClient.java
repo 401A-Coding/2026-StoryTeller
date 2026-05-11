@@ -138,9 +138,11 @@ public class ApiClient {
                 "1. add_volume: 添加新卷\n" +
                 "2. add_chapter: 添加新章节\n" +
                 "3. edit_chapter: 编辑章节内容（支持重写、续写、修改）\n" +
-                "4. generate_plot: 生成情节建议\n" +
-                "5. create_character: 创建角色\n" +
-                "6. answer_question: 回答问题（不执行操作）\n\n" +
+                "4. delete_chapter: 删除章节\n" +
+                "5. delete_volume: 删除卷（至少保留一个卷）\n" +
+                "6. generate_plot: 生成情节建议\n" +
+                "7. create_character: 创建角色\n" +
+                "8. answer_question: 回答问题（不执行操作）\n\n" +
                 "重要说明：\n" +
                 "- volume_id 和 chapter_id 从1开始计数\n" +
                 "- 如果用户没有指定具体章节，默认编辑最后一章（最后一个卷的最后一章）\n" +
@@ -190,6 +192,23 @@ public class ApiClient {
                 "    \"new_title\": \"新的章节标题\"  // 可选：同时修改标题\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要续写第一章\"\n" +
+                "}\n\n" +
+                "删除章节：\n" +
+                "{\n" +
+                "  \"action\": \"delete_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_id\": 3\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要删除第1卷的第3章\"\n" +
+                "}\n\n" +
+                "删除卷：\n" +
+                "{\n" +
+                "  \"action\": \"delete_volume\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 2\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想要删除第2卷\"\n" +
                 "}\n\n" +
                 "❌ 错误的 new_content 示例（不要这样写）：\n" +
                 "- \"请AI生成续写内容，延续第一章的叙事...\"  ← 这是指令，不是小说内容\n" +
