@@ -560,53 +560,43 @@ public class StoryGenerateActivity extends BaseActivity {
     }
 
     /**
-     * 添加新章节
+     * 添加新章节（直接追加到末尾 - 快捷键）
      */
     private void addNewChapter(ViewGroup chapterContainer, Volume volume) {
-        // Calculate the new chapter index based on existing chapters in this volume
-        int newChapterIndex = volume.getChapters().size() + 1;
-
-        Chapter chapter = new Chapter(newChapterIndex, "新章节", "");
-        volume.addChapter(chapter);
-
-        // Inflate chapter layout
-        View chapterView = LayoutInflater.from(this).inflate(R.layout.item_chapter, chapterContainer, false);
-
-        // Setup chapter prefix (e.g., "第1章 · ")
-        TextView tvChapterPrefix = chapterView.findViewById(R.id.tv_chapter_prefix);
-        tvChapterPrefix.setText("第" + newChapterIndex + "章 · ");
-
-        // Setup chapter name TextView (display mode)
-        TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
-        tvChapterName.setText(chapter.getTitle());
-
-        // Setup chapter name EditText (edit mode)
-        EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
-        etChapterName.setText(chapter.getTitle());
-
-        // Double tap to edit chapter name inline
-        setupInlineEdit(tvChapterName, etChapterName, chapter, true);
-
-        // Setup content editor
-        EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
-        etContent.setHint("开始写作...");
-        if (!TextUtils.isEmpty(chapter.getContent())) {
-            etContent.setText(chapter.getContent());
+        // 直接追加到末尾
+        int insertIndex = volume.getChapters().size();
+        addNewChapterAtPosition(chapterContainer, volume, insertIndex);
+    }
+    
+    /**
+     * 在指定位置添加新章节
+     * @param chapterContainer 章节容器
+     * @param volume 所属卷
+     * @param insertIndex 插入位置（从 0 开始）
+     */
+    private void addNewChapterAtPosition(ViewGroup chapterContainer, Volume volume, int insertIndex) {
+        // 验证插入位置
+        if (insertIndex < 0 || insertIndex > volume.getChapters().size()) {
+            return;
         }
-        etContent.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(android.text.Editable s) {
-                chapter.setContent(s.toString());
-            }
-        });
-
-        chapterContainer.addView(chapterView);
+        
+        // 创建新章节
+        Chapter newChapter = new Chapter(insertIndex + 1, "新章节", "");
+        volume.getChapters().add(insertIndex, newChapter);
+        
+        // 重新编号后续章节
+        for (int i = insertIndex; i < volume.getChapters().size(); i++) {
+            volume.getChapters().get(i).setId(i + 1);
+        }
+        
+        // 清空容器并重新渲染所有章节
+        chapterContainer.removeAllViews();
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            Chapter chapter = volume.getChapters().get(i);
+            renderChapterToUI(chapterContainer, volume, chapter, i + 1);
+        }
+        
+        Toast.makeText(this, "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -886,6 +876,8 @@ public class StoryGenerateActivity extends BaseActivity {
     private void showChapterMenu(Volume volume, Chapter chapter, int chapterIndex, View anchorView) {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, anchorView);
         popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("在上方添加章节");
+        popupMenu.getMenu().add("在下方添加章节");
         popupMenu.getMenu().add("删除");
         
         popupMenu.setOnMenuItemClickListener(item -> {
@@ -897,6 +889,18 @@ public class StoryGenerateActivity extends BaseActivity {
                 if (tvChapterName != null && etChapterName != null) {
                     tvChapterName.performClick();
                 }
+                return true;
+            } else if ("在上方添加章节".equals(title)) {
+                // 在当前章节上方添加
+                ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
+                int insertIndex = chapterIndex - 1; // chapterIndex 从 1 开始，转换为从 0 开始
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex);
+                return true;
+            } else if ("在下方添加章节".equals(title)) {
+                // 在当前章节下方添加
+                ViewGroup chapterContainer = (ViewGroup) anchorView.getParent();
+                int insertIndex = chapterIndex; // 在当前章节之后
+                addNewChapterAtPosition(chapterContainer, volume, insertIndex);
                 return true;
             } else if ("删除".equals(title)) {
                 // 确认删除

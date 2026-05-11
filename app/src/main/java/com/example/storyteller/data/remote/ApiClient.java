@@ -149,7 +149,10 @@ public class ApiClient {
                 "- 编辑章节时必须提供 new_content（AI生成的新内容）\n" +
                 "- ⚠️ new_content 必须是纯小说正文，不要包含任何说明性文字！\n" +
                 "- ⚠️ 不要在 new_content 中写'请AI生成...'、'以下是...'等提示语\n" +
-                "- ⚠️ new_content 应该直接是小说的内容，就像你在写小说一样\n\n" +
+                "- ⚠️ new_content 应该直接是小说的内容，就像你在写小说一样\n" +
+                "- ⚠️ 添加章节时**必须**提供 chapter_title（章节标题），根据内容生成一个简洁有力的标题\n" +
+                "- ⚠️ 章节标题应该概括本章主旨，长度控制在 2-8 个字\n" +
+                "- 💡 标题示例：'初遇'、'阴谋浮现'、'决战前夕'、'真相大白'\n\n" +
                 "返回格式示例：\n" +
                 "添加新卷：\n" +
                 "{\n" +
@@ -159,7 +162,7 @@ public class ApiClient {
                 "  },\n" +
                 "  \"reasoning\": \"用户想要添加一个新卷\"\n" +
                 "}\n\n" +
-                "添加章节：\n" +
+                "添加章节（默认追加到末尾）：\n" +
                 "{\n" +
                 "  \"action\": \"add_chapter\",\n" +
                 "  \"parameters\": {\n" +
@@ -168,6 +171,18 @@ public class ApiClient {
                 "    \"chapter_content\": \"那年夏天，阳光洒在操场上...\"\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要添加一个新章节\"\n" +
+                "}\n\n" +
+                "在指定位置插入章节：\n" +
+                "{\n" +
+                "  \"action\": \"add_chapter\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_id\": 1,\n" +
+                "    \"chapter_title\": \"回忆\",\n" +
+                "    \"chapter_content\": \"十年前，那是一个寒冷的冬天...\",\n" +
+                "    \"position\": 3,           // 在第几章附近插入\n" +
+                "    \"insert_after\": true     // true=在该章之后，false=在该章之前\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想在第3章后插入新章节\"\n" +
                 "}\n\n" +
                 "编辑章节（重写）：\n" +
                 "{\n" +

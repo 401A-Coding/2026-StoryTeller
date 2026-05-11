@@ -251,19 +251,55 @@ public class AgentCommandExecutor {
         
         Volume targetVolume = volumes.get(targetVolumeIndex);
         
-        // 创建新章节
-        int newChapterId = targetVolume.getChapters().size() + 1;
-        Chapter newChapter = new Chapter(newChapterId, chapterParams.chapterTitle, chapterParams.chapterContent);
-        targetVolume.addChapter(newChapter);
-        
-        // 保存更新后的结构
-        saveVolumesToStory(story, volumes);
-        
-        return CommandResult.success(
-            "✅ 已成功添加章节：《" + chapterParams.chapterTitle + "》",
-            "add_chapter",
-            newChapter
-        );
+        // 检查是否指定了插入位置
+        if (params.containsKey("position")) {
+            int position = ((Number) params.get("position")).intValue();
+            boolean insertAfter = !params.containsKey("insert_after") || 
+                                 ((Boolean) params.get("insert_after"));
+            
+            // 验证位置
+            if (position < 1 || position > targetVolume.getChapters().size()) {
+                return CommandResult.error("❌ 错误：章节位置超出范围（当前有 " + 
+                    targetVolume.getChapters().size() + " 章）");
+            }
+            
+            // 计算插入索引
+            int insertIndex = insertAfter ? position : position - 1;
+            
+            // 创建并插入新章节
+            Chapter newChapter = new Chapter(insertIndex + 1, chapterParams.chapterTitle, chapterParams.chapterContent);
+            targetVolume.getChapters().add(insertIndex, newChapter);
+            
+            // 重新编号后续章节
+            for (int i = insertIndex; i < targetVolume.getChapters().size(); i++) {
+                targetVolume.getChapters().get(i).setId(i + 1);
+            }
+            
+            // 保存更新后的结构
+            saveVolumesToStory(story, volumes);
+            
+            String refChapterTitle = targetVolume.getChapters().get(position - 1).getTitle();
+            String positionDesc = insertAfter ? "之后" : "之前";
+            return CommandResult.success(
+                "✅ 已在第" + position + "章《" + refChapterTitle + "》" + positionDesc + "添加新章节：《" + chapterParams.chapterTitle + "》",
+                "add_chapter",
+                newChapter
+            );
+        } else {
+            // 默认追加到末尾
+            int newChapterId = targetVolume.getChapters().size() + 1;
+            Chapter newChapter = new Chapter(newChapterId, chapterParams.chapterTitle, chapterParams.chapterContent);
+            targetVolume.addChapter(newChapter);
+            
+            // 保存更新后的结构
+            saveVolumesToStory(story, volumes);
+            
+            return CommandResult.success(
+                "✅ 已在第" + targetVolume.getId() + "卷末尾添加章节：《" + chapterParams.chapterTitle + "》",
+                "add_chapter",
+                newChapter
+            );
+        }
     }
 
     /**
