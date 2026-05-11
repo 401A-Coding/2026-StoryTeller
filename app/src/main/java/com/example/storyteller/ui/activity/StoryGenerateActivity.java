@@ -103,9 +103,11 @@ public class StoryGenerateActivity extends BaseActivity {
         // Setup save button
         btnSave.setOnClickListener(v -> {
             if (isEditMode && currentStory != null) {
+                // 编辑模式：更新现有小说
                 saveEditedStory();
             } else {
-                Toast.makeText(this, "保存功能暂未开放", Toast.LENGTH_SHORT).show();
+                // 创建模式：创建新小说
+                createNewStory();
             }
         });
 
@@ -390,6 +392,73 @@ public class StoryGenerateActivity extends BaseActivity {
             // Removed finish() to keep the activity open after saving
         } else {
             Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * 创建新小说（非编辑模式）
+     */
+    private void createNewStory() {
+        // Build the complete story content from all chapters
+        StringBuilder fullContent = new StringBuilder();
+        for (Volume volume : volumes) {
+            for (Chapter chapter : volume.getChapters()) {
+                if (!TextUtils.isEmpty(chapter.getTitle())) {
+                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                }
+                if (!TextUtils.isEmpty(chapter.getContent())) {
+                    fullContent.append(chapter.getContent()).append("\n\n");
+                }
+            }
+        }
+        
+        String content = fullContent.toString().trim();
+        if (TextUtils.isEmpty(content)) {
+            Toast.makeText(this, "请先添加一些内容再保存", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Generate title from first volume and chapter
+        String title = "新小说";
+        if (!volumes.isEmpty()) {
+            Volume firstVolume = volumes.get(0);
+            if (!firstVolume.getChapters().isEmpty()) {
+                Chapter firstChapter = firstVolume.getChapters().get(0);
+                if (!TextUtils.isEmpty(firstChapter.getTitle()) && !"新章节".equals(firstChapter.getTitle())) {
+                    title = firstChapter.getTitle();
+                } else if (!TextUtils.isEmpty(firstVolume.getTitle()) && !"新卷名".equals(firstVolume.getTitle())) {
+                    title = firstVolume.getTitle();
+                }
+            }
+        }
+        
+        // Create new story
+        Story newStory = new Story(title, content, "手动创建", System.currentTimeMillis());
+        
+        // Serialize volumes structure to JSON
+        String structureJson = JsonUtils.toJson(volumes);
+        newStory.setStructure(structureJson);
+        
+        // Save to database
+        long id = storyDao.insertStory(newStory);
+        if (id > 0) {
+            newStory.setId((int) id);
+            Toast.makeText(this, "小说创建成功！", Toast.LENGTH_SHORT).show();
+            
+            // Set as current editing story
+            currentStory = newStory;
+            isEditMode = true;
+            
+            // Update selection in SharedPreferences
+            com.example.storyteller.data.local.prefs.PrefsUtils.getInstance(this)
+                .putString(com.example.storyteller.ui.adapter.StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
+            com.example.storyteller.data.local.prefs.PrefsUtils.getInstance(this)
+                .putString(com.example.storyteller.ui.adapter.StoryAdapter.PREF_SELECTED_STORY_TITLE, title);
+            
+            // Finish and return to home
+            finish();
+        } else {
+            Toast.makeText(this, "创建失败", Toast.LENGTH_SHORT).show();
         }
     }
 

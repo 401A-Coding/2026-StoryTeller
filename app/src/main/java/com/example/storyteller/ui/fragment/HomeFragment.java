@@ -42,15 +42,47 @@ public class HomeFragment extends BaseFragment {
             .setOnClickListener(v -> {
                 // 获取当前选中的小说ID
                 String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                if (!TextUtils.isEmpty(selectedId)) {
+                
+                android.util.Log.d("HomeFragment", "点击故事生成，selectedId: '" + selectedId + "'");
+                android.util.Log.d("HomeFragment", "isEmpty: " + TextUtils.isEmpty(selectedId));
+                
+                if (TextUtils.isEmpty(selectedId)) {
+                    // 未选择小说，弹出对话框让用户选择
+                    android.util.Log.d("HomeFragment", "显示未选择对话框");
+                    showNoNovelSelectedDialog();
+                } else {
+                    // 已选择小说，验证小说是否存在
                     try {
-                        intent.putExtra("story_id", Integer.parseInt(selectedId));
+                        int storyId = Integer.parseInt(selectedId);
+                        Story story = storyDao.getStoryById(storyId);
+                        
+                        if (story == null) {
+                            // 小说不存在，清除选择状态并提示
+                            android.util.Log.w("HomeFragment", "小说不存在，ID: " + storyId + "，清除选择状态");
+                            PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+                            PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, "");
+                            
+                            Toast.makeText(requireContext(), "所选小说不存在，请重新选择", Toast.LENGTH_SHORT).show();
+                            refreshCurrentNovel();
+                            showNoNovelSelectedDialog();
+                        } else {
+                            // 小说存在，正常进入编辑页面
+                            android.util.Log.d("HomeFragment", "进入编辑页面，story_id: " + storyId);
+                            Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
+                            intent.putExtra("story_id", storyId);
+                            startActivity(intent);
+                        }
                     } catch (NumberFormatException e) {
-                        // 忽略无效的ID
+                        // ID 格式错误，清除选择状态
+                        android.util.Log.e("HomeFragment", "无效的 story_id: " + selectedId, e);
+                        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+                        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, "");
+                        
+                        Toast.makeText(requireContext(), "数据异常，请重新选择小说", Toast.LENGTH_SHORT).show();
+                        refreshCurrentNovel();
+                        showNoNovelSelectedDialog();
                     }
                 }
-                startActivity(intent);
             });
         view.findViewById(R.id.card_character)
             .setOnClickListener(v -> startActivity(new Intent(requireContext(), CharacterActivity.class)));
@@ -73,6 +105,13 @@ public class HomeFragment extends BaseFragment {
     @Override
     protected void initData() {
         storyDao = new StoryDao(requireContext());
+        
+        // 调试：打印当前选择状态
+        String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+        android.util.Log.d("HomeFragment", "initData - 当前 selectedId: '" + selectedId + "'");
+        List<Story> allStories = storyDao.getAllStories();
+        android.util.Log.d("HomeFragment", "initData - 数据库中的小说数量: " + (allStories != null ? allStories.size() : 0));
+        
         refreshList();
         refreshCurrentNovel();
     }
@@ -191,6 +230,67 @@ public class HomeFragment extends BaseFragment {
             dialog.dismiss();
         });
         builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    /**
+     * 显示未选择小说的提示对话框
+     */
+    private void showNoNovelSelectedDialog() {
+        List<Story> stories = storyDao.getAllStories();
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("提示");
+        
+        if (stories == null || stories.isEmpty()) {
+            // 没有任何小说，询问是否创建新小说
+            builder.setMessage("您还没有创建任何小说。\n是否要创建一个新小说？");
+            builder.setPositiveButton("创建新小说", (dialog, which) -> {
+                // 直接进入故事生成页面（不传 story_id，会创建新小说）
+                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
+                startActivity(intent);
+                dialog.dismiss();
+            });
+            builder.setNegativeButton("取消", null);
+        } else {
+            // 有小说但未选择，让用户选择
+            builder.setMessage("您还未选择当前小说。\n请选择一个小说或创建新小说。");
+            
+            // 提取小说标题
+            String[] storyTitles = new String[stories.size()];
+            for (int i = 0; i < stories.size(); i++) {
+                storyTitles[i] = stories.get(i).getTitle();
+            }
+            
+            builder.setSingleChoiceItems(storyTitles, -1, (dialog, which) -> {
+                Story selectedStory = stories.get(which);
+                
+                // 更新选择
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(selectedStory.getId()));
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, selectedStory.getTitle());
+                
+                // 刷新 UI
+                refreshList();
+                refreshCurrentNovel();
+                
+                // 进入编辑页面
+                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
+                intent.putExtra("story_id", selectedStory.getId());
+                startActivity(intent);
+                
+                dialog.dismiss();
+            });
+            
+            builder.setPositiveButton("创建新小说", (dialog, which) -> {
+                // 直接进入故事生成页面（不传 story_id，会创建新小说）
+                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
+                startActivity(intent);
+                dialog.dismiss();
+            });
+            
+            builder.setNegativeButton("取消", null);
+        }
+        
         builder.show();
     }
 }

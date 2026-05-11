@@ -152,8 +152,21 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 .setMessage("确定要删除《" + story.getTitle() + "》吗？")
                 .setPositiveButton("删除", (dialog, which) -> {
                     StoryDao storyDao = new StoryDao(context);
+                    
+                    // 检查是否删除的是当前选中的小说
+                    String currentSelectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
+                    boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) && 
+                        currentSelectedId.equals(String.valueOf(story.getId()));
+                    
                     int result = storyDao.deleteStory(story.getId());
                     if (result > 0) {
+                        // 如果删除的是当前选中的小说，清除选择状态
+                        if (isDeletingSelectedStory) {
+                            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
+                            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
+                            android.util.Log.d("StoryAdapter", "删除了当前选中的小说，已清除 selectedId");
+                        }
+                        
                         Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show();
                         if (deleteListener != null) {
                             deleteListener.onStoryDeleted(story.getId());
