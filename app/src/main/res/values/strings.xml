@@ -16,6 +16,15 @@
     <string name="action_character_analysis">人物画像</string>
     <string name="action_story_preview">前往小说预览</string>
     <string name="action_settings">前往设置</string>
+    <string name="action_regenerate_character">重新生成画像</string>
+    <string name="action_regenerate_one_character">重新生成该人物</string>
+    <string name="title_character_regenerate">重新生成画像</string>
+    <string name="title_character_regenerate_one">重新生成「%1$s」画像</string>
+    <string name="hint_character_regenerate">告诉我你希望人物画像更突出什么（例如：更细化性格、补充关系网、突出反差、指定人物数量…）</string>
+    <string name="hint_character_regenerate_one">输入你对该人物画像的补充要求（可选）</string>
+    <string name="subtitle_character_current_story">当前小说：《%1$s》</string>
+    <string name="subtitle_character_regenerate_default">请补充你想要的画像方向</string>
+    <string name="action_cancel">取消</string>
     <string name="desc_avatar">用户头像</string>
     <string name="mine_username">用户名：StoryTeller 用户</string>
     <string name="mine_user_id">账号：storyteller_001</string>

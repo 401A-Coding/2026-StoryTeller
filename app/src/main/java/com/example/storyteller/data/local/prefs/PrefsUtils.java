@@ -29,6 +29,11 @@ public class PrefsUtils {
         return prefs.getString(key, defaultValue);
     }
 
+    // 删除字符串键
+    public void remove(String key) {
+        prefs.edit().remove(key).apply();
+    }
+
     // 存储布尔值（如是否开启夜间模式）
     public void putBoolean(String key, boolean value) {
         prefs.edit().putBoolean(key, value).apply();
