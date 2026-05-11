@@ -21,11 +21,55 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="爬取小说素材"
+        android:text="@string/material_crawl_section_title"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@id/tv_material_title"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_crawl_type_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/material_crawl_type_label"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/tv_crawl_section"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/layout_crawl_types"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/tv_crawl_type_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <CheckBox
+            android:id="@+id/cb_material_persona"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/material_type_persona" />
+
+        <CheckBox
+            android:id="@+id/cb_material_plot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:checked="true"
+            android:text="@string/material_type_plot" />
+
+        <CheckBox
+            android:id="@+id/cb_material_theme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:checked="true"
+            android:text="@string/material_type_theme" />
+    </LinearLayout>
 
     <EditText
         android:id="@+id/et_novel_url"
@@ -36,7 +80,7 @@
         android:inputType="textUri"
         android:padding="12dp"
         android:background="@android:drawable/editbox_background"
-        app:layout_constraintTop_toBottomOf="@id/tv_crawl_section"
+        app:layout_constraintTop_toBottomOf="@id/layout_crawl_types"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

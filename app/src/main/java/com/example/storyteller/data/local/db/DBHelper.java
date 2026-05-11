@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -26,6 +26,11 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_MATERIAL_TITLE = "title";
     public static final String COL_MATERIAL_CONTENT = "content";
     public static final String COL_MATERIAL_CREATE_TIME = "create_time";
+    public static final String COL_MATERIAL_SOURCE_URL = "source_url";
+    public static final String COL_MATERIAL_SOURCE_TITLE = "source_title";
+    public static final String COL_MATERIAL_SOURCE_TYPE = "source_type";
+    public static final String COL_MATERIAL_AI_SCORE = "ai_score";
+    public static final String COL_MATERIAL_RAW_JSON = "raw_json";
 
     // 用户行为日志表字段
     public static final String TABLE_BEHAVIOR_LOG = "behavior_log";
@@ -85,7 +90,12 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_MATERIAL_CATEGORY + " TEXT NOT NULL, "
                 + COL_MATERIAL_TITLE + " TEXT NOT NULL, "
                 + COL_MATERIAL_CONTENT + " TEXT NOT NULL, "
-                + COL_MATERIAL_CREATE_TIME + " INTEGER"
+                + COL_MATERIAL_CREATE_TIME + " INTEGER, "
+                + COL_MATERIAL_SOURCE_URL + " TEXT, "
+                + COL_MATERIAL_SOURCE_TITLE + " TEXT, "
+                + COL_MATERIAL_SOURCE_TYPE + " TEXT, "
+                + COL_MATERIAL_AI_SCORE + " REAL DEFAULT 0, "
+                + COL_MATERIAL_RAW_JSON + " TEXT"
                 + ")";
 
         String createBehaviorLogTable = "CREATE TABLE IF NOT EXISTS " + TABLE_BEHAVIOR_LOG + " ("
@@ -109,6 +119,13 @@ public class DBHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_STRUCTURE + " TEXT");
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE " + TABLE_MATERIAL + " ADD COLUMN " + COL_MATERIAL_SOURCE_URL + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_MATERIAL + " ADD COLUMN " + COL_MATERIAL_SOURCE_TITLE + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_MATERIAL + " ADD COLUMN " + COL_MATERIAL_SOURCE_TYPE + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_MATERIAL + " ADD COLUMN " + COL_MATERIAL_AI_SCORE + " REAL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_MATERIAL + " ADD COLUMN " + COL_MATERIAL_RAW_JSON + " TEXT");
         }
     }
 }
