@@ -64,13 +64,6 @@
             android:maxLines="2"
             android:ellipsize="end" />
 
-        <TextView
-            android:id="@+id/tv_content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:ellipsize="end"
-            android:maxLines="4" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

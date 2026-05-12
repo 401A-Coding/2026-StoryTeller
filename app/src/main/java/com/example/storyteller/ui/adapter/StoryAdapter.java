@@ -58,71 +58,18 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         Story story = storyList.get(position);
         holder.tvTitle.setText(story.getTitle());
         holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
-        holder.tvContent.setText(story.getContent());
-        
-        // Parse and display volume names
-        String structureJson = story.getStructure();
-        if (!TextUtils.isEmpty(structureJson)) {
-            try {
-                List<com.example.storyteller.model.Volume> volumes = 
-                    com.example.storyteller.utils.JsonUtils.fromJson(structureJson, 
-                        new com.google.gson.reflect.TypeToken<List<com.example.storyteller.model.Volume>>(){}.getType());
-                
-                if (volumes != null && !volumes.isEmpty()) {
-                    // Display volume names
-                    StringBuilder volumesText = new StringBuilder();
-                    for (int i = 0; i < volumes.size(); i++) {
-                        if (i > 0) {
-                            volumesText.append("、");
-                        }
-                        volumesText.append(volumes.get(i).getTitle());
-                    }
-                    holder.tvVolumes.setText("卷：" + volumesText.toString());
-                    holder.tvVolumes.setVisibility(View.VISIBLE);
-                    
-                    // Display chapter names
-                    StringBuilder chaptersText = new StringBuilder();
-                    int chapterCount = 0;
-                    for (com.example.storyteller.model.Volume volume : volumes) {
-                        for (com.example.storyteller.model.Chapter chapter : volume.getChapters()) {
-                            if (chapterCount > 0) {
-                                chaptersText.append("、");
-                            }
-                            chaptersText.append(chapter.getTitle());
-                            chapterCount++;
-                            // Limit to first 5 chapters for preview
-                            if (chapterCount >= 5) break;
-                        }
-                        if (chapterCount >= 5) break;
-                    }
-                    
-                    if (chapterCount > 0) {
-                        if (chapterCount >= 5) {
-                            chaptersText.append("...");
-                        }
-                        holder.tvChapters.setText("章：" + chaptersText.toString());
-                        holder.tvChapters.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.tvChapters.setVisibility(View.GONE);
-                    }
-                } else {
-                    holder.tvVolumes.setVisibility(View.GONE);
-                    holder.tvChapters.setVisibility(View.GONE);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                holder.tvVolumes.setVisibility(View.GONE);
-                holder.tvChapters.setVisibility(View.GONE);
-            }
+        String seriesName = TextUtils.isEmpty(story.getGenre()) ? "创作" : story.getGenre().trim();
+        holder.tvVolumes.setText(context.getString(R.string.story_series_format, seriesName));
+        holder.tvVolumes.setVisibility(View.VISIBLE);
+
+        String description = story.getDescription();
+        if (TextUtils.isEmpty(description)) {
+            holder.tvChapters.setText(context.getString(R.string.story_description_empty));
         } else {
-            holder.tvVolumes.setVisibility(View.GONE);
-            holder.tvChapters.setVisibility(View.GONE);
+            holder.tvChapters.setText(context.getString(R.string.story_description_format, description.trim()));
         }
-        
-        // Clean content: remove markdown headers (## lines)
-        String cleanContent = cleanContentForPreview(story.getContent());
-        holder.tvContent.setText(cleanContent);
-        
+        holder.tvChapters.setVisibility(View.VISIBLE);
+
         // Check if this is the currently selected story
         String selectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
         boolean isSelected = !TextUtils.isEmpty(selectedId) && selectedId.equals(String.valueOf(story.getId()));
@@ -190,39 +137,11 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         notifyDataSetChanged();
     }
 
-    /**
-     * 清理内容，移除 Markdown 标题标记（## 开头的行）
-     */
-    private String cleanContentForPreview(String content) {
-        if (TextUtils.isEmpty(content)) {
-            return "暂无内容";
-        }
-        
-        // Split by lines and filter out markdown headers
-        String[] lines = content.split("\n");
-        StringBuilder cleaned = new StringBuilder();
-        
-        for (String line : lines) {
-            String trimmed = line.trim();
-            // Skip lines that start with ## (markdown headers)
-            if (!trimmed.startsWith("##") && !trimmed.isEmpty()) {
-                if (cleaned.length() > 0) {
-                    cleaned.append("\n");
-                }
-                cleaned.append(line);
-            }
-        }
-        
-        String result = cleaned.toString().trim();
-        return TextUtils.isEmpty(result) ? "暂无正文内容" : result;
-    }
-
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle;
         TextView tvTime;
         TextView tvVolumes;
         TextView tvChapters;
-        TextView tvContent;
         ImageView btnDelete;
 
         public StoryViewHolder(@NonNull View itemView) {
@@ -231,7 +150,6 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             tvTime = itemView.findViewById(R.id.tv_time);
             tvVolumes = itemView.findViewById(R.id.tv_volumes);
             tvChapters = itemView.findViewById(R.id.tv_chapters);
-            tvContent = itemView.findViewById(R.id.tv_content);
             btnDelete = itemView.findViewById(R.id.btn_delete);
         }
     }
