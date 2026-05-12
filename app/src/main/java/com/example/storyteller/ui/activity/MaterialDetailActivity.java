@@ -36,6 +36,8 @@ public class MaterialDetailActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        // 刘海屏适配：为根布局设置系统栏内边距
+        applySystemWindowInsets(findViewById(android.R.id.content));
         tvMetaSourceUrl = findViewById(R.id.tv_material_detail_source_url);
         tvMetaSourceTitle = findViewById(R.id.tv_material_detail_source_title);
         tvMetaSourceType = findViewById(R.id.tv_material_detail_source_type);
