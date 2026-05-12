@@ -152,7 +152,7 @@
                     android:src="@drawable/ic_arrow_drop_down"
                     android:padding="4dp"
                     android:contentDescription="选择小说"
-                    android:tint="#FFFFFF" />
+                    app:tint="#FFFFFF" />
             </LinearLayout>
 
             <!-- 收起按钮（固定在右侧） -->
@@ -163,7 +163,7 @@
                 android:src="@drawable/ic_close"
                 android:padding="4dp"
                 android:contentDescription="收起"
-                android:tint="#FFFFFF" />
+                app:tint="#FFFFFF" />
         </LinearLayout>
 
         <!-- Tab 切换栏 -->
