@@ -232,7 +232,7 @@ public class StoryDetailActivity extends BaseActivity {
                         Chapter chapter = chapters.get(j);
                         String chapterTitle = TextUtils.isEmpty(chapter.getTitle()) ? "未命名章" : chapter.getTitle().trim();
 
-                        // 章节行
+                        // 章节行（仅作预览，不可点击，让点击事件穿透到父级卷卡片）
                         LinearLayout chapterRow = new LinearLayout(this);
                         chapterRow.setLayoutParams(new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -240,12 +240,9 @@ public class StoryDetailActivity extends BaseActivity {
                         ));
                         chapterRow.setOrientation(LinearLayout.HORIZONTAL);
                         chapterRow.setPadding(0, 24, 0, 24);
-                        chapterRow.setClickable(true);
-                        chapterRow.setFocusable(true);
-                        try {
-                            chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
-                        } catch (Exception ignored) {
-                        }
+                        chapterRow.setClickable(false);
+                        chapterRow.setFocusable(false);
+                        chapterRow.setEnabled(false);
 
                         TextView tvChapter = new TextView(this);
                         tvChapter.setLayoutParams(new LinearLayout.LayoutParams(
