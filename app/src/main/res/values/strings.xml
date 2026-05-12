@@ -130,4 +130,6 @@
     <string name="select_story">选择小说</string>
     <string name="current_story">当前小说</string>
     <string name="collapse">收起</string>
+    <string name="placeholder_agent_mode">协助你编辑小说</string>
+    <string name="placeholder_ask_mode">回答你关于这本小说的问题</string>
 </resources>

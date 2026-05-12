@@ -100,6 +100,9 @@ public class StoryGenerateActivity extends BaseActivity {
     // Quick Action Chips
     private HorizontalScrollView scrollQuickActions;
     private com.google.android.material.chip.ChipGroup chipGroupQuickActions;
+    
+    // Welcome Card
+    private boolean hasStartedConversation = false;
 
     @Override
     protected int getLayoutId() {
@@ -226,6 +229,12 @@ public class StoryGenerateActivity extends BaseActivity {
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
+        
+        // 初始化 placeholder
+        updatePlaceholder();
+        
+        // 确保欢迎卡片初始显示
+        adapter.setShowWelcomeCard(true);
     }
 
 
@@ -250,11 +259,13 @@ public class StoryGenerateActivity extends BaseActivity {
                 currentMode = "agent";
                 btnModeSelector.setText(getString(R.string.agent));
                 Toast.makeText(this, "已启用 Agent 模式", Toast.LENGTH_SHORT).show();
+                updatePlaceholder();
                 return true;
             } else if (itemId == 2) {
                 currentMode = "ask";
                 btnModeSelector.setText(getString(R.string.ask));
                 Toast.makeText(this, "已切换到 Ask 模式", Toast.LENGTH_SHORT).show();
+                updatePlaceholder();
                 return true;
             }
             return false;
@@ -295,6 +306,17 @@ public class StoryGenerateActivity extends BaseActivity {
         });
         
         popupMenu.show();
+    }
+
+    /**
+     * 根据当前模式更新 placeholder
+     */
+    private void updatePlaceholder() {
+        if ("agent".equals(currentMode)) {
+            etMessage.setHint(getString(R.string.placeholder_agent_mode));
+        } else {
+            etMessage.setHint(getString(R.string.placeholder_ask_mode));
+        }
     }
 
     @Override
@@ -1242,6 +1264,14 @@ public class StoryGenerateActivity extends BaseActivity {
         if (TextUtils.isEmpty(content)) {
             return;
         }
+        
+        // 用户开始对话，隐藏欢迎卡片
+        if (!hasStartedConversation) {
+            hasStartedConversation = true;
+            // 通知适配器刷新，隐藏欢迎卡片
+            adapter.setShowWelcomeCard(false);
+        }
+        
         appendMessage(new ChatMessage(content, true, false));
         etMessage.setText("");
 

@@ -18,6 +18,11 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     private final Context context;
     private final List<ChatMessage> messages;
     private OnRetryListener retryListener;
+    private boolean showWelcomeCard = true;
+    
+    // View types
+    private static final int VIEW_TYPE_WELCOME = 0;
+    private static final int VIEW_TYPE_MESSAGE = 1;
     
     // 重试监听器接口
     public interface OnRetryListener {
@@ -32,17 +37,48 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     public void setOnRetryListener(OnRetryListener listener) {
         this.retryListener = listener;
     }
+    
+    public void setShowWelcomeCard(boolean show) {
+        this.showWelcomeCard = show;
+        notifyDataSetChanged();
+    }
 
     @NonNull
     @Override
     public ChatMessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_chat_message, parent, false);
-        return new ChatMessageViewHolder(view);
+        if (viewType == VIEW_TYPE_WELCOME) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_chat_welcome, parent, false);
+            return new ChatMessageViewHolder(view, true);
+        } else {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_chat_message, parent, false);
+            return new ChatMessageViewHolder(view, false);
+        }
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        // 第一条且需要显示欢迎卡片时，显示欢迎卡片
+        if (position == 0 && showWelcomeCard && messages.isEmpty()) {
+            return VIEW_TYPE_WELCOME;
+        }
+        return VIEW_TYPE_MESSAGE;
     }
 
     @Override
     public void onBindViewHolder(@NonNull ChatMessageViewHolder holder, int position) {
-        ChatMessage message = messages.get(position);
+        // 如果是欢迎卡片，不需要绑定数据
+        if (holder.isWelcomeCard) {
+            return;
+        }
+        
+        // 调整位置（因为有欢迎卡片占位）
+        int messagePosition = showWelcomeCard && messages.isEmpty() ? position : position - (showWelcomeCard ? 1 : 0);
+        
+        if (messagePosition < 0 || messagePosition >= messages.size()) {
+            return;
+        }
+        
+        ChatMessage message = messages.get(messagePosition);
         
         // 根据消息类型显示不同内容
         if (message.getMessageType() == ChatMessage.MessageType.PROCESSING || 
@@ -184,7 +220,16 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
 
     @Override
     public int getItemCount() {
-        return messages == null ? 0 : messages.size();
+        int messageCount = messages == null ? 0 : messages.size();
+        // 如果需要显示欢迎卡片且没有消息，至少显示一个item（欢迎卡片）
+        if (showWelcomeCard && messageCount == 0) {
+            return 1;
+        }
+        // 如果有欢迎卡片且有消息，总数+1
+        if (showWelcomeCard && messageCount > 0) {
+            return messageCount + 1;
+        }
+        return messageCount;
     }
 
     public static class ChatMessageViewHolder extends RecyclerView.ViewHolder {
@@ -195,28 +240,42 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         final TextView tvStepDuration;        // 耗时
         final TextView tvFinalResult;         // 最终结果
         final android.widget.Button btnRetry; // 重试按钮
+        final boolean isWelcomeCard;          // 是否为欢迎卡片
 
-        public ChatMessageViewHolder(@NonNull View itemView) {
+        public ChatMessageViewHolder(@NonNull View itemView, boolean isWelcomeCard) {
             super(itemView);
-            tvMessage = itemView.findViewById(R.id.tv_message);
+            this.isWelcomeCard = isWelcomeCard;
             
-            // 查找 include 的根视图
-            layoutStepsContainer = itemView.findViewById(R.id.layout_execution_steps);
-            
-            // 从 include 布局中查找子视图
-            if (layoutStepsContainer != null) {
-                layoutStepsList = layoutStepsContainer.findViewById(R.id.layout_steps_container);
-                tvStepTitle = layoutStepsContainer.findViewById(R.id.tv_step_title);
-                tvStepDuration = layoutStepsContainer.findViewById(R.id.tv_step_duration);
-                tvFinalResult = layoutStepsContainer.findViewById(R.id.tv_final_result);
-                btnRetry = layoutStepsContainer.findViewById(R.id.btn_retry);
+            if (!isWelcomeCard) {
+                tvMessage = itemView.findViewById(R.id.tv_message);
+                
+                // 查找 include 的根视图
+                layoutStepsContainer = itemView.findViewById(R.id.layout_execution_steps);
+                
+                // 从 include 布局中查找子视图
+                if (layoutStepsContainer != null) {
+                    layoutStepsList = layoutStepsContainer.findViewById(R.id.layout_steps_container);
+                    tvStepTitle = layoutStepsContainer.findViewById(R.id.tv_step_title);
+                    tvStepDuration = layoutStepsContainer.findViewById(R.id.tv_step_duration);
+                    tvFinalResult = layoutStepsContainer.findViewById(R.id.tv_final_result);
+                    btnRetry = layoutStepsContainer.findViewById(R.id.btn_retry);
+                } else {
+                    // 兼容旧布局
+                    layoutStepsList = new LinearLayout(itemView.getContext());
+                    tvStepTitle = new TextView(itemView.getContext());
+                    tvStepDuration = new TextView(itemView.getContext());
+                    tvFinalResult = new TextView(itemView.getContext());
+                    btnRetry = new android.widget.Button(itemView.getContext());
+                }
             } else {
-                // 兼容旧布局
-                layoutStepsList = new LinearLayout(itemView.getContext());
-                tvStepTitle = new TextView(itemView.getContext());
-                tvStepDuration = new TextView(itemView.getContext());
-                tvFinalResult = new TextView(itemView.getContext());
-                btnRetry = new android.widget.Button(itemView.getContext());
+                // 欢迎卡片的字段都为null
+                tvMessage = null;
+                layoutStepsContainer = null;
+                layoutStepsList = null;
+                tvStepTitle = null;
+                tvStepDuration = null;
+                tvFinalResult = null;
+                btnRetry = null;
             }
         }
     }
