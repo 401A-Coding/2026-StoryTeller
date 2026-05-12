@@ -53,7 +53,7 @@ public abstract class BaseActivity extends AppCompatActivity{
                 v.getPaddingRight(),
                 navigationBarHeight
             );
-            return WindowInsetsCompat.CONSUMED;
+            return insets;
         });
     }
 
