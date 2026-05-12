@@ -22,6 +22,7 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
 
     public interface Listener {
         void onRegenerateCharacter(@NonNull Character character, int position);
+        void onDeleteCharacter(@NonNull Character character, int position);
     }
 
     private Listener listener;
@@ -57,12 +58,22 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
         boolean expanded = position == expandedPosition;
         holder.tvDetail.setVisibility(expanded ? View.VISIBLE : View.GONE);
         holder.btnRegenerate.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        holder.btnDelete.setVisibility(expanded ? View.VISIBLE : View.GONE);
 
         holder.btnRegenerate.setOnClickListener(v -> {
             if (listener != null) {
                 int adapterPosition = holder.getBindingAdapterPosition();
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     listener.onRegenerateCharacter(characters.get(adapterPosition), adapterPosition);
+                }
+            }
+        });
+
+        holder.btnDelete.setOnClickListener(v -> {
+            if (listener != null) {
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    listener.onDeleteCharacter(characters.get(adapterPosition), adapterPosition);
                 }
             }
         });
@@ -102,11 +113,26 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
         notifyItemChanged(position);
     }
 
+    public void removeItem(int position) {
+        if (characters == null || position < 0 || position >= characters.size()) {
+            return;
+        }
+        characters.remove(position);
+        if (expandedPosition == position) {
+            expandedPosition = RecyclerView.NO_POSITION;
+        } else if (expandedPosition > position) {
+            expandedPosition--;
+        }
+        notifyItemRemoved(position);
+        notifyItemRangeChanged(position, characters.size() - position);
+    }
+
     public static class CharacterViewHolder extends RecyclerView.ViewHolder {
         final TextView tvName;
         final TextView tvRole;
         final TextView tvDetail;
         final Button btnRegenerate;
+        final Button btnDelete;
 
         CharacterViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -114,6 +140,7 @@ public class CharacterAdapter extends RecyclerView.Adapter<CharacterAdapter.Char
             tvRole = itemView.findViewById(R.id.tv_character_role);
             tvDetail = itemView.findViewById(R.id.tv_character_detail);
             btnRegenerate = itemView.findViewById(R.id.btn_character_regenerate);
+            btnDelete = itemView.findViewById(R.id.btn_character_delete);
         }
     }
 }

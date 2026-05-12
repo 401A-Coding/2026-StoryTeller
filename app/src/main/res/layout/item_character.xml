@@ -47,17 +47,33 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/btn_character_regenerate" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_character_regenerate"
-        style="?attr/materialButtonOutlinedStyle"
+    <LinearLayout
+        android:id="@+id/layout_character_item_actions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="@string/action_regenerate_one_character"
-        android:visibility="gone"
+        android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/tv_character_detail"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_character_delete"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="@string/action_delete"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_character_regenerate"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_regenerate_one_character"
+            android:visibility="gone" />
+    </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

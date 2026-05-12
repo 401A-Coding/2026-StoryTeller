@@ -35,6 +35,10 @@
     <string name="action_settings">前往设置</string>
     <string name="action_regenerate_character">重新生成画像</string>
     <string name="action_regenerate_one_character">重新生成该人物</string>
+    <string name="character_delete_confirm_title">删除人物画像</string>
+    <string name="character_delete_confirm_message">确认删除「%1$s」的人物画像吗？删除后无法恢复。</string>
+    <string name="character_delete_success">已删除「%1$s」的人物画像</string>
+    <string name="character_delete_failed">删除人物画像失败，请重试</string>
     <string name="title_character_regenerate">重新生成画像</string>
     <string name="title_character_regenerate_one">重新生成「%1$s」画像</string>
     <string name="hint_character_regenerate">告诉我你希望人物画像更突出什么（例如：更细化性格、补充关系网、突出反差、指定人物数量…）</string>

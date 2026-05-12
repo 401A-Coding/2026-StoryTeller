@@ -25,9 +25,11 @@ public class MainActivity extends BaseActivity {
 
     @Override
     protected void initView() {
-        // 刘海屏适配：为根布局设置系统栏内边距
+        // 根布局只处理顶部 inset，避免全页面底部多余留白
         applySystemWindowInsets(findViewById(android.R.id.content));
         bottomNav = findViewById(R.id.bottom_nav);
+        // 底部导航单独处理导航栏 inset，保证可点击区域不被遮挡
+        applySystemWindowInsets(bottomNav, false, true);
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment fragment;
             int itemId = item.getItemId();
