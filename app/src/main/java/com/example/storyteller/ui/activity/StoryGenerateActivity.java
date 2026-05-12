@@ -117,6 +117,9 @@ public class StoryGenerateActivity extends BaseActivity {
         btnSend = findViewById(R.id.btn_send);
         btnModeSelector = findViewById(R.id.btn_mode_selector);
         btnModelSelector = findViewById(R.id.btn_model_selector);
+        
+        // 设置 DrawerLayout 遮罩层颜色（半透明黑色）
+        drawerLayout.setScrimColor(0x80000000); // 50% 透明度的黑色
 
         // Content
         layoutContent = findViewById(R.id.layout_content);
