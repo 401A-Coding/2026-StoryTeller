@@ -3,6 +3,7 @@ package com.example.storyteller.ui.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +25,8 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 卷章节列表页面
@@ -78,63 +81,142 @@ public class VolumeChaptersActivity extends BaseActivity {
             return;
         }
 
+        // 获取卷列表：优先从 structure 解析，失败则从 content 解析
+        List<Volume> volumes = null;
         String structureJson = story.getStructure();
-        if (TextUtils.isEmpty(structureJson)) {
-            tvVolumeTitle.setText("暂无目录数据");
+        if (!TextUtils.isEmpty(structureJson)) {
+            try {
+                Type type = new TypeToken<List<Volume>>() {}.getType();
+                volumes = JsonUtils.fromJson(structureJson, type);
+            } catch (Exception e) {
+                Log.w("VolumeChaptersActivity", "Failed to parse structure JSON", e);
+            }
+        }
+        if (volumes == null || volumes.isEmpty()) {
+            if (!TextUtils.isEmpty(story.getContent())) {
+                volumes = parseVolumesFromContent(story.getContent());
+            }
+        }
+
+        if (volumes == null || volumeIndex >= volumes.size()) {
+            tvVolumeTitle.setText("卷未找到");
             return;
         }
 
-        try {
-            Type type = new TypeToken<List<Volume>>() {}.getType();
-            List<Volume> volumes = JsonUtils.fromJson(structureJson, type);
-            if (volumes == null || volumeIndex >= volumes.size()) {
-                tvVolumeTitle.setText("卷未找到");
-                return;
+        Volume volume = volumes.get(volumeIndex);
+        volumeTitle = TextUtils.isEmpty(volume.getTitle()) ? "未命名卷" : volume.getTitle().trim();
+        tvVolumeTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volumeTitle);
+
+        List<Chapter> chapters = volume.getChapters();
+        if (chapters == null || chapters.isEmpty()) {
+            tvVolumeTitle.setText(tvVolumeTitle.getText() + "（暂无章节）");
+            return;
+        }
+
+        // 每10章一页
+        chapterPages.clear();
+        int pageSize = 10;
+        for (int i = 0; i < chapters.size(); i += pageSize) {
+            int end = Math.min(i + pageSize, chapters.size());
+            chapterPages.add(new ArrayList<>(chapters.subList(i, end)));
+        }
+
+        pagerAdapter = new ChaptersPagerAdapter();
+        viewPager.setAdapter(pagerAdapter);
+
+        // 设置底部页数指示器
+        tabPageIndicator.setupWithViewPager(viewPager, true);
+
+        // 更新页数标签
+        for (int i = 0; i < tabPageIndicator.getTabCount(); i++) {
+            com.google.android.material.tabs.TabLayout.Tab tab = tabPageIndicator.getTabAt(i);
+            if (tab != null) {
+                int startChapter = i * pageSize + 1;
+                int endChapter = Math.min((i + 1) * pageSize, chapters.size());
+                tab.setText(startChapter + "-" + endChapter + "章");
             }
-
-            Volume volume = volumes.get(volumeIndex);
-            volumeTitle = TextUtils.isEmpty(volume.getTitle()) ? "未命名卷" : volume.getTitle().trim();
-            tvVolumeTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volumeTitle);
-
-            List<Chapter> chapters = volume.getChapters();
-            if (chapters == null || chapters.isEmpty()) {
-                tvVolumeTitle.setText(tvVolumeTitle.getText() + "（暂无章节）");
-                return;
-            }
-
-            // 每10章一页
-            chapterPages.clear();
-            int pageSize = 10;
-            for (int i = 0; i < chapters.size(); i += pageSize) {
-                int end = Math.min(i + pageSize, chapters.size());
-                chapterPages.add(new ArrayList<>(chapters.subList(i, end)));
-            }
-
-            pagerAdapter = new ChaptersPagerAdapter();
-            viewPager.setAdapter(pagerAdapter);
-
-            // 设置底部页数指示器
-            tabPageIndicator.setupWithViewPager(viewPager, true);
-
-            // 更新页数标签
-            for (int i = 0; i < tabPageIndicator.getTabCount(); i++) {
-                com.google.android.material.tabs.TabLayout.Tab tab = tabPageIndicator.getTabAt(i);
-                if (tab != null) {
-                    int startChapter = i * pageSize + 1;
-                    int endChapter = Math.min((i + 1) * pageSize, chapters.size());
-                    tab.setText(startChapter + "-" + endChapter + "章");
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            tvVolumeTitle.setText("解析失败");
         }
     }
 
     @Override
     protected void initData() {
         // 占位
+    }
+
+    /**
+     * 从纯文本 content 中解析出卷-章结构
+     */
+    private List<Volume> parseVolumesFromContent(String content) {
+        List<Volume> volumes = new ArrayList<>();
+        if (TextUtils.isEmpty(content)) {
+            return volumes;
+        }
+
+        String[] lines = content.split("\n");
+        Volume currentVolume = null;
+        List<Chapter> currentChapters = new ArrayList<>();
+        int volumeCount = 0;
+
+        Pattern volumePattern = Pattern.compile("^##\\s*第[一二三四五六七八九十百千0-9]+卷[\\s　]*([^\\n]*)");
+        Pattern chapterPattern = Pattern.compile("^第[一二三四五六七八九十百千0-9]+[章节][\\s　]*([^\\n]*)");
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (TextUtils.isEmpty(trimmed)) {
+                continue;
+            }
+
+            Matcher volumeMatcher = volumePattern.matcher(trimmed);
+            if (volumeMatcher.find()) {
+                if (currentVolume != null) {
+                    currentVolume.setChapters(new ArrayList<>(currentChapters));
+                    volumes.add(currentVolume);
+                    currentChapters.clear();
+                }
+                volumeCount++;
+                String volTitle = volumeMatcher.group(1).trim();
+                currentVolume = new Volume(TextUtils.isEmpty(volTitle) ? "第" + volumeCount + "卷" : volTitle);
+                continue;
+            }
+
+            Matcher chapterMatcher = chapterPattern.matcher(trimmed);
+            if (chapterMatcher.find()) {
+                String chapTitle = chapterMatcher.group(1).trim();
+                Chapter chapter = new Chapter(TextUtils.isEmpty(chapTitle) ? "第" + (currentChapters.size() + 1) + "章" : chapTitle);
+                currentChapters.add(chapter);
+                continue;
+            }
+
+            if (currentVolume == null) {
+                Matcher altChapterMatcher = Pattern.compile("^##\\s*第[一二三四五六七八九十百千0-9]+[章节][\\s　]*([^\\n]*)").matcher(trimmed);
+                if (altChapterMatcher.find()) {
+                    volumeCount++;
+                    currentVolume = new Volume("第" + volumeCount + "卷");
+                    String chapTitle = altChapterMatcher.group(1).trim();
+                    Chapter chapter = new Chapter(TextUtils.isEmpty(chapTitle) ? "第" + (currentChapters.size() + 1) + "章" : chapTitle);
+                    currentChapters.add(chapter);
+                }
+            }
+        }
+
+        if (currentVolume != null) {
+            currentVolume.setChapters(new ArrayList<>(currentChapters));
+            volumes.add(currentVolume);
+        }
+
+        if (volumes.isEmpty()) {
+            Volume defaultVolume = new Volume("第一卷");
+            defaultVolume.setChapters(new ArrayList<>(currentChapters));
+            if (defaultVolume.getChapters().isEmpty()) {
+                Chapter defaultChapter = new Chapter("第一章");
+                List<Chapter> defaultChapters = new ArrayList<>();
+                defaultChapters.add(defaultChapter);
+                defaultVolume.setChapters(defaultChapters);
+            }
+            volumes.add(defaultVolume);
+        }
+
+        return volumes;
     }
 
     /**
@@ -181,7 +263,10 @@ public class VolumeChaptersActivity extends BaseActivity {
                 chapterRow.setPadding(0, 20, 0, 20);
                 chapterRow.setClickable(true);
                 chapterRow.setFocusable(true);
-                chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                try {
+                    chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                } catch (Exception ignored) {
+                }
 
                 // 章节序号
                 TextView tvIndex = new TextView(VolumeChaptersActivity.this);
