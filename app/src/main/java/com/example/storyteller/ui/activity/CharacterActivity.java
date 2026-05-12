@@ -1,6 +1,5 @@
 package com.example.storyteller.ui.activity;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.text.TextUtils;
 import android.view.View;
@@ -90,11 +89,6 @@ public class CharacterActivity extends BaseActivity {
                         CharacterRegenerateBottomSheetDialogFragment.newInstance(story.getTitle(), character.getName());
                 dialog.setListener(extraDemand -> regenerateSingleCharacter(story, character, position, extraDemand));
                 dialog.show(getSupportFragmentManager(), "character_regenerate_one");
-            }
-
-            @Override
-            public void onDeleteCharacter(@androidx.annotation.NonNull Character character, int position) {
-                confirmDeleteCharacter(character, position);
             }
         });
 
@@ -439,44 +433,6 @@ public class CharacterActivity extends BaseActivity {
         }
     }
 
-    private void confirmDeleteCharacter(Character character, int position) {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.character_delete_confirm_title)
-                .setMessage(getString(R.string.character_delete_confirm_message, character.getName()))
-                .setNegativeButton(R.string.action_cancel, null)
-                .setPositiveButton(R.string.action_delete, (dialog, which) -> deleteCharacter(character, position))
-                .show();
-    }
-
-    private void deleteCharacter(Character character, int position) {
-        boolean removed;
-        if (character.getId() > 0) {
-            removed = characterDao.deleteCharacterById(character.getId()) > 0;
-        } else {
-            List<Character> snapshot = adapter.getDataSnapshot();
-            if (position < 0 || position >= snapshot.size()) {
-                removed = false;
-            } else {
-                snapshot.remove(position);
-                characterDao.replaceCharactersForStory(character.getStoryId(), snapshot);
-                removed = true;
-            }
-        }
-
-        if (!removed) {
-            Toast.makeText(this, R.string.character_delete_failed, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        adapter.removeItem(position);
-        pbLoading.setVisibility(View.GONE);
-        tvStatus.setVisibility(View.VISIBLE);
-        if (adapter.getItemCount() == 0) {
-            tvStatus.setText("该小说已无人物画像，可重新生成人物画像");
-        } else {
-            tvStatus.setText(getString(R.string.character_delete_success, character.getName()));
-        }
-    }
 
     private String buildStoryContextForPrompt(Story story, int maxLength) {
         StringBuilder builder = new StringBuilder();

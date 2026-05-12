@@ -64,10 +64,6 @@ public class CharacterDao {
         return db.delete(DBHelper.TABLE_CHARACTER, DBHelper.COL_CHARACTER_STORY_ID + "=?", new String[]{String.valueOf(storyId)});
     }
 
-    public int deleteCharacterById(int characterId) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db.delete(DBHelper.TABLE_CHARACTER, DBHelper.COL_CHARACTER_ID + "=?", new String[]{String.valueOf(characterId)});
-    }
 
     private Character map(Cursor cursor) {
         int id = cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_CHARACTER_ID));
