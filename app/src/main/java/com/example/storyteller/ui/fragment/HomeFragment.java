@@ -3,32 +3,25 @@ package com.example.storyteller.ui.fragment;
 import android.content.Intent;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.MainActivity;
 import com.example.storyteller.ui.activity.CharacterActivity;
 import com.example.storyteller.ui.activity.MaterialActivity;
 import com.example.storyteller.ui.activity.PlotTreeActivity;
 import com.example.storyteller.ui.activity.StoryGenerateActivity;
 import com.example.storyteller.ui.adapter.StoryAdapter;
-import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends BaseFragment {
 
-    private RecyclerView rvStory;
     private TextView tvCurrentNovel;
     private StoryDao storyDao;
-    private StoryAdapter adapter;
 
     @Override
     protected int getLayoutId() {
@@ -96,10 +89,7 @@ public class HomeFragment extends BaseFragment {
         });
 
         // 本地数据存储演示（直接写入测试故事，不走 AI）
-        rvStory = view.findViewById(R.id.rv_story);
         tvCurrentNovel = view.findViewById(R.id.tv_current_novel);
-
-        rvStory.setLayoutManager(new LinearLayoutManager(getContext()));
     }
 
     @Override
@@ -112,54 +102,13 @@ public class HomeFragment extends BaseFragment {
         List<Story> allStories = storyDao.getAllStories();
         android.util.Log.d("HomeFragment", "initData - 数据库中的小说数量: " + (allStories != null ? allStories.size() : 0));
         
-        refreshList();
         refreshCurrentNovel();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        refreshList();
         refreshCurrentNovel();
-    }
-
-    private void refreshList() {
-        // Get the currently selected story ID
-        String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
-        
-        List<Story> stories;
-        if (!TextUtils.isEmpty(selectedId)) {
-            // Only show the selected story
-            try {
-                int storyId = Integer.parseInt(selectedId);
-                Story selectedStory = storyDao.getStoryById(storyId);
-                if (selectedStory != null) {
-                    stories = new java.util.ArrayList<>();
-                    stories.add(selectedStory);
-                } else {
-                    stories = new java.util.ArrayList<>();
-                }
-            } catch (NumberFormatException e) {
-                stories = new java.util.ArrayList<>();
-            }
-        } else {
-            // No selection, show empty list
-            stories = new java.util.ArrayList<>();
-        }
-        
-        if (adapter == null) {
-            adapter = new StoryAdapter(requireContext(), stories);
-            
-            // Set delete listener
-            adapter.setOnStoryDeleteListener(storyId -> {
-                refreshList();
-                refreshCurrentNovel();
-            });
-            
-            rvStory.setAdapter(adapter);
-        } else {
-            adapter.setData(stories);
-        }
     }
 
     private void refreshCurrentNovel() {
@@ -168,15 +117,21 @@ public class HomeFragment extends BaseFragment {
         }
         String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
         if (selectedId == null || selectedId.isEmpty()) {
-            tvCurrentNovel.setText("当前小说：未选择");
+            tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
             return;
         }
         try {
             int storyId = Integer.parseInt(selectedId);
             Story story = storyDao.getStoryById(storyId);
-            tvCurrentNovel.setText(story == null ? "当前小说：未选择" : "当前小说：" + story.getTitle());
+
+            if (story == null) {
+                tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+                return;
+            }
+
+            tvCurrentNovel.setText(getString(R.string.home_current_novel_format, story.getTitle()));
         } catch (NumberFormatException e) {
-            tvCurrentNovel.setText("当前小说：未选择");
+            tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
         }
     }
 
@@ -224,7 +179,6 @@ public class HomeFragment extends BaseFragment {
             PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, selectedStory.getTitle());
             
             // Refresh UI
-            refreshList();
             refreshCurrentNovel();
             
             dialog.dismiss();
@@ -270,7 +224,6 @@ public class HomeFragment extends BaseFragment {
                 PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, selectedStory.getTitle());
                 
                 // 刷新 UI
-                refreshList();
                 refreshCurrentNovel();
                 
                 // 进入编辑页面

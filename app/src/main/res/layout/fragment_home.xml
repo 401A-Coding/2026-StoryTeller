@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -17,13 +18,13 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_home_content"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:layout_height="match_parent"
+            android:padding="32dp">
 
             <TextView
                 android:id="@+id/tv_search_placeholder"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:background="@android:drawable/edit_text"
                 android:gravity="center_vertical"
                 android:paddingStart="12dp"
@@ -34,122 +35,280 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
-            <TextView
-                android:id="@+id/tv_current_novel"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_current_novel"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="@string/home_current_novel"
-                android:textSize="14sp"
+                app:cardUseCompatPadding="true"
                 app:layout_constraintTop_toBottomOf="@id/tv_search_placeholder"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/btn_switch_novel" />
+                app:layout_constraintEnd_toEndOf="parent">
 
-            <Button
-                android:id="@+id/btn_switch_novel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/action_switch_novel"
-                app:layout_constraintTop_toBottomOf="@id/tv_search_placeholder"
-                app:layout_constraintEnd_toEndOf="parent" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/tv_current_novel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/home_current_novel"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/btn_switch_novel" />
+
+                    <Button
+                        android:id="@+id/btn_switch_novel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/action_switch_novel"
+                        app:layout_constraintTop_toTopOf="@id/tv_current_novel"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_story_generate"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="4dp"
                 android:clickable="true"
+                android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/tv_current_novel"
+                app:layout_constraintTop_toBottomOf="@id/card_current_novel"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/card_character"
-                app:layout_constraintHorizontal_chainStyle="spread">
+                app:layout_constraintEnd_toStartOf="@id/card_character" >
 
-                <TextView
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/title_story_generate"
-                    android:textSize="16sp" />
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/iv_story_generate_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:contentDescription="@null"
+                        android:src="@android:drawable/ic_menu_edit"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_story_generate_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_story_generate"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:layout_constraintBottom_toTopOf="@id/tv_story_generate_note"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/iv_story_generate_icon"
+                        app:layout_constraintVertical_bias="0.5" />
+
+                    <TextView
+                        android:id="@+id/tv_story_generate_note"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/home_note_story_generate"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="13sp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tv_story_generate_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_character"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:layout_marginTop="12dp"
-                android:layout_marginStart="8dp"
                 android:clickable="true"
+                android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/tv_current_novel"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/card_story_generate"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintTop_toBottomOf="@id/card_current_novel">
 
-                <TextView
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/title_character"
-                    android:textSize="16sp" />
+                    android:padding="32dp">
+
+                    <ImageView
+                        android:id="@+id/iv_character_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:contentDescription="@null"
+                        android:src="@android:drawable/ic_menu_myplaces"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_character_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_character"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:layout_constraintBottom_toTopOf="@id/tv_character_note"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/iv_character_icon"
+                        app:layout_constraintVertical_bias="0.5" />
+
+                    <TextView
+                        android:id="@+id/tv_character_note"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/home_note_character"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="13sp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tv_character_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_plot_tree"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginEnd="8dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="4dp"
                 android:clickable="true"
+                android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardUseCompatPadding="true"
                 app:layout_constraintTop_toBottomOf="@id/card_story_generate"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/card_material"
-                app:layout_constraintHorizontal_chainStyle="spread">
+                app:layout_constraintEnd_toStartOf="@id/card_material" >
 
-                <TextView
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/title_plot_tree"
-                    android:textSize="16sp" />
+                    android:padding="32dp">
+
+                    <ImageView
+                        android:id="@+id/iv_plot_tree_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:contentDescription="@null"
+                        android:src="@android:drawable/ic_menu_sort_by_size"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toTopOf="@+id/tv_plot_tree_title"/>
+
+                    <TextView
+                        android:id="@+id/tv_plot_tree_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_plot_tree"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toBottomOf="@+id/iv_plot_tree_icon"
+                        app:layout_constraintBottom_toTopOf="@id/tv_plot_tree_note"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintVertical_bias="0.5" />
+
+                    <TextView
+                        android:id="@+id/tv_plot_tree_note"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/home_note_plot_tree"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="13sp"
+                        app:layout_constraintTop_toBottomOf="@+id/tv_plot_tree_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_material"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginStart="8dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="4dp"
                 android:clickable="true"
+                android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/card_story_generate"
+                app:layout_constraintTop_toBottomOf="@id/card_character"
                 app:layout_constraintStart_toEndOf="@id/card_plot_tree"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintEnd_toEndOf="parent" >
 
-                <TextView
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/title_material"
-                    android:textSize="16sp" />
-            </com.google.android.material.card.MaterialCardView>
+                    android:padding="16dp">
 
-            <!-- 组员3：本地数据存储演示区域 -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_story"
-                android:layout_width="0dp"
-                android:layout_height="200dp"
-                android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/card_material"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                    <ImageView
+                        android:id="@+id/iv_material_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:contentDescription="@null"
+                        android:src="@android:drawable/ic_menu_agenda"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toTopOf="@+id/tv_material_title"/>
+
+                    <TextView
+                        android:id="@+id/tv_material_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_material"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toBottomOf="@+id/iv_material_icon"
+                        app:layout_constraintBottom_toTopOf="@id/tv_material_note"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintVertical_bias="0.5" />
+
+                    <TextView
+                        android:id="@+id/tv_material_note"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/home_note_material"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="13sp"
+                        app:layout_constraintTop_toBottomOf="@+id/tv_material_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
