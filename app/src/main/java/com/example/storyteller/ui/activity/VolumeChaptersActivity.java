@@ -113,9 +113,9 @@ public class VolumeChaptersActivity extends BaseActivity {
             return;
         }
 
-        // 每10章一页
+        // 每20章一页
         chapterPages.clear();
-        int pageSize = 10;
+        int pageSize = 20;
         for (int i = 0; i < chapters.size(); i += pageSize) {
             int end = Math.min(i + pageSize, chapters.size());
             chapterPages.add(new ArrayList<>(chapters.subList(i, end)));
@@ -246,7 +246,7 @@ public class VolumeChaptersActivity extends BaseActivity {
             pageLayout.setPadding(32, 16, 32, 16);
 
             List<Chapter> pageChapters = chapterPages.get(position);
-            int globalStartIndex = position * 10;
+            int globalStartIndex = position * 20;
 
             for (int i = 0; i < pageChapters.size(); i++) {
                 Chapter chapter = pageChapters.get(i);
