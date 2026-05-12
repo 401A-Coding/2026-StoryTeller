@@ -16,7 +16,7 @@ import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.StoryGenerateActivity;
+import com.example.storyteller.ui.activity.StoryDetailActivity;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
@@ -87,8 +87,9 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         holder.itemView.setOnClickListener(v -> {
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
-            Intent intent = new Intent(context, StoryGenerateActivity.class);
-            intent.putExtra("story_id", story.getId());
+            Intent intent = new Intent(context, StoryDetailActivity.class);
+            intent.putExtra(EXTRA_STORY_ID, story.getId());
+            intent.putExtra(EXTRA_STORY_TITLE, story.getTitle());
             context.startActivity(intent);
         });
         

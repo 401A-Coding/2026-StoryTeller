@@ -10,20 +10,23 @@ import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 
-public class StoryPreviewActivity extends BaseActivity {
+public class StoryDetailActivity extends BaseActivity {
 
     public static final String EXTRA_STORY_ID = StoryAdapter.EXTRA_STORY_ID;
     public static final String EXTRA_STORY_TITLE = StoryAdapter.EXTRA_STORY_TITLE;
 
     @Override
     protected int getLayoutId() {
-        return R.layout.activity_story_preview;
+        return R.layout.activity_story_detail;
     }
 
     @Override
     protected void initView() {
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
         TextView tvTitle = findViewById(R.id.tv_story_preview_title);
-        TextView tvContent = findViewById(R.id.tv_story_preview_content);
+        TextView tvSeries = findViewById(R.id.tv_story_series);
+        TextView tvDescription = findViewById(R.id.tv_story_description);
         Intent intent = getIntent();
         int storyId = intent.getIntExtra(EXTRA_STORY_ID, -1);
         String storyTitle = intent.getStringExtra(EXTRA_STORY_TITLE);
@@ -39,11 +42,19 @@ public class StoryPreviewActivity extends BaseActivity {
 
         if (story != null) {
             tvTitle.setText(TextUtils.isEmpty(storyTitle) ? story.getTitle() : storyTitle);
-            tvContent.setText(story.getContent());
+            tvSeries.setText(getString(
+                R.string.story_series_format,
+                TextUtils.isEmpty(story.getGenre()) ? getString(R.string.story_series_default) : story.getGenre()
+            ));
+            tvDescription.setText(getString(
+                R.string.story_description_format,
+                TextUtils.isEmpty(story.getDescription()) ? getString(R.string.story_description_default) : story.getDescription()
+            ));
             storyId = story.getId();
         } else {
             tvTitle.setText(TextUtils.isEmpty(storyTitle) ? "未找到故事" : storyTitle);
-            tvContent.setText("当前没有可显示的小说正文，请先生成或新增一篇故事。");
+            tvSeries.setText(getString(R.string.story_series_format, getString(R.string.story_series_default)));
+            tvDescription.setText(getString(R.string.story_description_format, getString(R.string.story_description_default)));
         }
 
         final int selectedStoryId = storyId;
@@ -67,6 +78,11 @@ public class StoryPreviewActivity extends BaseActivity {
             startActivity(characterIntent);
         });
 
+        findViewById(R.id.btn_plot_tree).setOnClickListener(v -> {
+            Intent plotIntent = new Intent(this, PlotTreeActivity.class);
+            startActivity(plotIntent);
+        });
+
         findViewById(R.id.btn_edit_story).setOnClickListener(v -> {
             Intent editIntent = new Intent(this, StoryGenerateActivity.class);
             if (selectedStoryId > 0) {
@@ -81,4 +97,5 @@ public class StoryPreviewActivity extends BaseActivity {
         // 占位
     }
 }
+
 

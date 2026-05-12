@@ -10,10 +10,12 @@
     <string name="title_material">素材库</string>
     <string name="title_bookshelf">我的书架</string>
     <string name="title_mine">我的信息</string>
-    <string name="title_story_preview">小说预览</string>
+    <string name="title_story_preview">小说详情</string>
     <string name="title_settings">设置</string>
     <string name="action_back_home">返回首页</string>
+    <string name="action_edit_story">编辑故事</string>
     <string name="action_character_analysis">人物画像</string>
+    <string name="action_plot_outline">剧情梳理</string>
     <string name="action_story_preview">前往小说预览</string>
     <string name="action_settings">前往设置</string>
     <string name="action_regenerate_character">重新生成画像</string>
@@ -78,6 +80,8 @@
     <string name="story_series_format">系列：%1$s</string>
     <string name="story_description_format">简介：%1$s</string>
     <string name="story_description_empty">简介：暂无简介</string>
+    <string name="story_series_default">未设置系列</string>
+    <string name="story_description_default">暂无简介</string>
     <string name="api_key">API Key:</string>
     <string name="enter_your_deepseek_api_key">输入 DeepSeek API Key</string>
     <string name="save_api_key">保存 API Key</string>
