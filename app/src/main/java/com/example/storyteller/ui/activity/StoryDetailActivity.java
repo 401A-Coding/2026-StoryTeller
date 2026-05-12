@@ -135,6 +135,15 @@ public class StoryDetailActivity extends BaseActivity {
      */
     private void buildCatalogViews(LinearLayout container, String structureJson, int storyId) {
         if (TextUtils.isEmpty(structureJson)) {
+            // 尝试从数据库重新获取完整故事数据（包含 structure）
+            StoryDao storyDao = new StoryDao(this);
+            Story fullStory = storyDao.getStoryById(storyId);
+            if (fullStory != null && !TextUtils.isEmpty(fullStory.getStructure())) {
+                structureJson = fullStory.getStructure();
+            }
+        }
+
+        if (TextUtils.isEmpty(structureJson)) {
             TextView emptyCatalog = new TextView(this);
             emptyCatalog.setText(getString(R.string.story_detail_catalog_empty));
             emptyCatalog.setTextColor(0xFF333333);
