@@ -125,6 +125,9 @@ public class StoryGenerateActivity extends BaseActivity {
         
         // 设置 DrawerLayout 遮罩层颜色（半透明黑色）
         drawerLayout.setScrimColor(0x80000000); // 50% 透明度的黑色
+        
+        // 禁用右侧抽屉的手势滑动，只允许通过按钮关闭
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
 
         // Content
         layoutContent = findViewById(R.id.layout_content);

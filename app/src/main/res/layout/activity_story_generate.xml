@@ -436,7 +436,8 @@
                 android:layout_height="wrap_content"
                 android:scrollbars="none"
                 android:visibility="gone"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:descendantFocusability="blocksDescendants">
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chip_group_quick_actions"
