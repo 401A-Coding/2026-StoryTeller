@@ -51,7 +51,7 @@
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_page_indicator"
         android:layout_width="0dp"
-        android:layout_height="32dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="4dp"
@@ -62,9 +62,9 @@
         app:tabIndicator="@null"
         app:tabBackground="@drawable/tab_category_bg"
         app:tabRippleColor="@null"
-        app:tabMinWidth="48dp"
-        app:tabPaddingStart="8dp"
-        app:tabPaddingEnd="8dp"
+        app:tabMinWidth="0dp"
+        app:tabPaddingStart="4dp"
+        app:tabPaddingEnd="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
