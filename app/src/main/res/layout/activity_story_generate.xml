@@ -182,70 +182,57 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical">
 
-                <!-- 模式选择 -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- 模式选择（Agent/Ask） -->
+                <Button
+                    android:id="@+id/btn_mode_selector"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/agent"
+                    android:textSize="12sp"
+                    android:textColor="@color/colorPrimary"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textAllCaps="false"
+                    android:drawableEnd="@drawable/ic_arrow_drop_down"
+                    android:drawablePadding="4dp"
+                    android:drawableTint="@color/colorPrimary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="32dp"
                     app:strokeWidth="1dp"
-                    app:strokeColor="#E0E0E0">
+                    app:strokeColor="@color/colorPrimary"
+                    app:cornerRadius="4dp" />
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                <!-- 模型选择（Flash/Pro） -->
+                <Button
+                    android:id="@+id/btn_model_selector"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/model_flash"
+                    android:textSize="12sp"
+                    android:textColor="@color/colorPrimary"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textAllCaps="false"
+                    android:drawableEnd="@drawable/ic_arrow_drop_down"
+                    android:drawablePadding="4dp"
+                    android:drawableTint="@color/colorPrimary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="32dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/colorPrimary"
+                    app:cornerRadius="4dp" />
 
-                        <!-- Agent 模式按钮 -->
-                        <Button
-                            android:id="@+id/btn_agent_mode"
-                            style="@style/Widget.MaterialComponents.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/agent"
-                            android:textSize="12sp"
-                            android:textColor="#666666"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp"
-                            android:textAllCaps="false"
-                            android:drawableStart="@drawable/ic_robot"
-                            android:drawablePadding="4dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:minHeight="32dp" />
-
-                        <!-- 分隔线 -->
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="24dp"
-                            android:background="#E0E0E0"
-                            android:layout_gravity="center_vertical" />
-
-                        <!-- Ask 模式按钮 -->
-                        <Button
-                            android:id="@+id/btn_ask_mode"
-                            style="@style/Widget.MaterialComponents.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/ask"
-                            android:textSize="12sp"
-                            android:textColor="#666666"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp"
-                            android:textAllCaps="false"
-                            android:drawableStart="@android:drawable/ic_menu_help"
-                            android:drawablePadding="4dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:minHeight="32dp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- 无形隐藏的spacer用来推送按钮到右侧 -->
+                <!-- 占位符，将发送按钮推到最右侧 -->
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
@@ -259,7 +246,8 @@
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_send"
                     android:contentDescription="@string/action_send"
-                    android:padding="12dp" />
+                    android:padding="12dp"
+                    android:tint="@color/colorPrimary" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

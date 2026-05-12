@@ -83,4 +83,7 @@
     <string name="close">关闭</string>
     <string name="ai_assistant">AI助手</string>
     <string name="ai">AI助手</string>
+    <string name="model_flash">Flash</string>
+    <string name="model_pro">Pro</string>
+    <string name="model_selector">模型选择</string>
 </resources>
