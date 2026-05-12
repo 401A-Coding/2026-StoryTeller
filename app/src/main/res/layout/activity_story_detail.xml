@@ -145,39 +145,21 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <!-- 目录标题 -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E6E6E6">
+                android:text="@string/story_detail_catalog_label"
+                android:textColor="#444444"
+                android:textSize="12sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/story_detail_catalog_label"
-                        android:textColor="#444444"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_story_catalog"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:lineSpacingExtra="4dp"
-                        android:textColor="#333333"
-                        android:textSize="14sp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            <!-- 每卷独立卡片容器 -->
+            <LinearLayout
+                android:id="@+id/layout_catalog_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -277,4 +259,3 @@
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
