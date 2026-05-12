@@ -17,10 +17,20 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
 
     private final Context context;
     private final List<ChatMessage> messages;
+    private OnRetryListener retryListener;
+    
+    // 重试监听器接口
+    public interface OnRetryListener {
+        void onRetry(String originalMessage);
+    }
 
     public ChatMessageAdapter(Context context, List<ChatMessage> messages) {
         this.context = context;
         this.messages = messages;
+    }
+    
+    public void setOnRetryListener(OnRetryListener listener) {
+        this.retryListener = listener;
     }
 
     @NonNull
@@ -134,6 +144,24 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         } else {
             holder.tvFinalResult.setVisibility(View.GONE);
         }
+        
+        // 显示重试按钮（如果有失败步骤且可以重试）
+        boolean hasFailedStep = false;
+        for (ChatMessage.ExecutionStep step : message.getSteps()) {
+            if (step.status == ChatMessage.StepStatus.FAILED) {
+                hasFailedStep = true;
+                break;
+            }
+        }
+        
+        if (hasFailedStep && message.canRetry() && retryListener != null) {
+            holder.btnRetry.setVisibility(View.VISIBLE);
+            holder.btnRetry.setOnClickListener(v -> {
+                retryListener.onRetry(message.getOriginalUserMessage());
+            });
+        } else {
+            holder.btnRetry.setVisibility(View.GONE);
+        }
     }
     
     /**
@@ -166,6 +194,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         final TextView tvStepTitle;           // 步骤标题
         final TextView tvStepDuration;        // 耗时
         final TextView tvFinalResult;         // 最终结果
+        final android.widget.Button btnRetry; // 重试按钮
 
         public ChatMessageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -180,12 +209,14 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
                 tvStepTitle = layoutStepsContainer.findViewById(R.id.tv_step_title);
                 tvStepDuration = layoutStepsContainer.findViewById(R.id.tv_step_duration);
                 tvFinalResult = layoutStepsContainer.findViewById(R.id.tv_final_result);
+                btnRetry = layoutStepsContainer.findViewById(R.id.btn_retry);
             } else {
                 // 兼容旧布局
                 layoutStepsList = new LinearLayout(itemView.getContext());
                 tvStepTitle = new TextView(itemView.getContext());
                 tvStepDuration = new TextView(itemView.getContext());
                 tvFinalResult = new TextView(itemView.getContext());
+                btnRetry = new android.widget.Button(itemView.getContext());
             }
         }
     }

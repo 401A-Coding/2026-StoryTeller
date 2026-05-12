@@ -17,6 +17,10 @@ public class ChatMessage {
     private long endTime = 0;
     private String resultContent = ""; // 用于存储执行完成后的最终结果
     
+    // 重试相关
+    private boolean canRetry = false; // 是否可以重试
+    private String originalUserMessage = ""; // 原始用户消息（用于重试）
+    
     public enum MessageType {
         NORMAL,          // 普通消息
         PROCESSING,      // 处理中（可更新步骤）
@@ -148,5 +152,28 @@ public class ChatMessage {
     
     public void setResultContent(String resultContent) {
         this.resultContent = resultContent;
+    }
+    
+    // 重试相关方法
+    public boolean canRetry() {
+        return canRetry;
+    }
+    
+    public void setCanRetry(boolean canRetry) {
+        this.canRetry = canRetry;
+    }
+    
+    public String getOriginalUserMessage() {
+        return originalUserMessage;
+    }
+    
+    public void setOriginalUserMessage(String originalUserMessage) {
+        this.originalUserMessage = originalUserMessage;
+    }
+    
+    // 清除重试状态（用于重试后）
+    public void clearRetryState() {
+        this.canRetry = false;
+        this.originalUserMessage = "";
     }
 }

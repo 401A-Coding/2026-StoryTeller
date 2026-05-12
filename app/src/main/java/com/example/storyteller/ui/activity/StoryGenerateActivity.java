@@ -193,6 +193,22 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat.setAdapter(adapter);
         btnSend.setOnClickListener(v -> sendMessage());
         
+        // 设置重试监听器
+        adapter.setOnRetryListener(originalMessage -> {
+            if (!TextUtils.isEmpty(originalMessage)) {
+                // 找到最后一条消息并清除重试状态
+                if (!messages.isEmpty()) {
+                    ChatMessage lastMessage = messages.get(messages.size() - 1);
+                    lastMessage.clearRetryState();
+                }
+                
+                etMessage.setText(originalMessage);
+                // 立即更新 UI，隐藏重试按钮
+                adapter.notifyItemChanged(messages.size() - 1);
+                sendMessage();
+            }
+        });
+        
         // Setup quick action chips
         scrollQuickActions = findViewById(R.id.scroll_quick_actions);
         chipGroupQuickActions = findViewById(R.id.chip_group_quick_actions);
@@ -1360,6 +1376,10 @@ public class StoryGenerateActivity extends BaseActivity {
                             processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
                             processingMsg.setResultContent("抱歉，发生了错误：" + e.getMessage());
                             
+                            // 设置重试信息
+                            processingMsg.setCanRetry(true);
+                            processingMsg.setOriginalUserMessage(content);
+                            
                             adapter.notifyItemChanged(messagePosition[0]);
                         });
                     }
@@ -1465,6 +1485,10 @@ public class StoryGenerateActivity extends BaseActivity {
                             // 标记为完成
                             processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
                             processingMsg.setResultContent("抱歉，发生了错误：" + e.getMessage());
+                            
+                            // 设置重试信息
+                            processingMsg.setCanRetry(true);
+                            processingMsg.setOriginalUserMessage(content);
                             
                             adapter.notifyItemChanged(messagePosition[0]);
                         });
