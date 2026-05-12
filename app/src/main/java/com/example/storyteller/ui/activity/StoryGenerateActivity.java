@@ -404,7 +404,7 @@ public class StoryGenerateActivity extends BaseActivity {
     }
     
     /**
-     * 隐藏除聚焦卷之外的其他卷
+     * 隐藏除聚焦卷之外的其他卷，同时隐藏添加新卷按钮
      */
     private void hideOtherVolumes() {
         if (focusedVolumeIndex < 0) return;
@@ -415,8 +415,9 @@ public class StoryGenerateActivity extends BaseActivity {
         for (int i = 0; i < childCount; i++) {
             View child = layoutContent.getChildAt(i);
             
-            // 跳过按钮
+            // 隐藏添加新卷按钮（聚焦模式下不允许添加新卷）
             if (child.getId() == R.id.btn_add_volume) {
+                child.setVisibility(View.GONE);
                 continue;
             }
             
