@@ -368,9 +368,10 @@ public class VolumeChaptersActivity extends BaseActivity {
                 // 章节序号
                 TextView tvIndex = new TextView(VolumeChaptersActivity.this);
                 tvIndex.setLayoutParams(new LinearLayout.LayoutParams(
-                    48,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ));
+                tvIndex.setMinWidth(48);
                 tvIndex.setText(String.valueOf(chapterGlobalIndex + 1));
                 tvIndex.setTextColor(0xFF9C27B0);
                 tvIndex.setTextSize(16);
