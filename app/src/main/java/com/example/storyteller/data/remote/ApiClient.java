@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import android.content.Context;  // 新增导入
+import android.content.Context;
 
 public class ApiClient {
     // 单例模式
@@ -67,8 +67,19 @@ public class ApiClient {
         }
     }
 
-    // 生成故事的方法
+    // 生成故事的方法（默认使用 flash 模型）
     public void generateStory(String prompt, Context context, Callback callback) {
+        generateStory(prompt, "flash", context, callback);
+    }
+
+    /**
+     * 生成故事的方法（支持模型选择）
+     * @param prompt 提示词
+     * @param model 模型类型："flash" 或 "pro"
+     * @param context Android Context
+     * @param callback 回调
+     */
+    public void generateStory(String prompt, String model, Context context, Callback callback) {
         String apiKey = ApiKeyManager.getApiKey(context);
         if (apiKey.isEmpty()) {
             callback.onFailure(new Exception("API key not set"));
@@ -76,6 +87,12 @@ public class ApiClient {
         }
         // 构建请求体
         DeepSeekRequest request = new DeepSeekRequest();
+        // 根据选择的模型设置不同的模型名称
+        if ("pro".equals(model)) {
+            request.model = "deepseek-v4-pro";  // Pro 模型
+        } else {
+            request.model = "deepseek-v4-flash";  // Flash 模型（默认）
+        }
         request.messages = List.of(new Message("user", prompt));  // 用户提示作为消息
 
         String json = gson.toJson(request);
@@ -118,13 +135,26 @@ public class ApiClient {
     // ==================== 智能体功能 ====================
 
     /**
-     * 智能体模式：分析用户意图并返回结构化命令
+     * 智能体模式：分析用户意图并返回结构化命令（默认使用 flash 模型）
      * @param userMessage 用户消息
      * @param currentStoryContext 当前小说上下文（卷章结构、最近内容等）
      * @param context Android Context
      * @param callback 回调
      */
     public void processAgentCommand(String userMessage, String currentStoryContext, 
+                                     Context context, AgentCallback callback) {
+        processAgentCommand(userMessage, currentStoryContext, "flash", context, callback);
+    }
+
+    /**
+     * 智能体模式：分析用户意图并返回结构化命令（支持模型选择）
+     * @param userMessage 用户消息
+     * @param currentStoryContext 当前小说上下文（卷章结构、最近内容等）
+     * @param model 模型类型："flash" 或 "pro"
+     * @param context Android Context
+     * @param callback 回调
+     */
+    public void processAgentCommand(String userMessage, String currentStoryContext, String model,
                                      Context context, AgentCallback callback) {
         String apiKey = ApiKeyManager.getApiKey(context);
         if (apiKey.isEmpty()) {
@@ -156,13 +186,23 @@ public class ApiClient {
                 "- ⚠️ 章节标题应该概括本章主旨，长度控制在 2-8 个字\n" +
                 "- 💡 标题示例：'初遇'、'阴谋浮现'、'决战前夕'、'真相大白'\n\n" +
                 "返回格式示例：\n" +
-                "添加新卷：\n" +
+                "添加新卷（默认追加到末尾）：\n" +
                 "{\n" +
                 "  \"action\": \"add_volume\",\n" +
                 "  \"parameters\": {\n" +
                 "    \"volume_title\": \"新的卷标题\"\n" +
                 "  },\n" +
                 "  \"reasoning\": \"用户想要添加一个新卷\"\n" +
+                "}\n\n" +
+                "在指定位置插入卷：\n" +
+                "{\n" +
+                "  \"action\": \"add_volume\",\n" +
+                "  \"parameters\": {\n" +
+                "    \"volume_title\": \"番外篇\",\n" +
+                "    \"position\": 2,           // 在第几卷附近插入\n" +
+                "    \"insert_after\": true     // true=在该卷之后，false=在该卷之前\n" +
+                "  },\n" +
+                "  \"reasoning\": \"用户想在第2卷后插入新卷\"\n" +
                 "}\n\n" +
                 "添加章节（默认追加到末尾）：\n" +
                 "{\n" +
@@ -277,10 +317,14 @@ public class ApiClient {
                 "  }\n" +
                 "}";
 
-        // 重要提示：当用户提到“编辑”、“修改”、“重写”、“续写”等词时，使用 edit_chapter 操作
-
         // 构建请求
         DeepSeekRequest request = new DeepSeekRequest();
+        // 根据选择的模型设置不同的模型名称
+        if ("pro".equals(model)) {
+            request.model = "deepseek-v4-pro";  // Pro 模型
+        } else {
+            request.model = "deepseek-v4-flash";  // Flash 模型（默认）
+        }
         request.messages = Arrays.asList(
                 new Message("system", systemPrompt),
                 new Message("user", "当前小说上下文：\n" + currentStoryContext + "\n\n用户消息：" + userMessage)

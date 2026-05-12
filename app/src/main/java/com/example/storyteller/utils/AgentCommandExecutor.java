@@ -217,18 +217,55 @@ public class AgentCommandExecutor {
         // 解析现有结构
         List<Volume> volumes = parseVolumesFromStory(story);
         
-        // 创建新卷
-        Volume newVolume = new Volume(volumes.size() + 1, volumeParams.volumeTitle);
-        volumes.add(newVolume);
-        
-        // 保存更新后的结构
-        saveVolumesToStory(story, volumes);
-        
-        return CommandResult.success(
-            "✅ 已成功添加卷：《" + volumeParams.volumeTitle + "》",
-            "add_volume",
-            newVolume
-        );
+        // 检查是否指定了插入位置
+        if (params.containsKey("position")) {
+            int position = ((Number) params.get("position")).intValue();
+            boolean insertAfter = !params.containsKey("insert_after") || 
+                                 ((Boolean) params.get("insert_after"));
+            
+            // 验证位置（可以在第1卷之前到最后一卷之后）
+            if (position < 1 || position > volumes.size() + 1) {
+                return CommandResult.error("❌ 错误：卷位置超出范围（当前有 " + volumes.size() + " 卷）");
+            }
+            
+            // 计算插入索引
+            int insertIndex = insertAfter ? position : position - 1;
+            
+            // 创建并插入新卷
+            Volume newVolume = new Volume(insertIndex + 1, volumeParams.volumeTitle);
+            volumes.add(insertIndex, newVolume);
+            
+            // 重新编号后续卷
+            for (int i = insertIndex; i < volumes.size(); i++) {
+                volumes.get(i).setId(i + 1);
+            }
+            
+            // 保存更新后的结构
+            saveVolumesToStory(story, volumes);
+            
+            String refVolumeTitle = position <= volumes.size() - 1 ? 
+                volumes.get(position).getTitle() : "末尾";
+            String positionDesc = insertAfter ? "之后" : "之前";
+            
+            return CommandResult.success(
+                "✅ 已在第" + position + "卷《" + refVolumeTitle + "》" + positionDesc + "添加新卷：《" + volumeParams.volumeTitle + "》",
+                "add_volume",
+                newVolume
+            );
+        } else {
+            // 默认追加到末尾
+            Volume newVolume = new Volume(volumes.size() + 1, volumeParams.volumeTitle);
+            volumes.add(newVolume);
+            
+            // 保存更新后的结构
+            saveVolumesToStory(story, volumes);
+            
+            return CommandResult.success(
+                "✅ 已成功在末尾添加卷：《" + volumeParams.volumeTitle + "》",
+                "add_volume",
+                newVolume
+            );
+        }
     }
 
     /**

@@ -2,7 +2,10 @@ package com.example.storyteller.ui.fragment;
 
 import android.content.Intent;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -101,7 +104,7 @@ public class HomeFragment extends BaseFragment {
         android.util.Log.d("HomeFragment", "initData - 当前 selectedId: '" + selectedId + "'");
         List<Story> allStories = storyDao.getAllStories();
         android.util.Log.d("HomeFragment", "initData - 数据库中的小说数量: " + (allStories != null ? allStories.size() : 0));
-        
+
         refreshCurrentNovel();
     }
 
@@ -200,9 +203,8 @@ public class HomeFragment extends BaseFragment {
             // 没有任何小说，询问是否创建新小说
             builder.setMessage("您还没有创建任何小说。\n是否要创建一个新小说？");
             builder.setPositiveButton("创建新小说", (dialog, which) -> {
-                // 直接进入故事生成页面（不传 story_id，会创建新小说）
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                startActivity(intent);
+                // 弹出创建小说对话框
+                showCreateStoryDialog();
                 dialog.dismiss();
             });
             builder.setNegativeButton("取消", null);
@@ -235,9 +237,8 @@ public class HomeFragment extends BaseFragment {
             });
             
             builder.setPositiveButton("创建新小说", (dialog, which) -> {
-                // 直接进入故事生成页面（不传 story_id，会创建新小说）
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                startActivity(intent);
+                // 弹出创建小说对话框
+                showCreateStoryDialog();
                 dialog.dismiss();
             });
             
@@ -245,5 +246,66 @@ public class HomeFragment extends BaseFragment {
         }
         
         builder.show();
+    }
+
+    /**
+     * 显示创建小说弹窗
+     */
+    private void showCreateStoryDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_create_story, null);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create();
+
+        EditText etTitle = dialogView.findViewById(R.id.et_story_title);
+        EditText etSeriesName = dialogView.findViewById(R.id.et_series_name);
+        EditText etDescription = dialogView.findViewById(R.id.et_story_description);
+
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btn_create).setOnClickListener(v -> {
+            String title = etTitle.getText().toString().trim();
+            if (TextUtils.isEmpty(title)) {
+                Toast.makeText(requireContext(), "请输入小说标题", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String seriesName = etSeriesName.getText().toString().trim();
+            String description = etDescription.getText().toString().trim();
+
+            // Create empty story
+            Story newStory = new Story(title, "", TextUtils.isEmpty(seriesName) ? "创作" : seriesName, System.currentTimeMillis());
+            if (!TextUtils.isEmpty(description)) {
+                newStory.setDescription(description);
+            }
+
+            // Initialize with one volume and one chapter
+            java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
+            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "第一卷");
+            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "第一章", "");
+            volume.addChapter(chapter);
+            volumes.add(volume);
+
+            // Save structure as JSON
+            String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
+            newStory.setStructure(structureJson);
+
+            long id = storyDao.insertStory(newStory);
+
+            if (id > 0) {
+                Toast.makeText(requireContext(), "创建成功", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+                refreshCurrentNovel();
+
+                // Navigate directly to edit page
+                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
+                intent.putExtra("story_id", (int) id);
+                startActivity(intent);
+            } else {
+                Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        dialog.show();
     }
 }
