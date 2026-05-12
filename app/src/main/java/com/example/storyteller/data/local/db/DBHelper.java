@@ -21,6 +21,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_DESCRIPTION = "description";  // 小说简介
     public static final String COL_STORY_CATEGORY = "category";  // 书架分类：全部/创作中/已完成/已收藏
     public static final String COL_STORY_COVER_COLOR = "cover_color";  // 封面颜色
+    public static final String COL_STORY_COVER_PATH = "cover_path";  // 封面图片路径
 
     // 素材表字段
     public static final String TABLE_MATERIAL = "material";
