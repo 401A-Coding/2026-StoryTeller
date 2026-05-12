@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -20,7 +21,6 @@ import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.utils.JsonUtils;
-import com.google.android.material.tabs.TabLayout;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 
 /**
  * 卷章节列表页面
- * 每10章一页，支持滑动翻页和底部页数提示
+ * 每20章一页，支持滑动翻页和底部页数提示
  */
 public class VolumeChaptersActivity extends BaseActivity {
 
@@ -38,13 +38,17 @@ public class VolumeChaptersActivity extends BaseActivity {
     public static final String EXTRA_VOLUME_INDEX = "extra_volume_index";
 
     private ViewPager viewPager;
-    private TabLayout tabPageIndicator;
+    private HorizontalScrollView horizontalPageIndicator;
+    private LinearLayout layoutPageIndicator;
     private TextView tvVolumeTitle;
     private ChaptersPagerAdapter pagerAdapter;
     private List<List<Chapter>> chapterPages = new ArrayList<>();
     private int storyId;
     private int volumeIndex;
     private String volumeTitle;
+    private int currentPagePosition = 0;
+    private int pageSize = 20;
+    private List<TextView> pageIndicatorViews = new ArrayList<>();
 
     @Override
     protected int getLayoutId() {
@@ -59,7 +63,8 @@ public class VolumeChaptersActivity extends BaseActivity {
 
         tvVolumeTitle = findViewById(R.id.tv_volume_title);
         viewPager = findViewById(R.id.view_pager_chapters);
-        tabPageIndicator = findViewById(R.id.tab_page_indicator);
+        horizontalPageIndicator = findViewById(R.id.horizontal_page_indicator);
+        layoutPageIndicator = findViewById(R.id.layout_page_indicator);
 
         Intent intent = getIntent();
         storyId = intent.getIntExtra(EXTRA_STORY_ID, -1);
@@ -115,7 +120,6 @@ public class VolumeChaptersActivity extends BaseActivity {
 
         // 每20章一页
         chapterPages.clear();
-        int pageSize = 20;
         for (int i = 0; i < chapters.size(); i += pageSize) {
             int end = Math.min(i + pageSize, chapters.size());
             chapterPages.add(new ArrayList<>(chapters.subList(i, end)));
@@ -124,39 +128,110 @@ public class VolumeChaptersActivity extends BaseActivity {
         pagerAdapter = new ChaptersPagerAdapter();
         viewPager.setAdapter(pagerAdapter);
 
-        // 设置底部页数指示器
-        tabPageIndicator.setupWithViewPager(viewPager, true);
+        // 创建自定义底部页数指示器
+        setupPageIndicator(chapters.size());
 
-        // 更新页数标签
-        for (int i = 0; i < tabPageIndicator.getTabCount(); i++) {
-            com.google.android.material.tabs.TabLayout.Tab tab = tabPageIndicator.getTabAt(i);
-            if (tab != null) {
-                int startChapter = i * pageSize + 1;
-                int endChapter = Math.min((i + 1) * pageSize, chapters.size());
-                tab.setText(startChapter + "-" + endChapter + "章");
-            }
-        }
-
-        // 监听页面切换，当切换到最后一个标签时自动滚动使其可见
+        // 监听页面切换
         viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {}
 
             @Override
             public void onPageSelected(int position) {
-                // 当选中最后一个标签时，自动滚动TabLayout使其可见
-                if (position == tabPageIndicator.getTabCount() - 1) {
-                    tabPageIndicator.post(() -> {
-                        com.google.android.material.tabs.TabLayout.Tab lastTab = tabPageIndicator.getTabAt(position);
-                        if (lastTab != null) {
-                            lastTab.select();
-                        }
-                    });
-                }
+                updatePageIndicator(position);
+                // 当选中靠后的标签时，自动滚动HorizontalScrollView使其可见
+                scrollToPageIndicator(position);
             }
 
             @Override
             public void onPageScrollStateChanged(int state) {}
+        });
+    }
+
+    /**
+     * 创建自定义底部页数指示器
+     */
+    private void setupPageIndicator(int totalChapters) {
+        layoutPageIndicator.removeAllViews();
+        pageIndicatorViews.clear();
+
+        int totalPages = chapterPages.size();
+
+        for (int i = 0; i < totalPages; i++) {
+            final int pageIndex = i;
+            int startChapter = i * pageSize + 1;
+            int endChapter = Math.min((i + 1) * pageSize, totalChapters);
+
+            // 创建页数标签
+            TextView tvPage = new TextView(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.setMargins(4, 0, 4, 0);
+            tvPage.setLayoutParams(params);
+            tvPage.setText(startChapter + "-" + endChapter);
+            tvPage.setTextSize(12);
+            tvPage.setPadding(12, 6, 12, 6);
+            tvPage.setGravity(android.view.Gravity.CENTER);
+            tvPage.setSingleLine(true);
+
+            // 设置背景（椭圆形）
+            if (i == 0) {
+                // 默认选中第一页
+                tvPage.setBackgroundResource(R.drawable.tab_category_bg);
+                tvPage.setSelected(true);
+                tvPage.setTextColor(android.graphics.Color.WHITE);
+            } else {
+                tvPage.setBackgroundResource(R.drawable.tab_category_bg);
+                tvPage.setSelected(false);
+                tvPage.setTextColor(0xFF9E9E9E);
+            }
+
+            // 点击切换到对应页
+            tvPage.setOnClickListener(v -> {
+                viewPager.setCurrentItem(pageIndex, true);
+                updatePageIndicator(pageIndex);
+                scrollToPageIndicator(pageIndex);
+            });
+
+            layoutPageIndicator.addView(tvPage);
+            pageIndicatorViews.add(tvPage);
+        }
+    }
+
+    /**
+     * 更新页数指示器选中状态
+     */
+    private void updatePageIndicator(int position) {
+        currentPagePosition = position;
+        for (int i = 0; i < pageIndicatorViews.size(); i++) {
+            TextView tv = pageIndicatorViews.get(i);
+            if (i == position) {
+                tv.setSelected(true);
+                tv.setTextColor(android.graphics.Color.WHITE);
+            } else {
+                tv.setSelected(false);
+                tv.setTextColor(0xFF9E9E9E);
+            }
+        }
+    }
+
+    /**
+     * 自动滚动HorizontalScrollView使选中的页数标签可见
+     */
+    private void scrollToPageIndicator(int position) {
+        if (position < 0 || position >= pageIndicatorViews.size()) return;
+
+        horizontalPageIndicator.post(() -> {
+            TextView targetView = pageIndicatorViews.get(position);
+            if (targetView != null) {
+                // 计算目标视图的位置，使其居中显示
+                int viewLeft = targetView.getLeft();
+                int viewWidth = targetView.getWidth();
+                int scrollWidth = horizontalPageIndicator.getWidth();
+                int scrollTo = viewLeft - (scrollWidth / 2) + (viewWidth / 2);
+                horizontalPageIndicator.smoothScrollTo(scrollTo, 0);
+            }
         });
     }
 
