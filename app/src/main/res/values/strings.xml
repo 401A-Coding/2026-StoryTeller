@@ -16,6 +16,13 @@
     <string name="action_edit_story">编辑故事</string>
     <string name="action_character_analysis">人物画像</string>
     <string name="action_plot_outline">剧情梳理</string>
+    <string name="story_detail_series_label">系列名称</string>
+    <string name="story_detail_description_label">简介</string>
+    <string name="story_detail_actions_label">快捷操作</string>
+    <string name="story_detail_word_count_label">字数</string>
+    <string name="story_detail_catalog_label">目录</string>
+    <string name="story_detail_word_count_format">%1$d字</string>
+    <string name="story_detail_catalog_empty">暂无目录</string>
     <string name="action_story_preview">前往小说预览</string>
     <string name="action_settings">前往设置</string>
     <string name="action_regenerate_character">重新生成画像</string>
