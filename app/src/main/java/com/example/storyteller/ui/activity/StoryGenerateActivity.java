@@ -740,23 +740,23 @@ public class StoryGenerateActivity extends BaseActivity {
      */
     private void switchToStory(Story story) {
         if (story == null) return;
-
+    
         // 保存当前小说（如果有）
         if (currentStory != null && isEditMode) {
             saveEditedStory();
         }
-
+    
         // 更新当前小说
         currentStory = story;
         isEditMode = true;
-
+    
         // 更新标题显示
         tvStoryTitle.setText(story.getTitle());
-
+    
         // 重新加载内容
         layoutContent.removeAllViews();
-
-        // 重新添加"添加新卷"按钮
+    
+        // 重新添加“添加新卷”按钮
         Button btnAddVolumeNew = new Button(this);
         btnAddVolumeNew.setId(R.id.btn_add_volume);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -770,7 +770,7 @@ public class StoryGenerateActivity extends BaseActivity {
         btnAddVolumeNew.setTextColor(android.graphics.Color.parseColor("#1976D2"));
         btnAddVolumeNew.setOnClickListener(v -> addNewVolume());
         layoutContent.addView(btnAddVolumeNew);
-
+    
         // 解析并渲染故事结构
         String structureJson = story.getStructure();
         if (!TextUtils.isEmpty(structureJson)) {
@@ -778,7 +778,12 @@ public class StoryGenerateActivity extends BaseActivity {
         } else {
             parseStoryContent(story.getContent());
         }
-
+    
+        // 如果当前显示的是目录Tab，自动刷新目录视图
+        if (panelToc.getVisibility() == View.VISIBLE) {
+            refreshTocView();
+        }
+    
         Toast.makeText(this, "已切换到《" + story.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
 
