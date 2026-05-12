@@ -6,6 +6,7 @@
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
+    <!-- 普通消息文本 -->
     <TextView
         android:id="@+id/tv_message"
         android:layout_width="wrap_content"
@@ -20,6 +21,17 @@
         android:textSize="14sp"
         android:textIsSelectable="true"
         android:longClickable="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- AI 执行步骤容器（默认隐藏） -->
+    <include
+        android:id="@+id/layout_execution_steps"
+        layout="@layout/item_chat_execution_steps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
