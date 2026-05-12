@@ -103,6 +103,8 @@ public class StoryGenerateActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        // 刘海屏适配：为根布局设置系统栏内边距
+        applySystemWindowInsets(findViewById(android.R.id.content));
         // Toolbar buttons
         btnStoryInfo = findViewById(R.id.btn_story_info);
         btnAi = findViewById(R.id.btn_ai);

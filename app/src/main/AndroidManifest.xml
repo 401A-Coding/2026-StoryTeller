@@ -13,23 +13,39 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.StoryTeller">
+        android:theme="@style/Theme.StoryTeller"
+        android:windowLayoutInDisplayCutoutMode="shortEdges">
         <activity
             android:name=".ui.activity.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.activity.StoryGenerateActivity" />
-        <activity android:name=".ui.activity.CharacterActivity" />
-        <activity android:name=".ui.activity.PlotTreeActivity" />
-        <activity android:name=".ui.activity.MaterialActivity" />
-        <activity android:name=".ui.activity.StoryDetailActivity" />
-        <activity android:name=".ui.activity.MaterialDetailActivity" />
-        <activity android:name=".ui.activity.SettingsActivity" />
+        <activity
+            android:name=".ui.activity.StoryGenerateActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.CharacterActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.PlotTreeActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.MaterialActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.StoryDetailActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.MaterialDetailActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.SettingsActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
     </application>
 
 </manifest>

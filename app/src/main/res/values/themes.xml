@@ -3,6 +3,10 @@
     <style name="Base.Theme.StoryTeller" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+
+        <!-- 刘海屏适配：让布局延伸到状态栏区域 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
     <style name="Theme.StoryTeller" parent="Base.Theme.StoryTeller" />

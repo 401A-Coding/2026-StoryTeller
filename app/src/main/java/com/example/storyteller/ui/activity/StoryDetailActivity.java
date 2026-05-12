@@ -29,6 +29,8 @@ public class StoryDetailActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        // 刘海屏适配：为根布局设置系统栏内边距
+        applySystemWindowInsets(findViewById(android.R.id.content));
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         TextView tvTitle = findViewById(R.id.tv_story_preview_title);

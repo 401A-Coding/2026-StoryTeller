@@ -17,6 +17,8 @@ public class SettingsActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        // 刘海屏适配：为根布局设置系统栏内边距
+        applySystemWindowInsets(findViewById(android.R.id.content));
         findViewById(R.id.btn_back_home).setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_HOME);
