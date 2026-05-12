@@ -86,4 +86,19 @@
     <string name="model_flash">Flash</string>
     <string name="model_pro">Pro</string>
     <string name="model_selector">模型选择</string>
+    <string name="story_info">小说信息</string>
+    <string name="tab_setting">设定</string>
+    <string name="tab_outline">大纲</string>
+    <string name="tab_toc">目录</string>
+    <string name="tab_docs">文档</string>
+    <string name="world_setting">📖 世界观设定</string>
+    <string name="story_outline">📝 故事大纲</string>
+    <string name="toc_overview">📚 目录概览</string>
+    <string name="reference_docs">📄 参考资料</string>
+    <string name="hint_world_setting">输入世界观设定...</string>
+    <string name="hint_outline">输入故事大纲...</string>
+    <string name="hint_docs">输入参考资料...</string>
+    <string name="select_story">选择小说</string>
+    <string name="current_story">当前小说</string>
+    <string name="collapse">收起</string>
 </resources>
