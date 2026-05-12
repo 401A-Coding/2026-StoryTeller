@@ -11,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -95,6 +96,10 @@ public class StoryGenerateActivity extends BaseActivity {
 
     // Storage
     private StoryRepository storyRepository;
+    
+    // Quick Action Chips
+    private HorizontalScrollView scrollQuickActions;
+    private com.google.android.material.chip.ChipGroup chipGroupQuickActions;
 
     @Override
     protected int getLayoutId() {
@@ -120,6 +125,9 @@ public class StoryGenerateActivity extends BaseActivity {
         
         // 设置 DrawerLayout 遮罩层颜色（半透明黑色）
         drawerLayout.setScrimColor(0x80000000); // 50% 透明度的黑色
+        
+        // 禁用右侧抽屉的手势滑动，只允许通过按钮关闭
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
 
         // Content
         layoutContent = findViewById(R.id.layout_content);
@@ -184,12 +192,35 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat.setLayoutManager(new LinearLayoutManager(this));
         rvChat.setAdapter(adapter);
         btnSend.setOnClickListener(v -> sendMessage());
+        
+        // 设置重试监听器
+        adapter.setOnRetryListener(originalMessage -> {
+            if (!TextUtils.isEmpty(originalMessage)) {
+                // 找到最后一条消息并清除重试状态
+                if (!messages.isEmpty()) {
+                    ChatMessage lastMessage = messages.get(messages.size() - 1);
+                    lastMessage.clearRetryState();
+                }
+                
+                etMessage.setText(originalMessage);
+                // 立即更新 UI，隐藏重试按钮
+                adapter.notifyItemChanged(messages.size() - 1);
+                sendMessage();
+            }
+        });
+        
+        // Setup quick action chips
+        scrollQuickActions = findViewById(R.id.scroll_quick_actions);
+        chipGroupQuickActions = findViewById(R.id.chip_group_quick_actions);
 
         // Setup mode selector
         btnModeSelector.setOnClickListener(v -> showModeSelectorPopup());
         
         // Setup model selector
         btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
+        
+        // 初始化快捷操作按钮（只在编辑模式且使用 Agent 模式时显示）
+        initQuickActions();
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
@@ -298,6 +329,9 @@ public class StoryGenerateActivity extends BaseActivity {
             // 更新标题显示
             tvStoryTitle.setText(currentStory.getTitle());
             
+            // 显示快捷操作按钮
+            setQuickActionsVisible(true);
+            
             // Clear existing content
             layoutContent.removeAllViews();
             
@@ -327,6 +361,11 @@ public class StoryGenerateActivity extends BaseActivity {
                 parseStoryContent(currentStory.getContent());
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     /**
@@ -1147,7 +1186,51 @@ public class StoryGenerateActivity extends BaseActivity {
         }
     }
 
-
+    /**
+     * 初始化快捷操作按钮
+     */
+    private void initQuickActions() {
+        // 清空现有 Chip
+        chipGroupQuickActions.removeAllViews();
+        
+        // 定义快捷操作
+        String[] quickActions = {
+            "帮我续写一章",
+            "重写最后一章",
+            "生成情节建议",
+            "添加新卷",
+            "让故事更悬疑"
+        };
+        
+        // 创建 Chip
+        for (String action : quickActions) {
+            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(this);
+            chip.setText(action);
+            chip.setChipBackgroundColorResource(android.R.color.white);
+            chip.setTextColor(getResources().getColor(R.color.colorPrimary, null));
+            chip.setClickable(true);
+            chip.setFocusable(true);
+            
+            // 设置点击事件
+            chip.setOnClickListener(v -> {
+                etMessage.setText(action);
+                etMessage.requestFocus();
+                // 将光标移到末尾
+                etMessage.setSelection(action.length());
+            });
+            
+            chipGroupQuickActions.addView(chip);
+        }
+    }
+    
+    /**
+     * 显示/隐藏快捷操作按钮
+     */
+    private void setQuickActionsVisible(boolean visible) {
+        if (scrollQuickActions != null) {
+            scrollQuickActions.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+    }
 
     /**
      * 发送消息给AI
@@ -1157,15 +1240,38 @@ public class StoryGenerateActivity extends BaseActivity {
         if (TextUtils.isEmpty(content)) {
             return;
         }
-        appendMessage(new ChatMessage(content, true));
+        appendMessage(new ChatMessage(content, true, false));
         etMessage.setText("");
 
         // Show loading
         progressBar.setVisibility(View.VISIBLE);
 
         if ("agent".equals(currentMode) && isEditMode && currentStory != null) {
-            // Agent mode: process command
+            // Agent mode: 使用步骤展示
+            // 创建处理中消息
+            ChatMessage processingMsg = new ChatMessage(false, ChatMessage.MessageType.PROCESSING);
+            final int[] messagePosition = {messages.size()};
+            appendMessage(processingMsg);
+            
+            progressBar.setVisibility(View.GONE);
+            
+            // 步骤 1: 读取上下文
+            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                "📖", "读取小说上下文", "", ChatMessage.StepStatus.RUNNING
+            ));
+            adapter.notifyItemChanged(messagePosition[0]);
+            
             String context = AgentCommandExecutor.buildStoryContext(currentStory, volumes);
+            
+            // 更新步骤 1 为完成
+            processingMsg.updateStep(0, ChatMessage.StepStatus.COMPLETED, 
+                "共 " + volumes.size() + " 卷");
+            
+            // 步骤 2: 分析用户意图
+            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                "🔍", "分析用户意图", "", ChatMessage.StepStatus.RUNNING
+            ));
+            adapter.notifyItemChanged(messagePosition[0]);
             
             ApiClient.getInstance().processAgentCommand(
                 content,
@@ -1176,20 +1282,83 @@ public class StoryGenerateActivity extends BaseActivity {
                     @Override
                     public void onCommandReady(ApiClient.AgentCommand command) {
                         runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
+                            // 更新步骤 2
+                            processingMsg.updateStep(1, ChatMessage.StepStatus.COMPLETED,
+                                "操作: " + command.action);
                             
-                            // 使用 AgentCommandExecutor 执行命令
-                            AgentCommandExecutor.CommandResult result = 
-                                commandExecutor.executeCommand(command, currentStory.getId());
-                            
-                            // 显示结果消息
-                            if (!TextUtils.isEmpty(result.message)) {
-                                appendMessage(new ChatMessage(result.message, false));
+                            // 步骤 3: 显示 reasoning（深度思考）
+                            if (!TextUtils.isEmpty(command.reasoning)) {
+                                processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                    "💭", "深度思考", command.reasoning, 
+                                    ChatMessage.StepStatus.COMPLETED
+                                ));
                             }
                             
-                            // 如果执行成功且不是问答操作，刷新 UI
-                            if (result.success && !"answer_question".equals(command.action)) {
-                                refreshStoryView();
+                            // 如果是问答操作，直接显示答案，不显示执行步骤
+                            if ("answer_question".equals(command.action)) {
+                                // 尝试从 parameters 中获取答案
+                                String answer = null;
+                                if (command.parameters != null) {
+                                    // 尝试多个可能的字段名
+                                    answer = (String) command.parameters.get("answer");
+                                    if (answer == null || answer.isEmpty()) {
+                                        answer = (String) command.parameters.get("response");
+                                    }
+                                    if (answer == null || answer.isEmpty()) {
+                                        answer = (String) command.parameters.get("content");
+                                    }
+                                }
+                                
+                                // 如果还是没有答案，使用 reasoning 作为答案
+                                if (answer == null || answer.isEmpty()) {
+                                    answer = command.reasoning;
+                                }
+                                
+                                // 如果仍然没有，显示默认消息
+                                if (answer == null || answer.isEmpty()) {
+                                    answer = "已回答";
+                                }
+                                
+                                // 标记为完成
+                                processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                                processingMsg.setResultContent(answer);
+                                
+                                // 初始化 displayContent 为空，准备打字机效果
+                                processingMsg.setDisplayContent("");
+                                
+                                // 启用打字机效果
+                                processingMsg.setTyping(true);
+                                adapter.notifyItemChanged(messagePosition[0]);
+                                
+                                // 启动打字机效果
+                                startTypewriterEffect(processingMsg, messagePosition[0]);
+                            } else {
+                                // 非问答操作：显示执行步骤
+                                processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                    "⚙️", "执行操作", "", ChatMessage.StepStatus.RUNNING
+                                ));
+                                adapter.notifyItemChanged(messagePosition[0]);
+                                
+                                // 延迟一点让用户看到状态变化
+                                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                                    AgentCommandExecutor.CommandResult result = 
+                                        commandExecutor.executeCommand(command, currentStory.getId());
+                                    
+                                    // 更新步骤 4
+                                    processingMsg.updateStep(3, ChatMessage.StepStatus.COMPLETED,
+                                        result.message);
+                                    
+                                    // 标记为完成
+                                    processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                                    processingMsg.setResultContent(result.message);
+                                    
+                                    adapter.notifyItemChanged(messagePosition[0]);
+                                    
+                                    // 如果执行成功，刷新 UI
+                                    if (result.success) {
+                                        refreshStoryView();
+                                    }
+                                }, 300); // 300ms 延迟
                             }
                         });
                     }
@@ -1197,8 +1366,131 @@ public class StoryGenerateActivity extends BaseActivity {
                     @Override
                     public void onFailure(Exception e) {
                         runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            appendMessage(new ChatMessage("抱歉，发生了错误：" + e.getMessage(), false));
+                            // 添加失败步骤
+                            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                "❌", "执行失败", e.getMessage(), 
+                                ChatMessage.StepStatus.FAILED
+                            ));
+                            
+                            // 标记为完成
+                            processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                            processingMsg.setResultContent("抱歉，发生了错误：" + e.getMessage());
+                            
+                            // 设置重试信息
+                            processingMsg.setCanRetry(true);
+                            processingMsg.setOriginalUserMessage(content);
+                            
+                            adapter.notifyItemChanged(messagePosition[0]);
+                        });
+                    }
+                }
+            );
+        } else if (isEditMode && currentStory != null) {
+            // Ask mode: 有上下文但不执行编辑操作
+            // 创建处理中消息
+            ChatMessage processingMsg = new ChatMessage(false, ChatMessage.MessageType.PROCESSING);
+            final int[] messagePosition = {messages.size()};
+            appendMessage(processingMsg);
+            
+            progressBar.setVisibility(View.GONE);
+            
+            // 步骤 1: 读取上下文
+            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                "📖", "读取小说上下文", "", ChatMessage.StepStatus.RUNNING
+            ));
+            adapter.notifyItemChanged(messagePosition[0]);
+            
+            String context = AgentCommandExecutor.buildStoryContext(currentStory, volumes);
+            
+            // 更新步骤 1 为完成
+            processingMsg.updateStep(0, ChatMessage.StepStatus.COMPLETED, 
+                "共 " + volumes.size() + " 卷");
+            
+            // 步骤 2: 分析问题
+            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                "💭", "分析问题", "", ChatMessage.StepStatus.RUNNING
+            ));
+            adapter.notifyItemChanged(messagePosition[0]);
+            
+            // 使用 processAgentCommand 但强制为 answer_question
+            ApiClient.getInstance().processAgentCommand(
+                content,
+                context,
+                currentModel,
+                this,
+                new ApiClient.AgentCallback() {
+                    @Override
+                    public void onCommandReady(ApiClient.AgentCommand command) {
+                        runOnUiThread(() -> {
+                            // 更新步骤 2
+                            processingMsg.updateStep(1, ChatMessage.StepStatus.COMPLETED,
+                                "分析完成");
+                            
+                            // 显示 reasoning（如果有）
+                            if (!TextUtils.isEmpty(command.reasoning)) {
+                                processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                    "🤔", "思考过程", command.reasoning, 
+                                    ChatMessage.StepStatus.COMPLETED
+                                ));
+                            }
+                            
+                            // 尝试从 parameters 中获取答案
+                            String answer = null;
+                            if (command.parameters != null) {
+                                // 尝试多个可能的字段名
+                                answer = (String) command.parameters.get("answer");
+                                if (answer == null || answer.isEmpty()) {
+                                    answer = (String) command.parameters.get("response");
+                                }
+                                if (answer == null || answer.isEmpty()) {
+                                    answer = (String) command.parameters.get("content");
+                                }
+                            }
+                            
+                            // 如果还是没有答案，使用 reasoning 作为答案
+                            if (answer == null || answer.isEmpty()) {
+                                answer = command.reasoning;
+                            }
+                            
+                            // 如果仍然没有，显示默认消息
+                            if (answer == null || answer.isEmpty()) {
+                                answer = "抱歉，我没有理解您的问题";
+                            }
+                            
+                            // 标记为完成
+                            processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                            processingMsg.setResultContent(answer);
+                            
+                            // 初始化 displayContent 为空，准备打字机效果
+                            processingMsg.setDisplayContent("");
+                            
+                            // 启用打字机效果
+                            processingMsg.setTyping(true);
+                            adapter.notifyItemChanged(messagePosition[0]);
+                            
+                            // 启动打字机效果
+                            startTypewriterEffect(processingMsg, messagePosition[0]);
+                        });
+                    }
+                    
+                    @Override
+                    public void onFailure(Exception e) {
+                        runOnUiThread(() -> {
+                            // 添加失败步骤
+                            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                "❌", "回答失败", e.getMessage(), 
+                                ChatMessage.StepStatus.FAILED
+                            ));
+                            
+                            // 标记为完成
+                            processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                            processingMsg.setResultContent("抱歉，发生了错误：" + e.getMessage());
+                            
+                            // 设置重试信息
+                            processingMsg.setCanRetry(true);
+                            processingMsg.setOriginalUserMessage(content);
+                            
+                            adapter.notifyItemChanged(messagePosition[0]);
                         });
                     }
                 }
@@ -1210,7 +1502,7 @@ public class StoryGenerateActivity extends BaseActivity {
                 public void onSuccess(String story) {
                     runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
-                        appendMessage(new ChatMessage(story, false));
+                        appendMessage(new ChatMessage(story, false, true));
                         saveGeneratedStory(content, story);
                     });
                 }
@@ -1219,7 +1511,7 @@ public class StoryGenerateActivity extends BaseActivity {
                 public void onFailure(Exception e) {
                     runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
-                        appendMessage(new ChatMessage("生成失败: " + e.getMessage(), false));
+                        appendMessage(new ChatMessage("生成失败: " + e.getMessage(), false, true));
                     });
                 }
             });
@@ -1233,6 +1525,55 @@ public class StoryGenerateActivity extends BaseActivity {
         messages.add(message);
         adapter.notifyItemInserted(messages.size() - 1);
         rvChat.scrollToPosition(messages.size() - 1);
+        
+        // 如果是 AI 回复且启用打字机效果，启动逐字显示
+        if (!message.isFromUser() && message.isTyping()) {
+            startTypewriterEffect(message, messages.size() - 1);
+        }
+    }
+    
+    /**
+     * 启动打字机效果
+     * @param message 消息对象
+     * @param position 在列表中的位置
+     */
+    private void startTypewriterEffect(ChatMessage message, int position) {
+        // 对于执行步骤消息，使用 resultContent；否则使用 content
+        final String fullText = !message.getResultContent().isEmpty() ? 
+            message.getResultContent() : message.getContent();
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        final int[] currentIndex = {0};
+        final int delay = 30; // 每个字符的延迟时间（毫秒）
+        
+        Runnable typewriterRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentIndex[0] <= fullText.length()) {
+                    // 更新显示内容
+                    String displayText = fullText.substring(0, currentIndex[0]);
+                    message.setDisplayContent(displayText);
+                    
+                    // 通知适配器更新
+                    adapter.notifyItemChanged(position);
+                    
+                    // 滚动到底部
+                    rvChat.scrollToPosition(messages.size() - 1);
+                    
+                    currentIndex[0]++;
+                    
+                    // 继续下一个字符
+                    if (currentIndex[0] <= fullText.length()) {
+                        handler.postDelayed(this, delay);
+                    } else {
+                        // 完成打字
+                        message.setTyping(false);
+                    }
+                }
+            }
+        };
+        
+        // 开始打字
+        handler.post(typewriterRunnable);
     }
 
     private void saveGeneratedStory(String prompt, String storyContent) {
@@ -1240,7 +1581,7 @@ public class StoryGenerateActivity extends BaseActivity {
         // 在编辑模式下，AI 生成的内容应该通过智能体命令来添加到当前小说
         if (isEditMode) {
             // 编辑模式：不自动创建新故事，只提示用户如何操作
-            appendMessage(new ChatMessage("💡 提示：在编辑模式下，请使用智能体模式来添加内容到当前小说。\n开启智能体模式后，可以说'帮我添加一个章节'", false));
+            appendMessage(new ChatMessage("💡 提示：在编辑模式下，请使用智能体模式来添加内容到当前小说。\n开启智能体模式后，可以说'帮我添加一个章节'", false, true));
             return;
         }
             
@@ -1252,7 +1593,7 @@ public class StoryGenerateActivity extends BaseActivity {
         long id = storyRepository.insertStory(story);
         if (id > 0) {
             story.setId((int) id);
-            appendMessage(new ChatMessage("故事已保存到书架：" + title, false));
+            appendMessage(new ChatMessage("故事已保存到书架：" + title, false, true));
         }
     }
 

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 单个执行步骤布局 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="6dp"
+    android:gravity="top">
+
+    <!-- 状态图标 -->
+    <TextView
+        android:id="@+id/tv_step_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:text="⏳"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginEnd="8dp" />
+
+    <!-- 步骤内容 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- 步骤标题 -->
+        <TextView
+            android:id="@+id/tv_step_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="正在读取上下文..."
+            android:textSize="13sp"
+            android:textColor="#424242"
+            android:textIsSelectable="true" />
+
+        <!-- 详细信息（可选） -->
+        <TextView
+            android:id="@+id/tv_step_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="#757575"
+            android:visibility="gone"
+            android:textIsSelectable="true" />
+
+    </LinearLayout>
+
+</LinearLayout>
