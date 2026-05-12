@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- 顶部标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:background="#1976D2">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_book_info"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="小说信息"
+            app:tint="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tv_story_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="新小说"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- 切换小说按钮 -->
+        <ImageView
+            android:id="@+id/btn_select_story"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_arrow_drop_down"
+            android:contentDescription="切换小说"
+            android:padding="4dp"
+            app:tint="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- Tab导航 -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_story_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        app:tabIndicatorColor="#1976D2"
+        app:tabSelectedTextColor="#1976D2"
+        app:tabTextColor="#666666" />
+
+    <!-- 内容区域 -->
+    <FrameLayout
+        android:id="@+id/layout_panel_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- 设定面板 -->
+        <ScrollView
+            android:id="@+id/panel_setting"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="世界观设定"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/et_world_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:hint="描述故事的世界观、背景设定..."
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:background="@drawable/bg_outline_edittext"
+                    android:padding="12dp"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 大纲面板 -->
+        <ScrollView
+            android:id="@+id/panel_outline"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="故事大纲"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/et_outline"
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:hint="描述故事的整体大纲和主线剧情..."
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:background="@drawable/bg_outline_edittext"
+                    android:padding="12dp"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 目录面板 -->
+        <ScrollView
+            android:id="@+id/panel_toc"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/layout_toc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp" />
+        </ScrollView>
+
+        <!-- 文档面板 -->
+        <ScrollView
+            android:id="@+id/panel_docs"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="写作笔记"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/et_docs"
+                    android:layout_width="match_parent"
+                    android:layout_height="400dp"
+                    android:hint="记录写作过程中的想法、灵感、参考资料..."
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:background="@drawable/bg_outline_edittext"
+                    android:padding="12dp"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+    </FrameLayout>
+
+</LinearLayout>

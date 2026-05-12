@@ -29,6 +29,9 @@
             android:name=".ui.activity.StoryGenerateActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
+            android:name=".ui.activity.StoryWorkspaceActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
             android:name=".ui.activity.CharacterActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity

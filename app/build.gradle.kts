@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gson)
     implementation(libs.recyclerview)
+    implementation(libs.viewpager2)
     implementation(libs.security.crypto)  // 新增：用于加密SharedPreferences
     implementation(libs.jsoup)  // 用于网页爬取
     testImplementation(libs.junit)

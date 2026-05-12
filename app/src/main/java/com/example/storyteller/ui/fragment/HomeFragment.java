@@ -17,7 +17,7 @@ import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.activity.CharacterActivity;
 import com.example.storyteller.ui.activity.MaterialActivity;
 import com.example.storyteller.ui.activity.PlotTreeActivity;
-import com.example.storyteller.ui.activity.StoryGenerateActivity;
+import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import java.util.List;
 
@@ -64,8 +64,8 @@ public class HomeFragment extends BaseFragment {
                         } else {
                             // 小说存在，正常进入编辑页面
                             android.util.Log.d("HomeFragment", "进入编辑页面，story_id: " + storyId);
-                            Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                            intent.putExtra("story_id", storyId);
+                            Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+                            intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, storyId);
                             startActivity(intent);
                         }
                     } catch (NumberFormatException e) {
@@ -229,8 +229,8 @@ public class HomeFragment extends BaseFragment {
                 refreshCurrentNovel();
                 
                 // 进入编辑页面
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                intent.putExtra("story_id", selectedStory.getId());
+                Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+                intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, selectedStory.getId());
                 startActivity(intent);
                 
                 dialog.dismiss();
@@ -298,8 +298,8 @@ public class HomeFragment extends BaseFragment {
                 refreshCurrentNovel();
 
                 // Navigate directly to edit page
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                intent.putExtra("story_id", (int) id);
+                Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+                intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);
                 startActivity(intent);
             } else {
                 Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();

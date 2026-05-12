@@ -1,0 +1,321 @@
+package com.example.storyteller.ui.activity;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.example.storyteller.R;
+import com.example.storyteller.base.BaseActivity;
+import com.example.storyteller.data.local.db.StoryDao;
+import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.adapter.WorkspacePagerAdapter;
+import com.example.storyteller.ui.component.BottomActionBar;
+import com.example.storyteller.ui.fragment.ArchitectureFragment;
+import com.example.storyteller.ui.fragment.StoryInfoPanelFragment;
+import com.example.storyteller.ui.fragment.WritingFragment;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+
+/**
+ * 作品工作区Activity
+ * 整合写作、架构、人物、素材等所有功能模块
+ */
+public class StoryWorkspaceActivity extends BaseActivity {
+
+    public static final String EXTRA_STORY_ID = "extra_story_id";
+
+    // UI组件
+    private DrawerLayout drawerLayout;
+    private TabLayout tabLayout;
+    private ViewPager2 viewPager;
+    private WorkspacePagerAdapter pagerAdapter;
+    private BottomActionBar bottomActionBar;
+    private TextView tvStoryTitle;
+    private FloatingActionButton fabAI;
+    private StoryInfoPanelFragment storyInfoPanelFragment;
+
+    // 数据
+    private StoryDao storyDao;
+    private Story currentStory;
+    private int storyId;
+
+    @Override
+    protected int getLayoutId() {
+        return R.layout.activity_story_workspace;
+    }
+
+    @Override
+    protected void initView() {
+        // 刘海屏适配
+        applySystemWindowInsets(findViewById(android.R.id.content));
+
+        // 初始化DrawerLayout
+        drawerLayout = findViewById(R.id.drawer_layout);
+        
+        // 设置 DrawerLayout 遮罩层颜色（半透明黑色）
+        drawerLayout.setScrimColor(0x80000000); // 50% 透明度的黑色
+        
+        // 禁用左侧抽屉的手势滑动，只允许通过按钮打开
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
+
+        // 初始化UI组件
+        tabLayout = findViewById(R.id.tab_layout);
+        viewPager = findViewById(R.id.view_pager);
+        tvStoryTitle = findViewById(R.id.tv_story_title);
+        fabAI = findViewById(R.id.fab_ai);
+
+        // 底部操作栏
+        MaterialCardView cardBottomBar = findViewById(R.id.bottom_action_bar);
+        LinearLayout layoutActions = findViewById(R.id.layout_bottom_actions);
+        bottomActionBar = new BottomActionBar(this, cardBottomBar, layoutActions);
+
+        // 返回按钮
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+        
+        // 点击标题区域打开左侧抽屉（整个容器都可点击）
+        View titleContainer = findViewById(R.id.layout_title_container);
+        if (titleContainer != null) {
+            titleContainer.setOnClickListener(v -> openStoryInfoPanel());
+            // 添加长按提示
+            titleContainer.setOnLongClickListener(v -> {
+                Toast.makeText(this, "点击查看小说信息", Toast.LENGTH_SHORT).show();
+                return true;
+            });
+        }
+
+        // 保存按钮
+        findViewById(R.id.btn_save).setOnClickListener(v -> saveCurrentWork());
+
+        // 更多操作按钮
+        findViewById(R.id.btn_more).setOnClickListener(v -> showMoreMenu());
+
+        // AI助手按钮
+        fabAI.setOnClickListener(v -> openAIDialog());
+    }
+
+    @Override
+    protected void initData() {
+        storyDao = new StoryDao(this);
+
+        // 获取作品ID
+        Intent intent = getIntent();
+        storyId = intent.getIntExtra(EXTRA_STORY_ID, -1);
+
+        if (storyId > 0) {
+            currentStory = storyDao.getStoryById(storyId);
+        }
+
+        if (currentStory == null) {
+            currentStory = storyDao.getLatestStory();
+        }
+
+        if (currentStory != null) {
+            storyId = currentStory.getId();
+            
+            // 更新标题
+            tvStoryTitle.setText(currentStory.getTitle());
+            
+            // 初始化左侧信息面板
+            initStoryInfoPanel();
+            
+            // 设置ViewPager适配器
+            pagerAdapter = new WorkspacePagerAdapter(this, storyId);
+            viewPager.setAdapter(pagerAdapter);
+
+            // 关联TabLayout和ViewPager2
+            new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+                tab.setText(pagerAdapter.getPageTitle(position));
+            }).attach();
+
+            // 设置Tab切换监听器
+            viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    updateBottomActionBar(position);
+                }
+            });
+
+            // 初始化底部操作栏（默认显示写作Tab的按钮）
+            updateBottomActionBar(WorkspacePagerAdapter.TAB_WRITING);
+        } else {
+            Toast.makeText(this, "未找到作品", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
+
+    /**
+     * 根据当前Tab更新底部操作栏
+     */
+    private void updateBottomActionBar(int tabPosition) {
+        switch (tabPosition) {
+            case WorkspacePagerAdapter.TAB_WRITING:
+                setupWritingBottomActions();
+                break;
+            case WorkspacePagerAdapter.TAB_ARCHITECTURE:
+                setupArchitectureBottomActions();
+                break;
+            case WorkspacePagerAdapter.TAB_CHARACTERS:
+                bottomActionBar.setupCharactersActions();
+                break;
+            case WorkspacePagerAdapter.TAB_MATERIALS:
+                bottomActionBar.setupMaterialsActions();
+                break;
+            case WorkspacePagerAdapter.TAB_MORE:
+                bottomActionBar.setupMoreActions();
+                break;
+        }
+    }
+
+    /**
+     * 配置写作Tab的底部按钮
+     */
+    private void setupWritingBottomActions() {
+        bottomActionBar.setupWritingActions(
+            this::addVolume,      // + 卷
+            this::addChapter,     // + 章
+            this::aiContinue,     // AI续写
+            this::showStats       // 统计
+        );
+    }
+
+    /**
+     * 配置架构Tab的底部按钮
+     */
+    private void setupArchitectureBottomActions() {
+        bottomActionBar.setupArchitectureActions(
+            this::saveArchitecture,   // 保存
+            this::aiOptimize,         // AI优化
+            this::previewArchitecture // 预览
+        );
+    }
+
+    // ========== 底部按钮功能实现 ==========
+
+    private void addVolume() {
+        Toast.makeText(this, "添加新卷（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 切换到写作Fragment并添加卷
+    }
+
+    private void addChapter() {
+        Toast.makeText(this, "添加新章节（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 切换到写作Fragment并添加章节
+    }
+
+    private void aiContinue() {
+        openAIDialog();
+        // TODO: 打开AI对话，预填充"续写"指令
+    }
+
+    private void showStats() {
+        Toast.makeText(this, "字数统计（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 显示统计信息
+    }
+
+    private void saveArchitecture() {
+        Toast.makeText(this, "保存架构信息（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 保存架构Fragment的数据
+    }
+
+    private void aiOptimize() {
+        openAIDialog();
+        // TODO: 打开AI对话，预填充"优化简介/大纲"指令
+    }
+
+    private void previewArchitecture() {
+        Toast.makeText(this, "预览效果（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 显示预览界面
+    }
+
+    // ========== Toolbar按钮功能 ==========
+
+    private void saveCurrentWork() {
+        // 保存左侧信息面板数据
+        if (storyInfoPanelFragment != null) {
+            storyInfoPanelFragment.savePanelData();
+        }
+        
+        // 根据当前Tab调用对应Fragment的保存方法
+        int currentPosition = viewPager.getCurrentItem();
+        
+        // 获取当前Fragment
+        Fragment currentFragment = getSupportFragmentManager().findFragmentByTag(
+            "f" + currentPosition
+        );
+        
+        if (currentFragment == null && pagerAdapter != null) {
+            // 如果找不到，尝试从ViewPager2获取
+            currentFragment = getSupportFragmentManager()
+                .getFragments()
+                .get(currentPosition);
+        }
+        
+        if (currentFragment instanceof WritingFragment) {
+            ((WritingFragment) currentFragment).saveStructure();
+        } else if (currentFragment instanceof ArchitectureFragment) {
+            // TODO: 调用ArchitectureFragment的保存方法
+            Toast.makeText(this, "保存架构信息", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showMoreMenu() {
+        // 显示更多操作菜单
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, findViewById(R.id.btn_more));
+        popupMenu.getMenu().add("导出作品");
+        popupMenu.getMenu().add("分享");
+        popupMenu.getMenu().add("删除作品");
+        popupMenu.getMenu().add("设置");
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            String title = item.getTitle().toString();
+            Toast.makeText(this, title + "（功能开发中）", Toast.LENGTH_SHORT).show();
+            return true;
+        });
+        
+        popupMenu.show();
+    }
+
+    private void openAIDialog() {
+        Toast.makeText(this, "AI助手（功能开发中）", Toast.LENGTH_SHORT).show();
+        // TODO: 打开AI对话界面
+    }
+
+    /**
+     * 初始化故事信息面板
+     */
+    private void initStoryInfoPanel() {
+        if (storyId > 0) {
+            storyInfoPanelFragment = StoryInfoPanelFragment.newInstance(storyId);
+            getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_story_info, storyInfoPanelFragment)
+                .commit();
+        }
+    }
+
+    /**
+     * 打开故事信息面板
+     */
+    private void openStoryInfoPanel() {
+        if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.openDrawer(GravityCompat.START);
+        } else {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }
+    }
+}
