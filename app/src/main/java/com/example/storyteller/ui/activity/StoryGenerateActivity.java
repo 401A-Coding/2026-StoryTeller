@@ -663,39 +663,212 @@ public class StoryGenerateActivity extends BaseActivity {
         // 添加标题
         TextView titleView = new TextView(this);
         titleView.setText("📚 目录概览");
-        titleView.setTextSize(16);
+        titleView.setTextSize(18);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setTextColor(0xFF212121);
         titleView.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
-        ((LinearLayout.LayoutParams) titleView.getLayoutParams()).bottomMargin = 12;
+        ((LinearLayout.LayoutParams) titleView.getLayoutParams()).bottomMargin = 16;
+        titleView.setPadding(0, 8, 0, 8);
         layoutToc.addView(titleView);
 
         // 遍历所有卷和章节
         for (int i = 0; i < volumes.size(); i++) {
             Volume volume = volumes.get(i);
             
+            // 卷标题容器
+            LinearLayout volumeContainer = new LinearLayout(this);
+            volumeContainer.setOrientation(LinearLayout.VERTICAL);
+            volumeContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+            volumeContainer.setPadding(0, 12, 0, 8);
+            
             // 卷标题
             TextView volumeTitle = new TextView(this);
             volumeTitle.setText("第" + (i + 1) + "卷 · " + volume.getTitle());
-            volumeTitle.setTextSize(14);
+            volumeTitle.setTextSize(16);
             volumeTitle.setTypeface(null, android.graphics.Typeface.BOLD);
             volumeTitle.setTextColor(0xFF1976D2);
-            volumeTitle.setPadding(0, 8, 0, 4);
-            layoutToc.addView(volumeTitle);
+            volumeTitle.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+            volumeContainer.addView(volumeTitle);
+            
+            // 添加卷分隔线
+            View volumeDivider = new View(this);
+            volumeDivider.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                2));
+            volumeDivider.setBackgroundColor(0xFFE0E0E0);
+            ((LinearLayout.LayoutParams) volumeDivider.getLayoutParams()).topMargin = 8;
+            ((LinearLayout.LayoutParams) volumeDivider.getLayoutParams()).bottomMargin = 8;
+            volumeContainer.addView(volumeDivider);
+            
+            layoutToc.addView(volumeContainer);
 
             // 章节列表
             for (int j = 0; j < volume.getChapters().size(); j++) {
                 Chapter chapter = volume.getChapters().get(j);
+                
+                // 章节项容器
+                LinearLayout chapterContainer = new LinearLayout(this);
+                chapterContainer.setOrientation(LinearLayout.HORIZONTAL);
+                chapterContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+                chapterContainer.setPadding(16, 8, 16, 8);
+                chapterContainer.setClickable(true);
+                chapterContainer.setFocusable(true);
+                
+                final int volumeIndex = i;
+                final int chapterIndex = j;
+                
+                // 章节点击事件：收起悬浮窗并跳转到对应位置
+                chapterContainer.setOnClickListener(v -> {
+                    // 收起左侧悬浮窗
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                    
+                    // 延迟一下，等待悬浮窗关闭后再滚动
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        scrollToChapter(volumeIndex, chapterIndex);
+                    }, 300);
+                });
+                
+                // 章节标题
                 TextView chapterTitle = new TextView(this);
-                chapterTitle.setText("    第" + (j + 1) + "章 · " + chapter.getTitle());
-                chapterTitle.setTextSize(13);
-                chapterTitle.setTextColor(0xFF666666);
-                chapterTitle.setPadding(0, 2, 0, 2);
-                layoutToc.addView(chapterTitle);
+                chapterTitle.setText("第" + (j + 1) + "章 · " + chapter.getTitle());
+                chapterTitle.setTextSize(15);
+                chapterTitle.setTextColor(0xFF424242);
+                chapterTitle.setLayoutParams(new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1));
+                chapterContainer.addView(chapterTitle);
+                
+                // 箭头图标
+                ImageView arrowIcon = new ImageView(this);
+                arrowIcon.setImageResource(android.R.drawable.ic_menu_more);
+                arrowIcon.setLayoutParams(new LinearLayout.LayoutParams(
+                    48,
+                    48));
+                arrowIcon.setPadding(8, 8, 8, 8);
+                arrowIcon.setColorFilter(0xFF9E9E9E);
+                chapterContainer.addView(arrowIcon);
+                
+                layoutToc.addView(chapterContainer);
+                
+                // 添加章节分隔线（除了最后一个章节）
+                if (j < volume.getChapters().size() - 1) {
+                    View chapterDivider = new View(this);
+                    chapterDivider.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1));
+                    chapterDivider.setBackgroundColor(0xFFF0F0F0);
+                    chapterDivider.setPadding(16, 0, 16, 0);
+                    layoutToc.addView(chapterDivider);
+                }
+            }
+            
+            // 卷之间添加更大的间距
+            if (i < volumes.size() - 1) {
+                View spacer = new View(this);
+                spacer.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    16));
+                layoutToc.addView(spacer);
             }
         }
+    }
+    
+    /**
+     * 滚动到指定章节位置
+     * @param volumeIndex 卷索引（从0开始）
+     * @param chapterIndex 章节索引（从0开始）
+     */
+    private void scrollToChapter(int volumeIndex, int chapterIndex) {
+        if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+            Toast.makeText(this, "无效的卷索引", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Volume volume = volumes.get(volumeIndex);
+        if (chapterIndex < 0 || chapterIndex >= volume.getChapters().size()) {
+            Toast.makeText(this, "无效的章节索引", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 查找对应的章节视图
+        // 遍历 layoutContent 找到对应的卷和章节
+        int childCount = layoutContent.getChildCount();
+        android.util.Log.d("ScrollToChapter", "开始查找: volumeIndex=" + volumeIndex + ", chapterIndex=" + chapterIndex);
+        android.util.Log.d("ScrollToChapter", "layoutContent 子视图数量: " + childCount);
+        
+        for (int i = 0; i < childCount; i++) {
+            View child = layoutContent.getChildAt(i);
+            
+            // 跳过按钮
+            if (child.getId() == R.id.btn_add_volume) {
+                android.util.Log.d("ScrollToChapter", "跳过按钮");
+                continue;
+            }
+            
+            // 查找卷视图
+            TextView tvVolumePrefix = child.findViewById(R.id.tv_volume_prefix);
+            if (tvVolumePrefix != null) {
+                String prefixText = tvVolumePrefix.getText().toString();
+                android.util.Log.d("ScrollToChapter", "检查卷: " + prefixText);
+                
+                // 检查是否是目标卷（例如 "第1卷 · "）
+                String targetVolumeText = "第" + (volumeIndex + 1) + "卷";
+                if (prefixText.contains(targetVolumeText)) {
+                    android.util.Log.d("ScrollToChapter", "找到目标卷");
+                    
+                    // 找到目标卷，现在查找章节
+                    LinearLayout layoutChapters = child.findViewById(R.id.layout_chapters_container);
+                    if (layoutChapters != null) {
+                        android.util.Log.d("ScrollToChapter", "章节容器子视图数量: " + layoutChapters.getChildCount());
+                        
+                        if (chapterIndex < layoutChapters.getChildCount()) {
+                            View chapterView = layoutChapters.getChildAt(chapterIndex);
+                            if (chapterView != null) {
+                                android.util.Log.d("ScrollToChapter", "找到目标章节，开始滚动");
+                                
+                                // 滚动到该章节
+                                androidx.core.widget.NestedScrollView scrollView = findViewById(R.id.scroll_content);
+                                if (scrollView != null) {
+                                    // 计算滚动位置
+                                    int[] location = new int[2];
+                                    chapterView.getLocationInWindow(location);
+                                    int scrollY = location[1] - scrollView.getTop() + scrollView.getScrollY();
+                                    
+                                    android.util.Log.d("ScrollToChapter", "滚动到位置: " + scrollY);
+                                    scrollView.smoothScrollTo(0, scrollY);
+                                    
+                                    // 高亮显示该章节
+                                    chapterView.setBackgroundColor(0x301976D2);
+                                    chapterView.postDelayed(() -> {
+                                        chapterView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+                                    }, 1500);
+                                    
+                                    Toast.makeText(this, "已定位到第" + (volumeIndex + 1) + "卷 第" + (chapterIndex + 1) + "章", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                            }
+                        } else {
+                            android.util.Log.e("ScrollToChapter", "章节索引超出范围: " + chapterIndex + " >= " + layoutChapters.getChildCount());
+                        }
+                    } else {
+                        android.util.Log.e("ScrollToChapter", "未找到章节容器");
+                    }
+                    return;
+                }
+            }
+        }
+        
+        android.util.Log.e("ScrollToChapter", "未找到目标章节");
+        Toast.makeText(this, "未找到对应章节", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -752,6 +925,12 @@ public class StoryGenerateActivity extends BaseActivity {
     
         // 更新标题显示
         tvStoryTitle.setText(story.getTitle());
+        
+        // 更新 SharedPreferences 中的选中状态
+        com.example.storyteller.data.local.prefs.PrefsUtils.getInstance(this)
+            .putString(com.example.storyteller.ui.adapter.StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
+        com.example.storyteller.data.local.prefs.PrefsUtils.getInstance(this)
+            .putString(com.example.storyteller.ui.adapter.StoryAdapter.PREF_SELECTED_STORY_TITLE, story.getTitle());
     
         // 重新加载内容
         layoutContent.removeAllViews();
