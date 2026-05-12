@@ -94,6 +94,18 @@ public class StoryDao {
         );
     }
 
+    public int updateStoryCollected(int storyId, boolean collected) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_IS_COLLECTED, collected ? 1 : 0);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
     public int setCollected(int storyId, boolean collected) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();

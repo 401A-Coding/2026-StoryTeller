@@ -198,12 +198,13 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     }
 
     /**
-     * 显示故事操作菜单（修改分类/更换封面/上传封面图片）
+     * 显示故事操作菜单（修改分类/收藏/上传封面图片）
      */
     private void showStoryActionMenu(Story story) {
+        String favoriteText = story.isCollected() ? "取消收藏" : "收藏";
         String[] items = {
             context.getString(R.string.bookshelf_change_category),
-            context.getString(R.string.bookshelf_change_cover),
+            favoriteText,
             "上传封面图片"
         };
         new AlertDialog.Builder(context)
@@ -212,7 +213,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 if (which == 0) {
                     showCategoryDialog(story);
                 } else if (which == 1) {
-                    showCoverColorDialog(story);
+                    toggleFavorite(story);
                 } else if (which == 2) {
                     if (pickCoverImageListener != null) {
                         pickCoverImageListener.onPickCoverImage(story.getId());
@@ -220,6 +221,18 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 }
             })
             .show();
+    }
+
+    /**
+     * 切换收藏状态
+     */
+    private void toggleFavorite(Story story) {
+        boolean newCollected = !story.isCollected();
+        StoryDao storyDao = new StoryDao(context);
+        storyDao.updateStoryCollected(story.getId(), newCollected);
+        story.setCollected(newCollected);
+        notifyDataSetChanged();
+        Toast.makeText(context, newCollected ? "已收藏" : "已取消收藏", Toast.LENGTH_SHORT).show();
     }
 
     /**
