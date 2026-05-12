@@ -224,10 +224,11 @@ public class StoryDetailActivity extends BaseActivity {
                 tvVolumeTitle.setTypeface(tvVolumeTitle.getTypeface(), android.graphics.Typeface.BOLD);
                 volumeContent.addView(tvVolumeTitle);
 
-                // 章节列表
+                // 章节列表 - 只显示前三章
                 List<Chapter> chapters = volume.getChapters();
                 if (chapters != null && !chapters.isEmpty()) {
-                    for (int j = 0; j < chapters.size(); j++) {
+                    int maxDisplay = Math.min(3, chapters.size());
+                    for (int j = 0; j < maxDisplay; j++) {
                         Chapter chapter = chapters.get(j);
                         String chapterTitle = TextUtils.isEmpty(chapter.getTitle()) ? "未命名章" : chapter.getTitle().trim();
 

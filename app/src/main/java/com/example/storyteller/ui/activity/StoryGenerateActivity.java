@@ -330,9 +330,18 @@ public class StoryGenerateActivity extends BaseActivity {
         // Check if we're editing an existing story
         Intent intent = getIntent();
         int storyId = intent.getIntExtra("story_id", -1);
+        final int targetVolume = intent.getIntExtra("volume_index", -1);
+        final int targetChapter = intent.getIntExtra("chapter_index", -1);
         if (storyId > 0) {
             // 编辑模式：加载已有小说
             loadExistingStory(storyId);
+            
+            // 如果传入了卷和章节索引，加载完成后滚动到对应位置
+            if (targetVolume >= 0 && targetChapter >= 0) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    scrollToChapter(targetVolume, targetChapter);
+                }, 500);
+            }
         } else {
             // 新建模式：设置默认标题
             tvStoryTitle.setText("新小说");
