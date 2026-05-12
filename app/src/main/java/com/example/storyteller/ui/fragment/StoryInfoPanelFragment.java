@@ -1,5 +1,6 @@
 package com.example.storyteller.ui.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -13,14 +14,17 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
+import com.example.storyteller.ui.adapter.StoryAdapter;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.List;
@@ -36,6 +40,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
     // UI Components
     private TextView tvStoryTitle;
     private ImageView btnSelectStory;
+    private ImageView btnClosePanel;  // 新增关闭按钮
     private TabLayout tabStoryInfo;
     private EditText etWorldSetting;
     private EditText etOutline;
@@ -51,6 +56,18 @@ public class StoryInfoPanelFragment extends BaseFragment {
     private int storyId;
     private StoryRepository storyRepository;
     private List<Volume> volumes;
+    
+    // 小说切换监听器
+    private OnStoryChangedListener onStoryChangedListener;
+    
+    public interface OnStoryChangedListener {
+        void onStoryChanged(int newStoryId);
+    }
+    
+    public void setOnStoryChangedListener(OnStoryChangedListener listener) {
+        this.onStoryChangedListener = listener;
+    }
+
 
     public static StoryInfoPanelFragment newInstance(int storyId) {
         StoryInfoPanelFragment fragment = new StoryInfoPanelFragment();
@@ -69,6 +86,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
     protected void initView(View view) {
         tvStoryTitle = view.findViewById(R.id.tv_story_title);
         btnSelectStory = view.findViewById(R.id.btn_select_story);
+        btnClosePanel = view.findViewById(R.id.btn_close_panel);  // 初始化关闭按钮
         tabStoryInfo = view.findViewById(R.id.tab_story_info);
         etWorldSetting = view.findViewById(R.id.et_world_setting);
         etOutline = view.findViewById(R.id.et_outline);
@@ -80,8 +98,16 @@ public class StoryInfoPanelFragment extends BaseFragment {
         panelDocs = view.findViewById(R.id.panel_docs);
 
         // 切换小说按钮
-        btnSelectStory.setOnClickListener(v -> {
-            Toast.makeText(requireContext(), "切换小说功能（开发中）", Toast.LENGTH_SHORT).show();
+        btnSelectStory.setOnClickListener(v -> showStorySelector());
+
+        // 关闭按钮 - 关闭左侧抽屉
+        btnClosePanel.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                androidx.drawerlayout.widget.DrawerLayout drawerLayout = getActivity().findViewById(R.id.drawer_layout);
+                if (drawerLayout != null) {
+                    drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START);
+                }
+            }
         });
 
         // 设置Tab监听
@@ -150,8 +176,10 @@ public class StoryInfoPanelFragment extends BaseFragment {
             }
         }
 
-        // 添加Tab
-        setupTabs();
+        // 只在第一次加载时添加Tab，避免重复添加
+        if (tabStoryInfo.getTabCount() == 0) {
+            setupTabs();
+        }
     }
 
     /**
@@ -275,6 +303,83 @@ public class StoryInfoPanelFragment extends BaseFragment {
         } else {
             Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * 显示小说选择器
+     */
+    private void showStorySelector() {
+        // 获取所有小说列表
+        List<Story> allStories = storyRepository.getAllStories();
+        if (allStories == null || allStories.isEmpty()) {
+            Toast.makeText(requireContext(), "暂无其他小说", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 构建小说标题列表
+        String[] storyTitles = new String[allStories.size()];
+        int selectedIndex = -1;
+        for (int i = 0; i < allStories.size(); i++) {
+            Story story = allStories.get(i);
+            storyTitles[i] = story.getTitle();
+            if (currentStory != null && story.getId() == currentStory.getId()) {
+                selectedIndex = i;
+            }
+        }
+
+        // 显示选择对话框
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("选择小说");
+        builder.setSingleChoiceItems(storyTitles, selectedIndex, (dialog, which) -> {
+            Story selectedStory = allStories.get(which);
+            if (selectedStory.getId() != (currentStory != null ? currentStory.getId() : -1)) {
+                // 切换到选中的小说
+                switchToStory(selectedStory);
+            }
+            dialog.dismiss();
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    /**
+     * 切换到指定小说
+     */
+    private void switchToStory(Story story) {
+        if (story == null) return;
+
+        android.util.Log.d("StoryInfoPanel", "开始切换小说: " + story.getTitle() + ", ID: " + story.getId());
+
+        // 保存当前小说数据（如果有修改）
+        if (currentStory != null) {
+            savePanelData();
+        }
+
+        // 更新当前小说
+        currentStory = story;
+        storyId = story.getId();
+
+        // 更新标题显示
+        tvStoryTitle.setText(story.getTitle());
+
+        // 更新 SharedPreferences 中的选中状态
+        PrefsUtils.getInstance(requireContext())
+            .putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
+        PrefsUtils.getInstance(requireContext())
+            .putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, story.getTitle());
+
+        // 重新加载内容
+        loadStoryData();
+
+        // 通知父Activity刷新UI（使用监听器）
+        if (onStoryChangedListener != null) {
+            android.util.Log.d("StoryInfoPanel", "调用监听器，story_id: " + story.getId());
+            onStoryChangedListener.onStoryChanged(story.getId());
+        } else {
+            android.util.Log.e("StoryInfoPanel", "onStoryChangedListener 为 null");
+        }
+
+        Toast.makeText(requireContext(), "已切换到《" + story.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
 
     /**

@@ -1,20 +1,14 @@
 package com.example.storyteller.ui.fragment;
 
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
@@ -22,28 +16,26 @@ import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.model.Story;
 
 /**
- * 小说架构编辑Fragment
- * 用于编辑作品的基本信息和描述信息
+ * 架构Fragment - 管理作品的基本信息
  */
 public class ArchitectureFragment extends BaseFragment {
 
     private static final String ARG_STORY_ID = "arg_story_id";
 
+    // UI组件
     private EditText etTitle;
-    private EditText etDescription;
-    private EditText etOutline;
-    private EditText etSummary;
     private Spinner spinnerGenre;
+    private EditText etDescription;
     private TextView tvDescriptionCount;
-    private Button btnSave;
 
-    private StoryDao storyDao;
+    // 数据
     private Story currentStory;
     private int storyId;
+    private StoryDao storyDao;
 
     // 类型选项
     private static final String[] GENRE_OPTIONS = {
-        "创作", "科幻", "奇幻", "悬疑", "言情", "历史", "武侠", "都市", "其他"
+        "玄幻", "奇幻", "武侠", "仙侠", "都市", "历史", "科幻", "悬疑", "恐怖", "言情", "其他"
     };
 
     public static ArchitectureFragment newInstance(int storyId) {
@@ -62,12 +54,9 @@ public class ArchitectureFragment extends BaseFragment {
     @Override
     protected void initView(View view) {
         etTitle = view.findViewById(R.id.et_architecture_title);
-        etDescription = view.findViewById(R.id.et_architecture_description);
-        etOutline = view.findViewById(R.id.et_architecture_outline);
-        etSummary = view.findViewById(R.id.et_architecture_summary);
         spinnerGenre = view.findViewById(R.id.spinner_genre);
+        etDescription = view.findViewById(R.id.et_architecture_description);
         tvDescriptionCount = view.findViewById(R.id.tv_description_count);
-        btnSave = view.findViewById(R.id.btn_save_architecture);
 
         // 设置类型下拉框
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -78,28 +67,19 @@ public class ArchitectureFragment extends BaseFragment {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerGenre.setAdapter(adapter);
 
-        // 简介字数统计
-        etDescription.addTextChangedListener(new TextWatcher() {
+        // 字数统计
+        etDescription.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                tvDescriptionCount.setText(s.length() + "/500");
+            }
 
             @Override
-            public void afterTextChanged(Editable s) {
-                int length = s.toString().length();
-                tvDescriptionCount.setText(length + "/500");
-                if (length > 500) {
-                    tvDescriptionCount.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                } else {
-                    tvDescriptionCount.setTextColor(getResources().getColor(android.R.color.darker_gray));
-                }
-            }
+            public void afterTextChanged(android.text.Editable s) {}
         });
-
-        // 保存按钮
-        btnSave.setOnClickListener(v -> saveChanges());
     }
 
     @Override
@@ -113,7 +93,7 @@ public class ArchitectureFragment extends BaseFragment {
         if (storyId > 0) {
             loadStoryData();
         } else {
-            Toast.makeText(requireContext(), "未找到作品信息", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "未找到作品", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -150,6 +130,15 @@ public class ArchitectureFragment extends BaseFragment {
 
         // 注意：大纲和总结目前存储在NovelSummary中，这里暂时留空
         // 后续可以扩展Story模型或创建关联表来存储这些信息
+    }
+    
+    /**
+     * 公开方法：刷新视图（用于切换小说后强制刷新）
+     */
+    public void refreshView() {
+        if (storyId > 0) {
+            loadStoryData();
+        }
     }
 
     /**

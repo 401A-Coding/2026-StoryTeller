@@ -25,21 +25,37 @@
 
         <TextView
             android:id="@+id/tv_story_title"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="新小说"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp" />
 
-        <!-- 切换小说按钮 -->
+        <!-- 切换小说按钮（紧邻标题） -->
         <ImageView
             android:id="@+id/btn_select_story"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:src="@drawable/ic_arrow_drop_down"
             android:contentDescription="切换小说"
+            android:padding="4dp"
+            app:tint="#FFFFFF" />
+
+        <!-- 占位空间，将关闭按钮推到右侧 -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- 关闭按钮 -->
+        <ImageView
+            android:id="@+id/btn_close_panel"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_close"
+            android:contentDescription="关闭"
             android:padding="4dp"
             app:tint="#FFFFFF" />
     </LinearLayout>

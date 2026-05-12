@@ -18,6 +18,7 @@ import com.example.storyteller.ui.fragment.WritingFragment;
 public class WorkspacePagerAdapter extends FragmentStateAdapter {
 
     private final int storyId;
+    private final long adapterId;  // 用于强制刷新Fragment
     
     // Tab定义
     public static final int TAB_WRITING = 0;
@@ -31,6 +32,24 @@ public class WorkspacePagerAdapter extends FragmentStateAdapter {
     public WorkspacePagerAdapter(@NonNull FragmentActivity fragmentActivity, int storyId) {
         super(fragmentActivity);
         this.storyId = storyId;
+        this.adapterId = System.currentTimeMillis();  // 每次创建都使用不同的ID
+    }
+    
+    /**
+     * 重写getItemId，确保每次切换小说后Fragment都会被重新创建
+     */
+    @Override
+    public long getItemId(int position) {
+        // 结合position和adapterId，确保ID唯一
+        return adapterId * 10 + position;
+    }
+    
+    /**
+     * 重写containsItem，确保Fragment不会被复用
+     */
+    @Override
+    public boolean containsItem(long itemId) {
+        return true;
     }
 
     @NonNull

@@ -52,7 +52,8 @@
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:imeOptions="actionDone"
-                android:inputType="text" />
+                android:inputType="text"
+                android:saveEnabled="false" />
 
             <TextView
                 android:id="@+id/tv_chapter_name"

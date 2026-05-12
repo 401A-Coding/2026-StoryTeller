@@ -340,6 +340,8 @@ public class StoryWorkspaceActivity extends BaseActivity {
     private void initStoryInfoPanel() {
         if (storyId > 0) {
             storyInfoPanelFragment = StoryInfoPanelFragment.newInstance(storyId);
+            // 设置小说切换监听器
+            storyInfoPanelFragment.setOnStoryChangedListener(this::reloadStory);
             getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.panel_story_info, storyInfoPanelFragment)
@@ -369,5 +371,17 @@ public class StoryWorkspaceActivity extends BaseActivity {
         if (currentFragment instanceof WritingFragment) {
             ((WritingFragment) currentFragment).refreshView();
         }
+    }
+    
+    /**
+     * 重新加载小说数据
+     */
+    private void reloadStory(int newStoryId) {
+        // 最简单可靠的方法：重新启动Activity
+        Intent intent = new Intent(this, StoryWorkspaceActivity.class);
+        intent.putExtra(EXTRA_STORY_ID, newStoryId);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }

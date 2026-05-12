@@ -46,6 +46,9 @@ public class WritingFragment extends BaseFragment {
     private int storyId;
     private StoryRepository storyRepository;
     private int volumeCount = 0;
+    
+    // 标记是否有正在编辑的EditText（用于防止切换Tab时自动保存）
+    private EditText currentEditingEditText = null;
 
     public static WritingFragment newInstance(int storyId) {
         WritingFragment fragment = new WritingFragment();
@@ -84,6 +87,20 @@ public class WritingFragment extends BaseFragment {
             Toast.makeText(requireContext(), "未找到作品", Toast.LENGTH_SHORT).show();
         }
     }
+    
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Fragment暂停时，清除编辑状态，防止切换Tab时自动保存
+        currentEditingEditText = null;
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // View销毁时，清除编辑状态
+        currentEditingEditText = null;
+    }
 
     /**
      * 加载作品数据
@@ -118,6 +135,15 @@ public class WritingFragment extends BaseFragment {
 
         // 渲染卷章
         renderVolumes();
+    }
+    
+    /**
+     * 公开方法：刷新视图（用于切换小说后强制刷新）
+     */
+    public void refreshView() {
+        if (storyId > 0) {
+            loadStoryData();
+        }
     }
 
     /**
@@ -254,24 +280,69 @@ public class WritingFragment extends BaseFragment {
      * 设置内联编辑（单击切换编辑模式）
      */
     private void setupInlineEdit(TextView textView, EditText editText, Object model, boolean isChapter) {
+        // 使用Tag存储关联信息
+        // Tag结构: [textView, model, isChapter]
+        Object[] tagData = new Object[]{textView, model, isChapter};
+        editText.setTag(tagData);
+        textView.setTag(tagData);  // TextView也存储同样的Tag
+        
+        // 清除旧的监听器（如果有）
+        textView.setOnClickListener(null);
+        editText.setOnFocusChangeListener(null);
+        editText.setOnEditorActionListener(null);
+        
         // 单击 TextView 切换到编辑模式
         textView.setOnClickListener(v -> {
-            textView.setVisibility(View.GONE);
-            editText.setVisibility(View.VISIBLE);
-            editText.requestFocus();
-            // 选中全部文本
-            editText.setSelection(editText.getText().length());
-            // 显示软键盘
-            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            // 从TextView的Tag中获取数据
+            Object[] tag = (Object[]) v.getTag();
+            if (tag == null || tag.length != 3) {
+                return;
+            }
+            
+            TextView tv = (TextView) tag[0];
+            
+            // 找到对应的EditText（通过遍历父布局）
+            android.view.ViewParent parent = tv.getParent();
+            if (parent instanceof android.view.ViewGroup) {
+                android.view.ViewGroup vg = (android.view.ViewGroup) parent;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    android.view.View child = vg.getChildAt(i);
+                    if (child instanceof EditText && child.getVisibility() == View.GONE) {
+                        EditText et = (EditText) child;
+                        Object[] etTag = (Object[]) et.getTag();
+                        if (etTag != null && etTag.length == 3 && etTag[0] == tv) {
+                            // 找到了对应的EditText
+                            tv.setVisibility(View.GONE);
+                            et.setVisibility(View.VISIBLE);
+                            et.requestFocus();
+                            et.setSelection(et.getText().length());
+                            
+                            android.view.inputmethod.InputMethodManager imm = 
+                                (android.view.inputmethod.InputMethodManager) requireActivity()
+                                    .getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) {
+                                imm.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                            }
+                            currentEditingEditText = et;
+                            break;
+                        }
+                    }
+                }
             }
         });
 
         // EditText 失去焦点时切换回显示模式
         editText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) {
-                finishEditing(editText, textView, model, isChapter);
+            if (!hasFocus && currentEditingEditText == v) {
+                // 从EditText的Tag中获取数据
+                Object[] tag = (Object[]) v.getTag();
+                if (tag != null && tag.length == 3) {
+                    TextView tv = (TextView) tag[0];
+                    Object m = tag[1];
+                    Boolean isChap = (Boolean) tag[2];
+                    finishEditing((EditText) v, tv, m, isChap);
+                }
+                currentEditingEditText = null;
             }
         });
 
@@ -279,7 +350,15 @@ public class WritingFragment extends BaseFragment {
         editText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
                 actionId == android.view.inputmethod.EditorInfo.IME_NULL) {
-                finishEditing(editText, textView, model, isChapter);
+                // 从EditText的Tag中获取数据
+                Object[] tag = (Object[]) v.getTag();
+                if (tag != null && tag.length == 3) {
+                    TextView tv = (TextView) tag[0];
+                    Object m = tag[1];
+                    Boolean isChap = (Boolean) tag[2];
+                    finishEditing((EditText) v, tv, m, isChap);
+                }
+                currentEditingEditText = null;
                 return true;
             }
             return false;
@@ -290,6 +369,12 @@ public class WritingFragment extends BaseFragment {
      * 完成编辑，切换回显示模式
      */
     private void finishEditing(EditText editText, TextView textView, Object model, boolean isChapter) {
+        // 安全检查：确保editText和textView仍然 attached to window
+        if (!editText.isAttachedToWindow() || !textView.isAttachedToWindow()) {
+            // View已经销毁，不执行保存
+            return;
+        }
+        
         String newName = editText.getText().toString().trim();
         if (TextUtils.isEmpty(newName)) {
             newName = isChapter ? "新章节" : "新卷名";
@@ -565,12 +650,5 @@ public class WritingFragment extends BaseFragment {
      */
     public List<Volume> getVolumes() {
         return volumes;
-    }
-    
-    /**
-     * 刷新视图（从数据库重新加载数据）
-     */
-    public void refreshView() {
-        loadStoryData();
     }
 }

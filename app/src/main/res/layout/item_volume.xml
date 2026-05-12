@@ -50,7 +50,8 @@
                 android:textColor="#212121"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:saveEnabled="false" />
 
             <TextView
                 android:id="@+id/tv_volume_name"
