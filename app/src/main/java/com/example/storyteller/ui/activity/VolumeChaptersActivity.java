@@ -136,6 +136,28 @@ public class VolumeChaptersActivity extends BaseActivity {
                 tab.setText(startChapter + "-" + endChapter + "章");
             }
         }
+
+        // 监听页面切换，当切换到最后一个标签时自动滚动使其可见
+        viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {}
+
+            @Override
+            public void onPageSelected(int position) {
+                // 当选中最后一个标签时，自动滚动TabLayout使其可见
+                if (position == tabPageIndicator.getTabCount() - 1) {
+                    tabPageIndicator.post(() -> {
+                        com.google.android.material.tabs.TabLayout.Tab lastTab = tabPageIndicator.getTabAt(position);
+                        if (lastTab != null) {
+                            lastTab.select();
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {}
+        });
     }
 
     @Override
