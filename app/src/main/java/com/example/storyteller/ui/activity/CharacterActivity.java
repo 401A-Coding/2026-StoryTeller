@@ -33,6 +33,7 @@ public class CharacterActivity extends BaseActivity {
 
     public static final String EXTRA_STORY_ID = StoryAdapter.EXTRA_STORY_ID;
 
+    private TextView tvCurrentStoryTitle;
     private ProgressBar pbLoading;
     private TextView tvStatus;
     private Button btnRegenerate;
@@ -50,7 +51,10 @@ public class CharacterActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
         RecyclerView rvCharacterList = findViewById(R.id.rv_character_list);
+        tvCurrentStoryTitle = findViewById(R.id.tv_current_story_title);
         pbLoading = findViewById(R.id.pb_character_loading);
         tvStatus = findViewById(R.id.tv_character_status);
         btnRegenerate = findViewById(R.id.btn_regenerate_character);
@@ -103,9 +107,12 @@ public class CharacterActivity extends BaseActivity {
     private void loadCharactersForSelectedStory(boolean forceRefresh, String extraDemand) {
         Story story = resolveSelectedStory();
         if (story == null) {
+            tvCurrentStoryTitle.setText("未找到故事");
             showEmpty("还没有可分析的小说，请先新增或选择一篇故事");
             return;
         }
+
+        tvCurrentStoryTitle.setText(story.getTitle());
 
         boolean hasExisting = adapter != null && adapter.getItemCount() > 0;
         showLoading();
@@ -376,7 +383,7 @@ public class CharacterActivity extends BaseActivity {
                 obj = root;
             } else if (root.has("characters") && root.get("characters").isJsonArray()) {
                 JsonArray array = root.getAsJsonArray("characters");
-                if (array.size() > 0 && array.get(0).isJsonObject()) {
+                if (!array.isEmpty() && array.get(0).isJsonObject()) {
                     obj = array.get(0).getAsJsonObject();
                 }
             }
