@@ -6,7 +6,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.MediaType;
 import com.google.gson.Gson;
-import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
@@ -48,6 +47,21 @@ public class ApiClient {
         public double temperature = 0.7;  // 创意度，0-1之间
     }
 
+    public static class RequestOptions {
+        public Integer maxTokens;
+        public Double temperature;
+
+        public RequestOptions setMaxTokens(int maxTokens) {
+            this.maxTokens = maxTokens;
+            return this;
+        }
+
+        public RequestOptions setTemperature(double temperature) {
+            this.temperature = temperature;
+            return this;
+        }
+    }
+
     public static class Message {
         public String role;  // "user" 或 "system"
         public String content;
@@ -80,6 +94,10 @@ public class ApiClient {
      * @param callback 回调
      */
     public void generateStory(String prompt, String model, Context context, Callback callback) {
+        generateStory(prompt, model, context, null, callback);
+    }
+
+    public void generateStory(String prompt, String model, Context context, RequestOptions options, Callback callback) {
         String apiKey = ApiKeyManager.getApiKey(context);
         if (apiKey.isEmpty()) {
             callback.onFailure(new Exception("API key not set"));
@@ -94,6 +112,14 @@ public class ApiClient {
             request.model = "deepseek-v4-flash";  // Flash 模型（默认）
         }
         request.messages = List.of(new Message("user", prompt));  // 用户提示作为消息
+        if (options != null) {
+            if (options.maxTokens != null && options.maxTokens > 0) {
+                request.max_tokens = options.maxTokens;
+            }
+            if (options.temperature != null) {
+                request.temperature = options.temperature;
+            }
+        }
 
         String json = gson.toJson(request);
         RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));

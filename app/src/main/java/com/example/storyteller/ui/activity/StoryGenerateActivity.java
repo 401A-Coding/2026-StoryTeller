@@ -600,6 +600,7 @@ public class StoryGenerateActivity extends BaseActivity {
         // Serialize volumes structure to JSON
         String structureJson = JsonUtils.toJson(volumes);
         currentStory.setStructure(structureJson);
+        currentStory.setPlotSummaryJson(null);
         
         // Save to database via repository
         int result = storyRepository.updateStory(currentStory);
