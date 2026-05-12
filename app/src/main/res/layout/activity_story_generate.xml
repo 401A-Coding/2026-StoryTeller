@@ -247,7 +247,7 @@
                     android:src="@android:drawable/ic_menu_send"
                     android:contentDescription="@string/action_send"
                     android:padding="12dp"
-                    android:tint="@color/colorPrimary" />
+                    app:tint="@color/colorPrimary" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
