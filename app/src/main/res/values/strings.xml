@@ -13,9 +13,13 @@
     <string name="title_story_preview">小说详情</string>
     <string name="title_settings">设置</string>
     <string name="action_back_home">返回首页</string>
+    <string name="action_import_material">导入素材</string>
     <string name="action_edit_story">编辑故事</string>
     <string name="action_character_analysis">人物画像</string>
     <string name="action_plot_outline">剧情梳理</string>
+    <string name="hint_material_search">搜索素材标题或内容</string>
+    <string name="material_filter_all">全部</string>
+    <string name="title_material_list">已存素材</string>
     <string name="story_detail_series_label">系列名称</string>
     <string name="story_detail_description_label">简介</string>
     <string name="story_detail_actions_label">快捷操作</string>

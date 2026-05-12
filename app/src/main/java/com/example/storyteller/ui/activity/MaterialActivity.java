@@ -49,6 +49,8 @@ public class MaterialActivity extends BaseActivity {
 
     @Override
     protected void initView() {
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
         btnImport = findViewById(R.id.btn_import);
         etSearch = findViewById(R.id.et_material_search);
         btnFilterAll = findViewById(R.id.btn_filter_all);
