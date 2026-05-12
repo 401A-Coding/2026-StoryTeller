@@ -194,7 +194,7 @@ public class BookshelfFragment extends BaseFragment {
             case 2: // 已完成
                 filteredStories = filterByCategory(allStories, getString(R.string.bookshelf_category_completed));
                 break;
-            case 3: // 已收藏
+            case 3: // 收藏（独立于创作中/已完成，任何故事都可以收藏）
                 filteredStories = getCollectedStories(allStories);
                 break;
             default: // 全部

@@ -137,7 +137,7 @@
     <string name="bookshelf_category_all">全部</string>
     <string name="bookshelf_category_writing">创作中</string>
     <string name="bookshelf_category_completed">已完成</string>
-    <string name="bookshelf_category_collected">已收藏</string>
+    <string name="bookshelf_category_collected">收藏</string>
     <string name="bookshelf_empty_hint">还没有小说，点击下方按钮创建吧</string>
     <string name="bookshelf_change_category">修改分类</string>
     <string name="bookshelf_change_cover">更换封面</string>
