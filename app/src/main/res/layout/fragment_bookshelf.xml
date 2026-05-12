@@ -23,32 +23,36 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        app:tabMode="scrollable"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:tabMode="fixed"
         app:tabGravity="fill"
-        app:tabSelectedTextColor="@color/colorPrimary"
+        app:tabSelectedTextColor="@android:color/white"
         app:tabTextColor="@color/colorGray"
-        app:tabIndicatorColor="@color/colorPrimary"
+        app:tabIndicator="@null"
+        app:tabBackground="@drawable/tab_category_bg"
+        app:tabRippleColor="@null"
         app:layout_constraintTop_toBottomOf="@id/tv_bookshelf_title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/bookshelf_category_all" />
 
         <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/bookshelf_category_writing" />
 
         <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/bookshelf_category_completed" />
 
         <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/bookshelf_category_collected" />
 
