@@ -137,170 +137,186 @@ public class StoryDetailActivity extends BaseActivity {
      * 动态生成每卷的卡片视图，每卷和每章都可点击进入编辑
      */
     private void buildCatalogViews(LinearLayout container, String structureJson, int storyId) {
-        List<Volume> volumes = null;
+        try {
+            List<Volume> volumes = null;
 
-        // 1. 尝试从传入的 structureJson 解析
-        if (!TextUtils.isEmpty(structureJson)) {
-            try {
-                Type type = new TypeToken<List<Volume>>() {}.getType();
-                volumes = JsonUtils.fromJson(structureJson, type);
-            } catch (Exception e) {
-                Log.w("StoryDetailActivity", "Failed to parse structure JSON", e);
+            // 1. 尝试从传入的 structureJson 解析
+            if (!TextUtils.isEmpty(structureJson)) {
+                try {
+                    Type type = new TypeToken<List<Volume>>() {}.getType();
+                    volumes = JsonUtils.fromJson(structureJson, type);
+                } catch (Exception e) {
+                    Log.w("StoryDetailActivity", "Failed to parse structure JSON", e);
+                }
             }
-        }
 
-        // 2. 如果为空，从数据库重新获取完整数据
-        if (volumes == null || volumes.isEmpty()) {
-            StoryDao storyDao = new StoryDao(this);
-            Story fullStory = storyDao.getStoryById(storyId);
-            if (fullStory != null) {
-                // 2a. 尝试从 structure 字段获取
-                if (!TextUtils.isEmpty(fullStory.getStructure())) {
-                    try {
-                        Type type = new TypeToken<List<Volume>>() {}.getType();
-                        volumes = JsonUtils.fromJson(fullStory.getStructure(), type);
-                    } catch (Exception e) {
-                        Log.w("StoryDetailActivity", "Failed to parse full story structure", e);
+            // 2. 如果为空，从数据库重新获取完整数据
+            if (volumes == null || volumes.isEmpty()) {
+                StoryDao storyDao = new StoryDao(this);
+                Story fullStory = storyDao.getStoryById(storyId);
+                if (fullStory != null) {
+                    // 2a. 尝试从 structure 字段获取
+                    if (!TextUtils.isEmpty(fullStory.getStructure())) {
+                        try {
+                            Type type = new TypeToken<List<Volume>>() {}.getType();
+                            volumes = JsonUtils.fromJson(fullStory.getStructure(), type);
+                        } catch (Exception e) {
+                            Log.w("StoryDetailActivity", "Failed to parse full story structure", e);
+                        }
+                    }
+                    // 2b. 如果还是没有，从 content 中解析
+                    if ((volumes == null || volumes.isEmpty()) && !TextUtils.isEmpty(fullStory.getContent())) {
+                        volumes = parseVolumesFromContent(fullStory.getContent());
                     }
                 }
-                // 2b. 如果还是没有，从 content 中解析
-                if ((volumes == null || volumes.isEmpty()) && !TextUtils.isEmpty(fullStory.getContent())) {
-                    volumes = parseVolumesFromContent(fullStory.getContent());
-                }
             }
-        }
 
-        // 3. 如果仍然为空，显示"暂无目录"
-        if (volumes == null || volumes.isEmpty()) {
-            TextView emptyCatalog = new TextView(this);
-            emptyCatalog.setText(getString(R.string.story_detail_catalog_empty));
-            emptyCatalog.setTextColor(0xFF333333);
-            emptyCatalog.setTextSize(14);
-            container.addView(emptyCatalog);
-            return;
-        }
+            // 3. 如果仍然为空，显示"暂无目录"
+            if (volumes == null || volumes.isEmpty()) {
+                TextView emptyCatalog = new TextView(this);
+                emptyCatalog.setText(getString(R.string.story_detail_catalog_empty));
+                emptyCatalog.setTextColor(0xFF333333);
+                emptyCatalog.setTextSize(14);
+                container.addView(emptyCatalog);
+                return;
+            }
 
-        // 4. 渲染卷卡片
-        for (int i = 0; i < volumes.size(); i++) {
-            final int volumeIndex = i;
-            Volume volume = volumes.get(i);
-            String volumeTitle = TextUtils.isEmpty(volume.getTitle()) ? "未命名卷" : volume.getTitle().trim();
+            // 4. 渲染卷卡片
+            for (int i = 0; i < volumes.size(); i++) {
+                final int volumeIndex = i;
+                Volume volume = volumes.get(i);
+                String volumeTitle = TextUtils.isEmpty(volume.getTitle()) ? "未命名卷" : volume.getTitle().trim();
 
-            // 创建卷卡片
-            MaterialCardView volumeCard = new MaterialCardView(this);
-            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-            cardParams.topMargin = 12;
-            volumeCard.setLayoutParams(cardParams);
-            volumeCard.setRadius(48);
-            volumeCard.setCardElevation(2);
-            volumeCard.setStrokeWidth(1);
-            volumeCard.setStrokeColor(0xFFE6E6E6);
-            volumeCard.setClickable(true);
-            volumeCard.setFocusable(true);
-            volumeCard.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                // 创建卷卡片
+                MaterialCardView volumeCard = new MaterialCardView(this);
+                LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                cardParams.topMargin = 12;
+                volumeCard.setLayoutParams(cardParams);
+                volumeCard.setRadius(48);
+                volumeCard.setCardElevation(2);
+                volumeCard.setStrokeWidth(1);
+                volumeCard.setStrokeColor(0xFFE6E6E6);
+                volumeCard.setClickable(true);
+                volumeCard.setFocusable(true);
+                // 安全设置 foreground，避免在某些设备上崩溃
+                try {
+                    volumeCard.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                } catch (Exception ignored) {
+                }
 
-            // 卷卡片内部布局
-            LinearLayout volumeContent = new LinearLayout(this);
-            volumeContent.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ));
-            volumeContent.setOrientation(LinearLayout.VERTICAL);
-            volumeContent.setPadding(48, 48, 48, 48);
+                // 卷卡片内部布局
+                LinearLayout volumeContent = new LinearLayout(this);
+                volumeContent.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ));
+                volumeContent.setOrientation(LinearLayout.VERTICAL);
+                volumeContent.setPadding(48, 48, 48, 48);
 
-            // 卷标题
-            TextView tvVolumeTitle = new TextView(this);
-            tvVolumeTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volumeTitle);
-            tvVolumeTitle.setTextColor(0xFF2A2A2A);
-            tvVolumeTitle.setTextSize(15);
-            tvVolumeTitle.setTypeface(tvVolumeTitle.getTypeface(), android.graphics.Typeface.BOLD);
-            volumeContent.addView(tvVolumeTitle);
+                // 卷标题
+                TextView tvVolumeTitle = new TextView(this);
+                tvVolumeTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volumeTitle);
+                tvVolumeTitle.setTextColor(0xFF2A2A2A);
+                tvVolumeTitle.setTextSize(15);
+                tvVolumeTitle.setTypeface(tvVolumeTitle.getTypeface(), android.graphics.Typeface.BOLD);
+                volumeContent.addView(tvVolumeTitle);
 
-            // 章节列表
-            List<Chapter> chapters = volume.getChapters();
-            if (chapters != null && !chapters.isEmpty()) {
-                for (int j = 0; j < chapters.size(); j++) {
-                    Chapter chapter = chapters.get(j);
-                    String chapterTitle = TextUtils.isEmpty(chapter.getTitle()) ? "未命名章" : chapter.getTitle().trim();
+                // 章节列表
+                List<Chapter> chapters = volume.getChapters();
+                if (chapters != null && !chapters.isEmpty()) {
+                    for (int j = 0; j < chapters.size(); j++) {
+                        Chapter chapter = chapters.get(j);
+                        String chapterTitle = TextUtils.isEmpty(chapter.getTitle()) ? "未命名章" : chapter.getTitle().trim();
 
-                    // 章节行
-                    LinearLayout chapterRow = new LinearLayout(this);
-                    chapterRow.setLayoutParams(new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ));
-                    chapterRow.setOrientation(LinearLayout.HORIZONTAL);
-                    chapterRow.setPadding(0, 24, 0, 24);
-                    chapterRow.setClickable(true);
-                    chapterRow.setFocusable(true);
-                    chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
-
-                    TextView tvChapter = new TextView(this);
-                    tvChapter.setLayoutParams(new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1
-                    ));
-                    tvChapter.setText((j + 1) + ". " + chapterTitle);
-                    tvChapter.setTextColor(0xFF333333);
-                    tvChapter.setTextSize(14);
-
-                    // 编辑提示箭头
-                    TextView tvArrow = new TextView(this);
-                    tvArrow.setText(">");
-                    tvArrow.setTextColor(0xFFBBBBBB);
-                    tvArrow.setTextSize(14);
-
-                    chapterRow.addView(tvChapter);
-                    chapterRow.addView(tvArrow);
-
-                    // 点击章节进入编辑
-                    final int chapterIndex = j;
-                    final int volIdxForChapter = volumeIndex;
-                    chapterRow.setOnClickListener(v -> {
-                        Intent editIntent = new Intent(this, StoryGenerateActivity.class);
-                        editIntent.putExtra("story_id", storyId);
-                        editIntent.putExtra("volume_index", volIdxForChapter);
-                        editIntent.putExtra("chapter_index", chapterIndex);
-                        startActivity(editIntent);
-                    });
-
-                    volumeContent.addView(chapterRow);
-
-                    // 章节之间的分割线
-                    if (j < chapters.size() - 1) {
-                        View divider = new View(this);
-                        divider.setLayoutParams(new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 1
+                        // 章节行
+                        LinearLayout chapterRow = new LinearLayout(this);
+                        chapterRow.setLayoutParams(new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
                         ));
-                        divider.setBackgroundColor(0xFFEEEEEE);
-                        volumeContent.addView(divider);
+                        chapterRow.setOrientation(LinearLayout.HORIZONTAL);
+                        chapterRow.setPadding(0, 24, 0, 24);
+                        chapterRow.setClickable(true);
+                        chapterRow.setFocusable(true);
+                        try {
+                            chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                        } catch (Exception ignored) {
+                        }
+
+                        TextView tvChapter = new TextView(this);
+                        tvChapter.setLayoutParams(new LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1
+                        ));
+                        tvChapter.setText((j + 1) + ". " + chapterTitle);
+                        tvChapter.setTextColor(0xFF333333);
+                        tvChapter.setTextSize(14);
+
+                        // 编辑提示箭头
+                        TextView tvArrow = new TextView(this);
+                        tvArrow.setText(">");
+                        tvArrow.setTextColor(0xFFBBBBBB);
+                        tvArrow.setTextSize(14);
+
+                        chapterRow.addView(tvChapter);
+                        chapterRow.addView(tvArrow);
+
+                        // 点击章节进入编辑
+                        final int chapterIndex = j;
+                        final int volIdxForChapter = volumeIndex;
+                        chapterRow.setOnClickListener(v -> {
+                            Intent editIntent = new Intent(this, StoryGenerateActivity.class);
+                            editIntent.putExtra("story_id", storyId);
+                            editIntent.putExtra("volume_index", volIdxForChapter);
+                            editIntent.putExtra("chapter_index", chapterIndex);
+                            startActivity(editIntent);
+                        });
+
+                        volumeContent.addView(chapterRow);
+
+                        // 章节之间的分割线
+                        if (j < chapters.size() - 1) {
+                            View divider = new View(this);
+                            divider.setLayoutParams(new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT, 1
+                            ));
+                            divider.setBackgroundColor(0xFFEEEEEE);
+                            volumeContent.addView(divider);
+                        }
                     }
+                } else {
+                    TextView tvEmpty = new TextView(this);
+                    tvEmpty.setText("  暂无章节");
+                    tvEmpty.setTextColor(0xFF999999);
+                    tvEmpty.setTextSize(13);
+                    tvEmpty.setPadding(0, 16, 0, 0);
+                    volumeContent.addView(tvEmpty);
                 }
-            } else {
-                TextView tvEmpty = new TextView(this);
-                tvEmpty.setText("  暂无章节");
-                tvEmpty.setTextColor(0xFF999999);
-                tvEmpty.setTextSize(13);
-                tvEmpty.setPadding(0, 16, 0, 0);
-                volumeContent.addView(tvEmpty);
+
+                volumeCard.addView(volumeContent);
+
+                // 点击整卷进入卷章节列表（分页展示）
+                final int volumeIdx = volumeIndex;
+                volumeCard.setOnClickListener(v -> {
+                    Intent volumeIntent = new Intent(StoryDetailActivity.this, VolumeChaptersActivity.class);
+                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_STORY_ID, storyId);
+                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_VOLUME_INDEX, volumeIdx);
+                    startActivity(volumeIntent);
+                });
+
+                container.addView(volumeCard);
             }
-
-            volumeCard.addView(volumeContent);
-
-            // 点击整卷进入卷章节列表（分页展示）
-            final int volumeIdx = volumeIndex;
-            volumeCard.setOnClickListener(v -> {
-                Intent volumeIntent = new Intent(StoryDetailActivity.this, VolumeChaptersActivity.class);
-                volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_STORY_ID, storyId);
-                volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_VOLUME_INDEX, volumeIdx);
-                startActivity(volumeIntent);
-            });
-
-            container.addView(volumeCard);
+        } catch (Exception e) {
+            Log.e("StoryDetailActivity", "buildCatalogViews crashed", e);
+            TextView errorCatalog = new TextView(this);
+            errorCatalog.setText(getString(R.string.story_detail_catalog_empty));
+            errorCatalog.setTextColor(0xFF333333);
+            errorCatalog.setTextSize(14);
+            container.addView(errorCatalog);
         }
     }
 
@@ -320,7 +336,6 @@ public class StoryDetailActivity extends BaseActivity {
         String[] lines = content.split("\n");
         Volume currentVolume = null;
         List<Chapter> currentChapters = new ArrayList<>();
-        String currentVolumeTitle = null;
         int volumeCount = 0;
 
         // 正则：## 第一卷 标题 或 ## 第1卷 标题
@@ -392,5 +407,3 @@ public class StoryDetailActivity extends BaseActivity {
         return volumes;
     }
 }
-
-
