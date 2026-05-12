@@ -15,7 +15,6 @@ import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.StoryGenerateActivity;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import java.text.Collator;
 import java.util.ArrayList;
@@ -148,9 +147,9 @@ public class BookshelfFragment extends BaseFragment {
                 dialog.dismiss();
                 refreshStories();
 
-                // Navigate directly to edit page
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                intent.putExtra("story_id", (int) id);
+                // Navigate directly to workspace page
+                Intent intent = new Intent(requireContext(), com.example.storyteller.ui.activity.StoryWorkspaceActivity.class);
+                intent.putExtra(com.example.storyteller.ui.activity.StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);
                 startActivity(intent);
             } else {
                 Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();

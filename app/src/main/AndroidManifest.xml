@@ -26,9 +26,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.activity.StoryGenerateActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        <activity
             android:name=".ui.activity.StoryWorkspaceActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
@@ -39,9 +36,6 @@
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
             android:name=".ui.activity.MaterialActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        <activity
-            android:name=".ui.activity.StoryDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
             android:name=".ui.activity.MaterialDetailActivity"
