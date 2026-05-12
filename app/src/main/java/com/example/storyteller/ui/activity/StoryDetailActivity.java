@@ -99,12 +99,21 @@ public class StoryDetailActivity extends BaseActivity {
         });
 
         findViewById(R.id.btn_edit_story).setOnClickListener(v -> {
-            Intent editIntent = new Intent(this, StoryGenerateActivity.class);
-            if (selectedStoryId > 0) {
-                editIntent.putExtra("story_id", selectedStoryId);
-            }
-            startActivity(editIntent);
+            startEditStory(selectedStoryId);
         });
+
+        // 点击故事章节/目录也可进入编辑
+        findViewById(R.id.tv_story_catalog).setOnClickListener(v -> {
+            startEditStory(selectedStoryId);
+        });
+    }
+
+    private void startEditStory(int storyId) {
+        Intent editIntent = new Intent(this, StoryGenerateActivity.class);
+        if (storyId > 0) {
+            editIntent.putExtra("story_id", storyId);
+        }
+        startActivity(editIntent);
     }
 
     @Override
