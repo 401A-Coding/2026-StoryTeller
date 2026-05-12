@@ -7,14 +7,18 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -32,6 +36,7 @@ import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
 import com.example.storyteller.utils.AgentCommandExecutor;
 import com.example.storyteller.utils.JsonUtils;
+import com.google.android.material.tabs.TabLayout;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +47,7 @@ import java.util.List;
 public class StoryGenerateActivity extends BaseActivity {
 
     // UI Components
-    private ImageView btnBack;
+    private ImageView btnStoryInfo;
     private ImageView btnAi;
     private ImageView btnSave;
     private DrawerLayout drawerLayout;
@@ -56,6 +61,22 @@ public class StoryGenerateActivity extends BaseActivity {
     private ProgressBar progressBar;
     private LinearLayout layoutContent;
     private Button btnAddVolume;
+
+    // Story Info Panel (左侧悬浮栏)
+    private LinearLayout panelStoryInfo;
+    private ImageView btnCloseStoryInfo;
+    private ImageView btnSelectStory;
+    private TextView tvStoryTitle;
+    private TabLayout tabStoryInfo;
+    private EditText etWorldSetting;
+    private EditText etOutline;
+    private EditText etDocs;
+    private LinearLayout layoutToc;
+    private View panelSetting;
+    private View panelOutline;
+    private View panelToc;
+    private View panelDocs;
+
 
     // AI Chat
     private final List<ChatMessage> messages = new ArrayList<>();
@@ -83,7 +104,7 @@ public class StoryGenerateActivity extends BaseActivity {
     @Override
     protected void initView() {
         // Toolbar buttons
-        btnBack = findViewById(R.id.btn_back);
+        btnStoryInfo = findViewById(R.id.btn_story_info);
         btnAi = findViewById(R.id.btn_ai);
         btnSave = findViewById(R.id.btn_save);
 
@@ -102,8 +123,43 @@ public class StoryGenerateActivity extends BaseActivity {
         btnAddVolume = findViewById(R.id.btn_add_volume);
         progressBar = findViewById(R.id.progress_bar);
 
-        // Setup back button
-        btnBack.setOnClickListener(v -> finish());
+        // Story Info Panel (左侧悬浮栏)
+        panelStoryInfo = findViewById(R.id.panel_story_info);
+        btnCloseStoryInfo = findViewById(R.id.btn_close_story_info);
+        btnSelectStory = findViewById(R.id.btn_select_story);
+        tvStoryTitle = findViewById(R.id.tv_story_title);
+        tabStoryInfo = findViewById(R.id.tab_story_info);
+        etWorldSetting = findViewById(R.id.et_world_setting);
+        etOutline = findViewById(R.id.et_outline);
+        etDocs = findViewById(R.id.et_docs);
+        layoutToc = findViewById(R.id.layout_toc);
+        panelSetting = findViewById(R.id.panel_setting);
+        panelOutline = findViewById(R.id.panel_outline);
+        panelToc = findViewById(R.id.panel_toc);
+        panelDocs = findViewById(R.id.panel_docs);
+
+        // Setup story info button (打开左侧面板)
+        btnStoryInfo.setOnClickListener(v -> toggleStoryInfoPanel());
+
+        // Setup close story info button
+        btnCloseStoryInfo.setOnClickListener(v -> toggleStoryInfoPanel());
+
+        // Setup select story button
+        btnSelectStory.setOnClickListener(v -> showStorySelector());
+
+        // Setup TabLayout for story info panel
+        tabStoryInfo.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                switchTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
 
         // Setup AI panel toggle
         btnAi.setOnClickListener(v -> toggleAiPanel());
@@ -135,6 +191,7 @@ public class StoryGenerateActivity extends BaseActivity {
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
     }
+
 
     /**
      * 显示模式选择弹窗（Agent/Ask）
@@ -219,7 +276,10 @@ public class StoryGenerateActivity extends BaseActivity {
             // 编辑模式：加载已有小说
             loadExistingStory(storyId);
         } else {
-            // 新建模式：自动创建初始卷和章节
+            // 新建模式：设置默认标题
+            tvStoryTitle.setText("新小说");
+            
+            // 自动创建初始卷和章节
             addNewVolume();
         }
     }
@@ -231,6 +291,10 @@ public class StoryGenerateActivity extends BaseActivity {
         currentStory = storyRepository.getStoryById(storyId);
         if (currentStory != null) {
             isEditMode = true;
+            
+            // 更新标题显示
+            tvStoryTitle.setText(currentStory.getTitle());
+            
             // Clear existing content
             layoutContent.removeAllViews();
             
@@ -535,6 +599,9 @@ public class StoryGenerateActivity extends BaseActivity {
             currentStory = newStory;
             isEditMode = true;
             
+            // 更新标题显示
+            tvStoryTitle.setText(title);
+            
             // Update selection in SharedPreferences
             com.example.storyteller.data.local.prefs.PrefsUtils.getInstance(this)
                 .putString(com.example.storyteller.ui.adapter.StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
@@ -549,6 +616,173 @@ public class StoryGenerateActivity extends BaseActivity {
     }
 
     /**
+     * 切换小说信息面板显示/隐藏（左侧悬浮栏）
+     */
+    private void toggleStoryInfoPanel() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            drawerLayout.openDrawer(GravityCompat.START);
+        }
+    }
+
+    /**
+     * 切换小说信息面板中的Tab
+     */
+    private void switchTab(int position) {
+        // 隐藏所有面板
+        panelSetting.setVisibility(View.GONE);
+        panelOutline.setVisibility(View.GONE);
+        panelToc.setVisibility(View.GONE);
+        panelDocs.setVisibility(View.GONE);
+
+        // 显示选中的面板
+        switch (position) {
+            case 0: // 设定
+                panelSetting.setVisibility(View.VISIBLE);
+                break;
+            case 1: // 大纲
+                panelOutline.setVisibility(View.VISIBLE);
+                break;
+            case 2: // 目录
+                panelToc.setVisibility(View.VISIBLE);
+                refreshTocView();
+                break;
+            case 3: // 文档
+                panelDocs.setVisibility(View.VISIBLE);
+                break;
+        }
+    }
+
+    /**
+     * 刷新目录视图
+     */
+    private void refreshTocView() {
+        layoutToc.removeAllViews();
+        
+        // 添加标题
+        TextView titleView = new TextView(this);
+        titleView.setText("📚 目录概览");
+        titleView.setTextSize(16);
+        titleView.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleView.setTextColor(0xFF212121);
+        titleView.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        ((LinearLayout.LayoutParams) titleView.getLayoutParams()).bottomMargin = 12;
+        layoutToc.addView(titleView);
+
+        // 遍历所有卷和章节
+        for (int i = 0; i < volumes.size(); i++) {
+            Volume volume = volumes.get(i);
+            
+            // 卷标题
+            TextView volumeTitle = new TextView(this);
+            volumeTitle.setText("第" + (i + 1) + "卷 · " + volume.getTitle());
+            volumeTitle.setTextSize(14);
+            volumeTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+            volumeTitle.setTextColor(0xFF1976D2);
+            volumeTitle.setPadding(0, 8, 0, 4);
+            layoutToc.addView(volumeTitle);
+
+            // 章节列表
+            for (int j = 0; j < volume.getChapters().size(); j++) {
+                Chapter chapter = volume.getChapters().get(j);
+                TextView chapterTitle = new TextView(this);
+                chapterTitle.setText("    第" + (j + 1) + "章 · " + chapter.getTitle());
+                chapterTitle.setTextSize(13);
+                chapterTitle.setTextColor(0xFF666666);
+                chapterTitle.setPadding(0, 2, 0, 2);
+                layoutToc.addView(chapterTitle);
+            }
+        }
+    }
+
+    /**
+     * 显示小说选择器
+     */
+    private void showStorySelector() {
+        // 获取所有小说列表
+        List<Story> allStories = storyRepository.getAllStories();
+        if (allStories == null || allStories.isEmpty()) {
+            Toast.makeText(this, "暂无其他小说", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 构建小说标题列表
+        String[] storyTitles = new String[allStories.size()];
+        int selectedIndex = -1;
+        for (int i = 0; i < allStories.size(); i++) {
+            Story story = allStories.get(i);
+            storyTitles[i] = story.getTitle();
+            if (currentStory != null && story.getId() == currentStory.getId()) {
+                selectedIndex = i;
+            }
+        }
+
+        // 显示选择对话框
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("选择小说");
+        builder.setSingleChoiceItems(storyTitles, selectedIndex, (dialog, which) -> {
+            Story selectedStory = allStories.get(which);
+            if (selectedStory.getId() != (currentStory != null ? currentStory.getId() : -1)) {
+                // 切换到选中的小说
+                switchToStory(selectedStory);
+            }
+            dialog.dismiss();
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    /**
+     * 切换到指定小说
+     */
+    private void switchToStory(Story story) {
+        if (story == null) return;
+
+        // 保存当前小说（如果有）
+        if (currentStory != null && isEditMode) {
+            saveEditedStory();
+        }
+
+        // 更新当前小说
+        currentStory = story;
+        isEditMode = true;
+
+        // 更新标题显示
+        tvStoryTitle.setText(story.getTitle());
+
+        // 重新加载内容
+        layoutContent.removeAllViews();
+
+        // 重新添加"添加新卷"按钮
+        Button btnAddVolumeNew = new Button(this);
+        btnAddVolumeNew.setId(R.id.btn_add_volume);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = 32;
+        params.bottomMargin = 32;
+        params.gravity = android.view.Gravity.CENTER;
+        btnAddVolumeNew.setLayoutParams(params);
+        btnAddVolumeNew.setText(getString(R.string.btn_add_volume));
+        btnAddVolumeNew.setTextColor(android.graphics.Color.parseColor("#1976D2"));
+        btnAddVolumeNew.setOnClickListener(v -> addNewVolume());
+        layoutContent.addView(btnAddVolumeNew);
+
+        // 解析并渲染故事结构
+        String structureJson = story.getStructure();
+        if (!TextUtils.isEmpty(structureJson)) {
+            parseStoryStructure(structureJson);
+        } else {
+            parseStoryContent(story.getContent());
+        }
+
+        Toast.makeText(this, "已切换到《" + story.getTitle() + "》", Toast.LENGTH_SHORT).show();
+    }
+
+    /**
      * 切换AI助手面板显示/隐藏
      */
     private void toggleAiPanel() {
@@ -558,6 +792,7 @@ public class StoryGenerateActivity extends BaseActivity {
             drawerLayout.openDrawer(GravityCompat.END);
         }
     }
+
 
     /**
      * 添加新卷

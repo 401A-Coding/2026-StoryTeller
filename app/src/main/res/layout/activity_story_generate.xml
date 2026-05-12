@@ -21,15 +21,15 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary">
 
-            <!-- 左侧：返回箭头 -->
-            <ImageView
-                android:id="@+id/btn_back"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="start"
-                android:contentDescription="返回"
-                android:src="@drawable/ic_arrow_back"
-                android:padding="12dp" />
+    <!-- 左侧：小说信息按钮（汉堡菜单） -->
+    <ImageView
+        android:id="@+id/btn_story_info"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="start"
+        android:contentDescription="小说信息"
+        android:src="@drawable/ic_menu"
+        android:padding="12dp" />
 
             <!-- 右侧：AI图标和保存图标 -->
             <LinearLayout
@@ -98,6 +98,231 @@
             android:visibility="gone" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <!-- 小说信息左侧悬浮栏 -->
+    <LinearLayout
+        android:id="@+id/panel_story_info"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:elevation="8dp">
+
+        <!-- 小说标题行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="#1976D2">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_book_info"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="小说信息" />
+
+            <!-- 小说名称和下拉按钮的组合容器 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_story_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="当前小说"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <!-- 下拉选择小说按钮 -->
+                <ImageView
+                    android:id="@+id/btn_select_story"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_arrow_drop_down"
+                    android:padding="4dp"
+                    android:contentDescription="选择小说"
+                    android:tint="#FFFFFF" />
+            </LinearLayout>
+
+            <!-- 收起按钮（固定在右侧） -->
+            <ImageView
+                android:id="@+id/btn_close_story_info"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_close"
+                android:padding="4dp"
+                android:contentDescription="收起"
+                android:tint="#FFFFFF" />
+        </LinearLayout>
+
+        <!-- Tab 切换栏 -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_story_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F5F5F5"
+            app:tabIndicatorColor="#1976D2"
+            app:tabSelectedTextColor="#1976D2"
+            app:tabTextColor="#666666"
+            app:tabMode="fixed"
+            app:tabGravity="fill">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="设定" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="大纲" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="目录" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="文档" />
+        </com.google.android.material.tabs.TabLayout>
+
+        <!-- 内容区域 -->
+        <FrameLayout
+            android:id="@+id/layout_story_info_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <!-- 设定区域 -->
+            <ScrollView
+                android:id="@+id/panel_setting"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📖 世界观设定"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#212121"
+                        android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/et_world_setting"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入世界观设定..."
+                        android:background="@drawable/bg_outline_edittext"
+                        android:padding="12dp"
+                        android:minHeight="120dp"
+                        android:gravity="top"
+                        android:inputType="textMultiLine" />
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- 大纲区域 -->
+            <ScrollView
+                android:id="@+id/panel_outline"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📝 故事大纲"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#212121"
+                        android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/et_outline"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入故事大纲..."
+                        android:background="@drawable/bg_outline_edittext"
+                        android:padding="12dp"
+                        android:minHeight="120dp"
+                        android:gravity="top"
+                        android:inputType="textMultiLine" />
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- 目录区域 -->
+            <ScrollView
+                android:id="@+id/panel_toc"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+                <LinearLayout
+                    android:id="@+id/layout_toc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📚 目录概览"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#212121"
+                        android:layout_marginBottom="12dp" />
+                    <!-- 动态填充卷章列表 -->
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- 文档区域 -->
+            <ScrollView
+                android:id="@+id/panel_docs"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📄 参考资料"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#212121"
+                        android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/et_docs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入参考资料..."
+                        android:background="@drawable/bg_outline_edittext"
+                        android:padding="12dp"
+                        android:minHeight="120dp"
+                        android:gravity="top"
+                        android:inputType="textMultiLine" />
+                </LinearLayout>
+            </ScrollView>
+        </FrameLayout>
+    </LinearLayout>
 
     <!-- AI 助手右侧边栏 -->
     <LinearLayout
