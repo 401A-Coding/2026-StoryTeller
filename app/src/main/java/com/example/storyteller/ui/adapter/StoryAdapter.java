@@ -2,6 +2,7 @@ package com.example.storyteller.ui.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,13 +33,31 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     private List<Story> storyList;
     private final DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
     private OnStoryDeleteListener deleteListener;
+    private OnStoryCategoryChangeListener categoryChangeListener;
+    private OnStoryCoverChangeListener coverChangeListener;
 
     public interface OnStoryDeleteListener {
         void onStoryDeleted(int storyId);
     }
 
+    public interface OnStoryCategoryChangeListener {
+        void onCategoryChanged(int storyId, String newCategory);
+    }
+
+    public interface OnStoryCoverChangeListener {
+        void onCoverChanged(int storyId, String newCoverColor);
+    }
+
     public void setOnStoryDeleteListener(OnStoryDeleteListener listener) {
         this.deleteListener = listener;
+    }
+
+    public void setOnStoryCategoryChangeListener(OnStoryCategoryChangeListener listener) {
+        this.categoryChangeListener = listener;
+    }
+
+    public void setOnStoryCoverChangeListener(OnStoryCoverChangeListener listener) {
+        this.coverChangeListener = listener;
     }
 
     public StoryAdapter(Context context, List<Story> storyList) {
@@ -56,34 +75,40 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         Story story = storyList.get(position);
+        
+        // 设置封面颜色
+        String coverColorStr = story.getCoverColor();
+        if (TextUtils.isEmpty(coverColorStr)) {
+            coverColorStr = "#1976D2";
+        }
+        try {
+            int coverColor = Color.parseColor(coverColorStr);
+            holder.layoutCover.setBackgroundColor(coverColor);
+        } catch (Exception e) {
+            holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
+        }
+
+        // 封面标题（居中显示）
+        holder.tvCoverTitle.setText(story.getTitle());
+
+        // 封面分类标签
+        String category = story.getCategory();
+        if (TextUtils.isEmpty(category)) {
+            category = "创作中";
+        }
+        holder.tvCoverCategory.setText(category);
+
+        // 底部信息
         holder.tvTitle.setText(story.getTitle());
         holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
-        String seriesName = TextUtils.isEmpty(story.getGenre()) ? "创作" : story.getGenre().trim();
-        holder.tvVolumes.setText(context.getString(R.string.story_series_format, seriesName));
-        holder.tvVolumes.setVisibility(View.VISIBLE);
 
-        String description = story.getDescription();
-        if (TextUtils.isEmpty(description)) {
-            holder.tvChapters.setText(context.getString(R.string.story_description_empty));
-        } else {
-            holder.tvChapters.setText(context.getString(R.string.story_description_format, description.trim()));
-        }
-        holder.tvChapters.setVisibility(View.VISIBLE);
+        // 长按显示操作菜单（修改分类/更换封面）
+        holder.itemView.setOnLongClickListener(v -> {
+            showStoryActionMenu(story);
+            return true;
+        });
 
-        // Check if this is the currently selected story
-        String selectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
-        boolean isSelected = !TextUtils.isEmpty(selectedId) && selectedId.equals(String.valueOf(story.getId()));
-        
-        // Highlight the selected story
-        if (isSelected) {
-            holder.itemView.setBackgroundColor(context.getResources().getColor(R.color.colorPrimaryLight, null));
-            holder.tvTitle.setTextColor(context.getResources().getColor(R.color.colorPrimary, null));
-        } else {
-            holder.itemView.setBackgroundColor(context.getResources().getColor(android.R.color.transparent, null));
-            holder.tvTitle.setTextColor(context.getResources().getColor(android.R.color.black, null));
-        }
-        
-        // Click to edit story directly
+        // 点击进入详情
         holder.itemView.setOnClickListener(v -> {
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
@@ -92,29 +117,25 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             intent.putExtra(EXTRA_STORY_TITLE, story.getTitle());
             context.startActivity(intent);
         });
-        
-        // Delete button click
+
+        // 删除按钮
         holder.btnDelete.setOnClickListener(v -> {
             new AlertDialog.Builder(context)
                 .setTitle("删除故事")
                 .setMessage("确定要删除《" + story.getTitle() + "》吗？")
                 .setPositiveButton("删除", (dialog, which) -> {
                     StoryDao storyDao = new StoryDao(context);
-                    
-                    // 检查是否删除的是当前选中的小说
+
                     String currentSelectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
-                    boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) && 
+                    boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) &&
                         currentSelectedId.equals(String.valueOf(story.getId()));
-                    
+
                     int result = storyDao.deleteStory(story.getId());
                     if (result > 0) {
-                        // 如果删除的是当前选中的小说，清除选择状态
                         if (isDeletingSelectedStory) {
                             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
                             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
-                            android.util.Log.d("StoryAdapter", "删除了当前选中的小说，已清除 selectedId");
                         }
-                        
                         Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show();
                         if (deleteListener != null) {
                             deleteListener.onStoryDeleted(story.getId());
@@ -128,6 +149,85 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         });
     }
 
+    /**
+     * 显示故事操作菜单（修改分类/更换封面）
+     */
+    private void showStoryActionMenu(Story story) {
+        String[] items = {context.getString(R.string.bookshelf_change_category),
+                          context.getString(R.string.bookshelf_change_cover)};
+        new AlertDialog.Builder(context)
+            .setTitle(story.getTitle())
+            .setItems(items, (dialog, which) -> {
+                if (which == 0) {
+                    showCategoryDialog(story);
+                } else if (which == 1) {
+                    showCoverColorDialog(story);
+                }
+            })
+            .show();
+    }
+
+    /**
+     * 显示修改分类对话框
+     */
+    private void showCategoryDialog(Story story) {
+        String[] categories = {
+            context.getString(R.string.bookshelf_category_writing),
+            context.getString(R.string.bookshelf_category_completed),
+            context.getString(R.string.bookshelf_category_collected)
+        };
+        int currentIndex = 0;
+        String currentCategory = story.getCategory();
+        for (int i = 0; i < categories.length; i++) {
+            if (categories[i].equals(currentCategory)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        new AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.bookshelf_category_hint))
+            .setSingleChoiceItems(categories, currentIndex, (dialog, which) -> {
+                String newCategory = categories[which];
+                StoryDao storyDao = new StoryDao(context);
+                storyDao.updateStoryCategory(story.getId(), newCategory);
+                story.setCategory(newCategory);
+                notifyDataSetChanged();
+                if (categoryChangeListener != null) {
+                    categoryChangeListener.onCategoryChanged(story.getId(), newCategory);
+                }
+                dialog.dismiss();
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+
+    /**
+     * 显示更换封面颜色对话框
+     */
+    private void showCoverColorDialog(Story story) {
+        String[] colorNames = {"蓝色", "绿色", "橙色", "紫色", "玫红", "青色", "棕色", "灰蓝", "深橙", "靛蓝", "青绿", "黄绿"};
+        String[] colorValues = {
+            "#1976D2", "#388E3C", "#F57C00", "#7B1FA2",
+            "#C2185B", "#0097A7", "#5D4037", "#455A64",
+            "#E64A19", "#303F9F", "#00796B", "#AFB42B"
+        };
+        new AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.bookshelf_cover_color_hint))
+            .setItems(colorNames, (dialog, which) -> {
+                String newColor = colorValues[which];
+                StoryDao storyDao = new StoryDao(context);
+                storyDao.updateStoryCoverColor(story.getId(), newColor);
+                story.setCoverColor(newColor);
+                notifyDataSetChanged();
+                if (coverChangeListener != null) {
+                    coverChangeListener.onCoverChanged(story.getId(), newColor);
+                }
+                dialog.dismiss();
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+
     @Override
     public int getItemCount() {
         return storyList == null ? 0 : storyList.size();
@@ -139,18 +239,20 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     }
 
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
+        View layoutCover;
+        TextView tvCoverTitle;
+        TextView tvCoverCategory;
         TextView tvTitle;
         TextView tvTime;
-        TextView tvVolumes;
-        TextView tvChapters;
         ImageView btnDelete;
 
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
+            layoutCover = itemView.findViewById(R.id.layout_cover);
+            tvCoverTitle = itemView.findViewById(R.id.tv_cover_title);
+            tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvTime = itemView.findViewById(R.id.tv_time);
-            tvVolumes = itemView.findViewById(R.id.tv_volumes);
-            tvChapters = itemView.findViewById(R.id.tv_chapters);
             btnDelete = itemView.findViewById(R.id.btn_delete);
         }
     }

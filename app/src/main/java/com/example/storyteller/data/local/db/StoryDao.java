@@ -27,6 +27,8 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
+        values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
+        values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -39,6 +41,8 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
+        values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
+        values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -50,6 +54,30 @@ public class StoryDao {
     public int deleteStory(int storyId) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         return db.delete(DBHelper.TABLE_STORY, DBHelper.COL_STORY_ID + "=?", new String[]{String.valueOf(storyId)});
+    }
+
+    public int updateStoryCategory(int storyId, String category) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_CATEGORY, category);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    public int updateStoryCoverColor(int storyId, String coverColor) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_COVER_COLOR, coverColor);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
     }
 
     public int setCollected(int storyId, boolean collected) {
@@ -169,7 +197,19 @@ public class StoryDao {
         if (descriptionIndex >= 0 && !cursor.isNull(descriptionIndex)) {
             description = cursor.getString(descriptionIndex);
         }
+
+        String category = "创作中";
+        int categoryIndex = cursor.getColumnIndex(DBHelper.COL_STORY_CATEGORY);
+        if (categoryIndex >= 0 && !cursor.isNull(categoryIndex)) {
+            category = cursor.getString(categoryIndex);
+        }
+
+        String coverColor = "#1976D2";
+        int coverColorIndex = cursor.getColumnIndex(DBHelper.COL_STORY_COVER_COLOR);
+        if (coverColorIndex >= 0 && !cursor.isNull(coverColorIndex)) {
+            coverColor = cursor.getString(coverColorIndex);
+        }
         
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description);
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description, category, coverColor);
     }
 }

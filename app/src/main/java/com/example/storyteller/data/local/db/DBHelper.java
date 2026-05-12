@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 5;
+    private static final int DB_VERSION = 6;
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -19,6 +19,8 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_IS_COLLECTED = "is_collected";
     public static final String COL_STORY_STRUCTURE = "structure";  // 存储卷-章结构的JSON数据
     public static final String COL_STORY_DESCRIPTION = "description";  // 小说简介
+    public static final String COL_STORY_CATEGORY = "category";  // 书架分类：全部/创作中/已完成/已收藏
+    public static final String COL_STORY_COVER_COLOR = "cover_color";  // 封面颜色
 
     // 素材表字段
     public static final String TABLE_MATERIAL = "material";
@@ -131,6 +133,10 @@ public class DBHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 5) {
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_DESCRIPTION + " TEXT");
+        }
+        if (oldVersion < 6) {
+            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_CATEGORY + " TEXT DEFAULT '全部'");
+            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2'");
         }
     }
 }
