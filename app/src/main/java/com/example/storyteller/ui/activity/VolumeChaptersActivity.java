@@ -170,8 +170,8 @@ public class VolumeChaptersActivity extends BaseActivity {
             params.setMargins(4, 0, 4, 0);
             tvPage.setLayoutParams(params);
             tvPage.setText(startChapter + "-" + endChapter);
-            tvPage.setTextSize(12);
-            tvPage.setPadding(12, 6, 12, 6);
+            tvPage.setTextSize(14);
+            tvPage.setPadding(16, 8, 16, 8);
             tvPage.setGravity(android.view.Gravity.CENTER);
             tvPage.setSingleLine(true);
 
