@@ -116,6 +116,13 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             setCoverColor(holder, story);
         }
 
+        // 收藏五角星标记
+        if (story.isCollected()) {
+            holder.ivFavoriteStar.setVisibility(View.VISIBLE);
+        } else {
+            holder.ivFavoriteStar.setVisibility(View.GONE);
+        }
+
         // 封面标题
         holder.tvCoverTitle.setText(story.getTitle());
 
@@ -289,6 +296,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
         View layoutCover;
         ImageView ivCoverImage;
+        ImageView ivFavoriteStar;
         TextView tvCoverTitle;
         TextView tvCoverCategory;
         TextView tvTitle;
@@ -299,6 +307,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             super(itemView);
             layoutCover = itemView.findViewById(R.id.layout_cover);
             ivCoverImage = itemView.findViewById(R.id.iv_cover_image);
+            ivFavoriteStar = itemView.findViewById(R.id.iv_favorite_star);
             tvCoverTitle = itemView.findViewById(R.id.tv_cover_title);
             tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
             tvTitle = itemView.findViewById(R.id.tv_title);

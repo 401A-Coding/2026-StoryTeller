@@ -103,6 +103,18 @@
 
         </LinearLayout>
 
+        <!-- 收藏五角星标记 -->
+        <ImageView
+            android:id="@+id/iv_favorite_star"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/btn_star_big_on"
+            android:contentDescription="收藏"
+            android:visibility="gone"
+            android:layout_margin="6dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
         <!-- 删除按钮 -->
         <ImageView
             android:id="@+id/btn_delete"
