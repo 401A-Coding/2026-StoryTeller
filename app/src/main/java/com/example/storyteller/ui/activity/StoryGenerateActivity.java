@@ -1304,7 +1304,15 @@ public class StoryGenerateActivity extends BaseActivity {
                                 processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
                                 processingMsg.setResultContent(answer);
                                 
+                                // 初始化 displayContent 为空，准备打字机效果
+                                processingMsg.setDisplayContent("");
+                                
+                                // 启用打字机效果
+                                processingMsg.setTyping(true);
                                 adapter.notifyItemChanged(messagePosition[0]);
+                                
+                                // 启动打字机效果
+                                startTypewriterEffect(processingMsg, messagePosition[0]);
                             } else {
                                 // 非问答操作：显示执行步骤
                                 processingMsg.addStep(new ChatMessage.ExecutionStep(
@@ -1430,7 +1438,15 @@ public class StoryGenerateActivity extends BaseActivity {
                             processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
                             processingMsg.setResultContent(answer);
                             
+                            // 初始化 displayContent 为空，准备打字机效果
+                            processingMsg.setDisplayContent("");
+                            
+                            // 启用打字机效果
+                            processingMsg.setTyping(true);
                             adapter.notifyItemChanged(messagePosition[0]);
+                            
+                            // 启动打字机效果
+                            startTypewriterEffect(processingMsg, messagePosition[0]);
                         });
                     }
                     
@@ -1495,7 +1511,9 @@ public class StoryGenerateActivity extends BaseActivity {
      * @param position 在列表中的位置
      */
     private void startTypewriterEffect(ChatMessage message, int position) {
-        final String fullText = message.getContent();
+        // 对于执行步骤消息，使用 resultContent；否则使用 content
+        final String fullText = !message.getResultContent().isEmpty() ? 
+            message.getResultContent() : message.getContent();
         final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
         final int[] currentIndex = {0};
         final int delay = 30; // 每个字符的延迟时间（毫秒）

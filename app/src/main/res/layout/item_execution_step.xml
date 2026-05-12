@@ -31,7 +31,8 @@
             android:layout_height="wrap_content"
             android:text="正在读取上下文..."
             android:textSize="13sp"
-            android:textColor="#424242" />
+            android:textColor="#424242"
+            android:textIsSelectable="true" />
 
         <!-- 详细信息（可选） -->
         <TextView
@@ -42,7 +43,8 @@
             android:text=""
             android:textSize="11sp"
             android:textColor="#757575"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:textIsSelectable="true" />
 
     </LinearLayout>
 

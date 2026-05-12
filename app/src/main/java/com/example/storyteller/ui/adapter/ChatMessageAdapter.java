@@ -128,7 +128,9 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         if (message.getMessageType() == ChatMessage.MessageType.COMPLETED && 
             !message.getResultContent().isEmpty()) {
             holder.tvFinalResult.setVisibility(View.VISIBLE);
-            holder.tvFinalResult.setText("\n" + message.getResultContent());
+            // 如果启用打字机效果，使用 displayContent；否则使用完整内容
+            String displayText = message.isTyping() ? message.getDisplayContent() : message.getResultContent();
+            holder.tvFinalResult.setText("\n" + displayText);
         } else {
             holder.tvFinalResult.setVisibility(View.GONE);
         }
