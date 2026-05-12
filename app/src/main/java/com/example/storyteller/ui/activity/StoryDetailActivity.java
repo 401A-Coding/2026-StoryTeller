@@ -95,6 +95,9 @@ public class StoryDetailActivity extends BaseActivity {
 
         findViewById(R.id.btn_plot_tree).setOnClickListener(v -> {
             Intent plotIntent = new Intent(this, PlotTreeActivity.class);
+            if (selectedStoryId > 0) {
+                plotIntent.putExtra(PlotTreeActivity.EXTRA_STORY_ID, selectedStoryId);
+            }
             startActivity(plotIntent);
         });
 
