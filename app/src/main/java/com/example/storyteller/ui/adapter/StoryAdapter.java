@@ -241,8 +241,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     private void showCategoryDialog(Story story) {
         String[] categories = {
             context.getString(R.string.bookshelf_category_writing),
-            context.getString(R.string.bookshelf_category_completed),
-            context.getString(R.string.bookshelf_category_collected)
+            context.getString(R.string.bookshelf_category_completed)
         };
         int currentIndex = 0;
         String currentCategory = story.getCategory();
