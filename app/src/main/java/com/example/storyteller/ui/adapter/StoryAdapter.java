@@ -2,7 +2,9 @@ package com.example.storyteller.ui.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +20,7 @@ import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.activity.StoryDetailActivity;
+import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
@@ -35,6 +38,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     private OnStoryDeleteListener deleteListener;
     private OnStoryCategoryChangeListener categoryChangeListener;
     private OnStoryCoverChangeListener coverChangeListener;
+    private OnPickCoverImageListener pickCoverImageListener;
 
     public interface OnStoryDeleteListener {
         void onStoryDeleted(int storyId);
@@ -48,6 +52,10 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         void onCoverChanged(int storyId, String newCoverColor);
     }
 
+    public interface OnPickCoverImageListener {
+        void onPickCoverImage(int storyId);
+    }
+
     public void setOnStoryDeleteListener(OnStoryDeleteListener listener) {
         this.deleteListener = listener;
     }
@@ -58,6 +66,10 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     public void setOnStoryCoverChangeListener(OnStoryCoverChangeListener listener) {
         this.coverChangeListener = listener;
+    }
+
+    public void setOnPickCoverImageListener(OnPickCoverImageListener listener) {
+        this.pickCoverImageListener = listener;
     }
 
     public StoryAdapter(Context context, List<Story> storyList) {
@@ -75,20 +87,36 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         Story story = storyList.get(position);
-        
-        // 设置封面颜色
-        String coverColorStr = story.getCoverColor();
-        if (TextUtils.isEmpty(coverColorStr)) {
-            coverColorStr = "#1976D2";
-        }
-        try {
-            int coverColor = Color.parseColor(coverColorStr);
-            holder.layoutCover.setBackgroundColor(coverColor);
-        } catch (Exception e) {
-            holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
+
+        // 设置封面：优先显示用户上传的图片，否则显示颜色背景
+        String coverPath = story.getCoverPath();
+        if (!TextUtils.isEmpty(coverPath)) {
+            File coverFile = new File(coverPath);
+            if (coverFile.exists()) {
+                holder.ivCoverImage.setVisibility(View.VISIBLE);
+                holder.ivCoverImage.setImageBitmap(BitmapFactory.decodeFile(coverPath));
+                // 设置颜色背景作为图片加载时的备用
+                String coverColorStr = story.getCoverColor();
+                if (TextUtils.isEmpty(coverColorStr)) {
+                    coverColorStr = "#1976D2";
+                }
+                try {
+                    holder.layoutCover.setBackgroundColor(Color.parseColor(coverColorStr));
+                } catch (Exception e) {
+                    holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
+                }
+            } else {
+                // 图片文件不存在，使用颜色背景
+                holder.ivCoverImage.setVisibility(View.GONE);
+                setCoverColor(holder, story);
+            }
+        } else {
+            // 没有上传图片，使用颜色背景
+            holder.ivCoverImage.setVisibility(View.GONE);
+            setCoverColor(holder, story);
         }
 
-        // 封面标题（居中显示）
+        // 封面标题
         holder.tvCoverTitle.setText(story.getTitle());
 
         // 封面分类标签
@@ -102,7 +130,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         holder.tvTitle.setText(story.getTitle());
         holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
 
-        // 长按显示操作菜单（修改分类/更换封面）
+        // 长按显示操作菜单（修改分类/更换封面/上传封面图片）
         holder.itemView.setOnLongClickListener(v -> {
             showStoryActionMenu(story);
             return true;
@@ -149,12 +177,28 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         });
     }
 
+    private void setCoverColor(StoryViewHolder holder, Story story) {
+        String coverColorStr = story.getCoverColor();
+        if (TextUtils.isEmpty(coverColorStr)) {
+            coverColorStr = "#1976D2";
+        }
+        try {
+            int coverColor = Color.parseColor(coverColorStr);
+            holder.layoutCover.setBackgroundColor(coverColor);
+        } catch (Exception e) {
+            holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
+        }
+    }
+
     /**
-     * 显示故事操作菜单（修改分类/更换封面）
+     * 显示故事操作菜单（修改分类/更换封面/上传封面图片）
      */
     private void showStoryActionMenu(Story story) {
-        String[] items = {context.getString(R.string.bookshelf_change_category),
-                          context.getString(R.string.bookshelf_change_cover)};
+        String[] items = {
+            context.getString(R.string.bookshelf_change_category),
+            context.getString(R.string.bookshelf_change_cover),
+            "上传封面图片"
+        };
         new AlertDialog.Builder(context)
             .setTitle(story.getTitle())
             .setItems(items, (dialog, which) -> {
@@ -162,6 +206,10 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                     showCategoryDialog(story);
                 } else if (which == 1) {
                     showCoverColorDialog(story);
+                } else if (which == 2) {
+                    if (pickCoverImageListener != null) {
+                        pickCoverImageListener.onPickCoverImage(story.getId());
+                    }
                 }
             })
             .show();
@@ -240,6 +288,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
         View layoutCover;
+        ImageView ivCoverImage;
         TextView tvCoverTitle;
         TextView tvCoverCategory;
         TextView tvTitle;
@@ -249,6 +298,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             layoutCover = itemView.findViewById(R.id.layout_cover);
+            ivCoverImage = itemView.findViewById(R.id.iv_cover_image);
             tvCoverTitle = itemView.findViewById(R.id.tv_cover_title);
             tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
             tvTitle = itemView.findViewById(R.id.tv_title);

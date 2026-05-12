@@ -19,8 +19,10 @@ public class Story {
     private String description;
     // 书架分类：全部/创作中/已完成/已收藏
     private String category;
-    // 封面颜色（十六进制颜色值）
+    // 封面颜色（十六进制颜色值，作为封面图片未设置时的备用背景）
     private String coverColor;
+    // 封面图片路径（用户上传的封面图片文件路径）
+    private String coverPath;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -33,6 +35,7 @@ public class Story {
         this.description = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
+        this.coverPath = null;
     }
 
     // 数据库查询用构造方法
@@ -47,6 +50,7 @@ public class Story {
         this.description = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
+        this.coverPath = null;
     }
 
     // 完整构造方法
@@ -61,6 +65,7 @@ public class Story {
         this.description = description;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
+        this.coverPath = null;
     }
 
     // 完整构造方法（含分类和封面颜色）
@@ -75,6 +80,22 @@ public class Story {
         this.description = description;
         this.category = category;
         this.coverColor = coverColor;
+        this.coverPath = null;
+    }
+
+    // 完整构造方法（含分类、封面颜色和封面图片路径）
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String category, String coverColor, String coverPath) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.genre = genre;
+        this.createTime = createTime;
+        this.isCollected = isCollected;
+        this.structure = structure;
+        this.description = description;
+        this.category = category;
+        this.coverColor = coverColor;
+        this.coverPath = coverPath;
     }
 
     /**
@@ -115,4 +136,6 @@ public class Story {
     public void setCategory(String category) { this.category = category; }
     public String getCoverColor() { return coverColor; }
     public void setCoverColor(String coverColor) { this.coverColor = coverColor; }
+    public String getCoverPath() { return coverPath; }
+    public void setCoverPath(String coverPath) { this.coverPath = coverPath; }
 }

@@ -2,6 +2,7 @@ package com.example.storyteller.ui.fragment;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,8 +10,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
@@ -20,6 +25,9 @@ import com.example.storyteller.ui.activity.StoryGenerateActivity;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import com.google.android.material.tabs.TabLayout;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +43,13 @@ public class BookshelfFragment extends BaseFragment {
 
     // 当前选中的分类索引：0=全部, 1=创作中, 2=已完成, 3=已收藏
     private int currentCategoryIndex = 0;
+
+    // 当前正在设置封面的故事ID
+    private int pendingCoverStoryId = -1;
+
+    // 图片选择启动器
+    private final ActivityResultLauncher<String> pickImageLauncher =
+        registerForActivityResult(new ActivityResultContracts.GetContent(), this::onImageSelected);
 
     @Override
     protected int getLayoutId() {
@@ -62,6 +77,12 @@ public class BookshelfFragment extends BaseFragment {
 
         // 设置封面变更监听
         adapter.setOnStoryCoverChangeListener((storyId, newCoverColor) -> refreshStories());
+
+        // 设置上传封面图片监听
+        adapter.setOnPickCoverImageListener(storyId -> {
+            pendingCoverStoryId = storyId;
+            pickImageLauncher.launch("image/*");
+        });
 
         recyclerView.setAdapter(adapter);
 
@@ -94,6 +115,49 @@ public class BookshelfFragment extends BaseFragment {
     public void onResume() {
         super.onResume();
         refreshStories();
+    }
+
+    /**
+     * 处理选择的封面图片
+     */
+    private void onImageSelected(Uri imageUri) {
+        if (imageUri == null || pendingCoverStoryId < 0) {
+            pendingCoverStoryId = -1;
+            return;
+        }
+
+        try {
+            // 将图片复制到应用内部存储
+            String fileName = "cover_" + pendingCoverStoryId + "_" + System.currentTimeMillis() + ".jpg";
+            File coverDir = new File(requireContext().getFilesDir(), "covers");
+            if (!coverDir.exists()) {
+                coverDir.mkdirs();
+            }
+            File coverFile = new File(coverDir, fileName);
+
+            // 复制图片文件
+            try (InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
+                 FileOutputStream outputStream = new FileOutputStream(coverFile)) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+            }
+
+            // 更新数据库中的封面路径
+            String coverPath = coverFile.getAbsolutePath();
+            storyDao.updateStoryCoverPath(pendingCoverStoryId, coverPath);
+
+            Toast.makeText(requireContext(), "封面已更新", Toast.LENGTH_SHORT).show();
+            refreshStories();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(), "设置封面失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        pendingCoverStoryId = -1;
     }
 
     private void refreshStories() {
