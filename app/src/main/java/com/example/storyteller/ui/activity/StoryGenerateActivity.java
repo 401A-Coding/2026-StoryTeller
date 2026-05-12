@@ -11,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -95,6 +96,26 @@ public class StoryGenerateActivity extends BaseActivity {
 
     // Storage
     private StoryRepository storyRepository;
+    
+    // AI Thinking Status UI
+    private LinearLayout layoutThinkingStatus;
+    private TextView tvThinkingStatus;
+    private TextView tvThinkingDetail;
+    
+    // Quick Action Chips
+    private HorizontalScrollView scrollQuickActions;
+    private com.google.android.material.chip.ChipGroup chipGroupQuickActions;
+    
+    // 动态提示语
+    private static final String[] THINKING_MESSAGES = {
+        "正在理解您的意图...",
+        "正在查阅小说上下文...",
+        "正在构思内容...",
+        "即将完成..."
+    };
+    private android.os.Handler thinkingHandler;
+    private Runnable thinkingRunnable;
+    private int currentMessageIndex = 0;
 
     @Override
     protected int getLayoutId() {
@@ -184,12 +205,24 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat.setLayoutManager(new LinearLayoutManager(this));
         rvChat.setAdapter(adapter);
         btnSend.setOnClickListener(v -> sendMessage());
+        
+        // Setup thinking status UI
+        layoutThinkingStatus = findViewById(R.id.layout_thinking_status);
+        tvThinkingStatus = findViewById(R.id.tv_thinking_status);
+        tvThinkingDetail = findViewById(R.id.tv_thinking_detail);
+        
+        // Setup quick action chips
+        scrollQuickActions = findViewById(R.id.scroll_quick_actions);
+        chipGroupQuickActions = findViewById(R.id.chip_group_quick_actions);
 
         // Setup mode selector
         btnModeSelector.setOnClickListener(v -> showModeSelectorPopup());
         
         // Setup model selector
         btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
+        
+        // 初始化快捷操作按钮（只在编辑模式且使用 Agent 模式时显示）
+        initQuickActions();
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
@@ -298,6 +331,9 @@ public class StoryGenerateActivity extends BaseActivity {
             // 更新标题显示
             tvStoryTitle.setText(currentStory.getTitle());
             
+            // 显示快捷操作按钮
+            setQuickActionsVisible(true);
+            
             // Clear existing content
             layoutContent.removeAllViews();
             
@@ -327,6 +363,13 @@ public class StoryGenerateActivity extends BaseActivity {
                 parseStoryContent(currentStory.getContent());
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 清理动态提示语定时器
+        stopThinkingMessageRotation();
     }
 
     /**
@@ -1150,6 +1193,116 @@ public class StoryGenerateActivity extends BaseActivity {
 
 
     /**
+     * 显示 AI 思考状态
+     */
+    private void showThinkingStatus(String status, String detail) {
+        runOnUiThread(() -> {
+            layoutThinkingStatus.setVisibility(View.VISIBLE);
+            tvThinkingStatus.setText(status);
+            if (!TextUtils.isEmpty(detail)) {
+                tvThinkingDetail.setText(detail);
+                tvThinkingDetail.setVisibility(View.VISIBLE);
+            } else {
+                tvThinkingDetail.setVisibility(View.GONE);
+            }
+            
+            // 启动动态提示语轮换
+            startThinkingMessageRotation();
+        });
+    }
+    
+    /**
+     * 隐藏 AI 思考状态
+     */
+    private void hideThinkingStatus() {
+        runOnUiThread(() -> {
+            layoutThinkingStatus.setVisibility(View.GONE);
+            stopThinkingMessageRotation();
+        });
+    }
+    
+    /**
+     * 启动动态提示语轮换
+     */
+    private void startThinkingMessageRotation() {
+        stopThinkingMessageRotation(); // 先停止之前的
+        
+        thinkingHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        currentMessageIndex = 0;
+        
+        thinkingRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (tvThinkingDetail != null && tvThinkingDetail.getVisibility() == View.VISIBLE) {
+                    tvThinkingDetail.setText(THINKING_MESSAGES[currentMessageIndex]);
+                    currentMessageIndex = (currentMessageIndex + 1) % THINKING_MESSAGES.length;
+                    
+                    // 每 2 秒切换一次
+                    thinkingHandler.postDelayed(this, 2000);
+                }
+            }
+        };
+        
+        // 立即执行第一次，然后开始循环
+        thinkingHandler.post(thinkingRunnable);
+    }
+    
+    /**
+     * 停止动态提示语轮换
+     */
+    private void stopThinkingMessageRotation() {
+        if (thinkingHandler != null && thinkingRunnable != null) {
+            thinkingHandler.removeCallbacks(thinkingRunnable);
+        }
+    }
+    
+    /**
+     * 初始化快捷操作按钮
+     */
+    private void initQuickActions() {
+        // 清空现有 Chip
+        chipGroupQuickActions.removeAllViews();
+        
+        // 定义快捷操作
+        String[] quickActions = {
+            "帮我续写一章",
+            "重写最后一章",
+            "生成情节建议",
+            "添加新卷",
+            "让故事更悬疑"
+        };
+        
+        // 创建 Chip
+        for (String action : quickActions) {
+            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(this);
+            chip.setText(action);
+            chip.setChipBackgroundColorResource(android.R.color.white);
+            chip.setTextColor(getResources().getColor(R.color.colorPrimary, null));
+            chip.setClickable(true);
+            chip.setFocusable(true);
+            
+            // 设置点击事件
+            chip.setOnClickListener(v -> {
+                etMessage.setText(action);
+                etMessage.requestFocus();
+                // 将光标移到末尾
+                etMessage.setSelection(action.length());
+            });
+            
+            chipGroupQuickActions.addView(chip);
+        }
+    }
+    
+    /**
+     * 显示/隐藏快捷操作按钮
+     */
+    private void setQuickActionsVisible(boolean visible) {
+        if (scrollQuickActions != null) {
+            scrollQuickActions.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    /**
      * 发送消息给AI
      */
     private void sendMessage() {
@@ -1165,6 +1318,8 @@ public class StoryGenerateActivity extends BaseActivity {
 
         if ("agent".equals(currentMode) && isEditMode && currentStory != null) {
             // Agent mode: process command
+            showThinkingStatus("🤔 AI 正在思考...", "分析您的意图...");
+            
             String context = AgentCommandExecutor.buildStoryContext(currentStory, volumes);
             
             ApiClient.getInstance().processAgentCommand(
@@ -1178,19 +1333,34 @@ public class StoryGenerateActivity extends BaseActivity {
                         runOnUiThread(() -> {
                             progressBar.setVisibility(View.GONE);
                             
+                            // 显示 AI 的思考过程（reasoning）
+                            if (!TextUtils.isEmpty(command.reasoning)) {
+                                appendMessage(new ChatMessage("💭 AI思考：" + command.reasoning, false));
+                            }
+                            
+                            // 隐藏思考状态
+                            hideThinkingStatus();
+                            
                             // 使用 AgentCommandExecutor 执行命令
-                            AgentCommandExecutor.CommandResult result = 
-                                commandExecutor.executeCommand(command, currentStory.getId());
+                            showThinkingStatus("✅ 正在执行操作...", "处理您的请求...");
                             
-                            // 显示结果消息
-                            if (!TextUtils.isEmpty(result.message)) {
-                                appendMessage(new ChatMessage(result.message, false));
-                            }
-                            
-                            // 如果执行成功且不是问答操作，刷新 UI
-                            if (result.success && !"answer_question".equals(command.action)) {
-                                refreshStoryView();
-                            }
+                            // 延迟一点让用户看到状态变化
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                                AgentCommandExecutor.CommandResult result = 
+                                    commandExecutor.executeCommand(command, currentStory.getId());
+                                
+                                hideThinkingStatus();
+                                
+                                // 显示结果消息
+                                if (!TextUtils.isEmpty(result.message)) {
+                                    appendMessage(new ChatMessage(result.message, false));
+                                }
+                                
+                                // 如果执行成功且不是问答操作，刷新 UI
+                                if (result.success && !"answer_question".equals(command.action)) {
+                                    refreshStoryView();
+                                }
+                            }, 500); // 500ms 延迟
                         });
                     }
                     
@@ -1198,6 +1368,7 @@ public class StoryGenerateActivity extends BaseActivity {
                     public void onFailure(Exception e) {
                         runOnUiThread(() -> {
                             progressBar.setVisibility(View.GONE);
+                            hideThinkingStatus();
                             appendMessage(new ChatMessage("抱歉，发生了错误：" + e.getMessage(), false));
                         });
                     }
