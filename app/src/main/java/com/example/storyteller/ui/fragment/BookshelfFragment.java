@@ -132,8 +132,8 @@ public class BookshelfFragment extends BaseFragment {
 
             // Initialize with one volume and one chapter
             java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
-            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "第一卷");
-            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "第一章", "");
+            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "新卷名");
+            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "新章节", "");
             volume.addChapter(chapter);
             volumes.add(volume);
 

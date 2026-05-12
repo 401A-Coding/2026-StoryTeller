@@ -172,4 +172,15 @@
         android:background="#FFFFFF"
         android:elevation="8dp" />
 
+    <!-- 右侧抽屉 - AI助手面板 -->
+    <FrameLayout
+        android:id="@+id/panel_ai"
+        android:layout_width="350dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:clickable="true"
+        android:focusable="true" />
+
 </androidx.drawerlayout.widget.DrawerLayout>

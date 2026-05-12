@@ -146,8 +146,12 @@ public class AgentCommandExecutor {
      */
     public static AddChapterParams parseAddChapterParams(Map<String, Object> params) {
         AddChapterParams result = new AddChapterParams();
-        result.volumeId = params.containsKey("volume_id") ? 
-            ((Number) Objects.requireNonNull(params.get("volume_id"))).intValue() : 1;
+        // 安全解析 volume_id，默认为 1
+        if (params.containsKey("volume_id") && params.get("volume_id") != null) {
+            result.volumeId = ((Number) params.get("volume_id")).intValue();
+        } else {
+            result.volumeId = 1;
+        }
         result.chapterTitle = params.containsKey("chapter_title") ? 
             (String) params.get("chapter_title") : "新章节";
         result.chapterContent = params.containsKey("chapter_content") ? 
@@ -180,10 +184,18 @@ public class AgentCommandExecutor {
      */
     public static EditChapterParams parseEditChapterParams(Map<String, Object> params) {
         EditChapterParams result = new EditChapterParams();
-        result.volumeId = params.containsKey("volume_id") ? 
-            ((Number) params.get("volume_id")).intValue() : 1;
-        result.chapterId = params.containsKey("chapter_id") ? 
-            ((Number) params.get("chapter_id")).intValue() : 1;
+        // 安全解析 volume_id，默认为 1
+        if (params.containsKey("volume_id") && params.get("volume_id") != null) {
+            result.volumeId = ((Number) params.get("volume_id")).intValue();
+        } else {
+            result.volumeId = 1;
+        }
+        // 安全解析 chapter_id，默认为 1
+        if (params.containsKey("chapter_id") && params.get("chapter_id") != null) {
+            result.chapterId = ((Number) params.get("chapter_id")).intValue();
+        } else {
+            result.chapterId = 1;
+        }
         result.editType = params.containsKey("edit_type") ? 
             (String) params.get("edit_type") : "rewrite";
         result.newContent = params.containsKey("new_content") ? 
@@ -218,7 +230,7 @@ public class AgentCommandExecutor {
         List<Volume> volumes = parseVolumesFromStory(story);
         
         // 检查是否指定了插入位置
-        if (params.containsKey("position")) {
+        if (params.containsKey("position") && params.get("position") != null) {
             int position = ((Number) params.get("position")).intValue();
             boolean insertAfter = !params.containsKey("insert_after") || 
                                  ((Boolean) params.get("insert_after"));
@@ -295,10 +307,26 @@ public class AgentCommandExecutor {
         Volume targetVolume = volumes.get(targetVolumeIndex);
         
         // 检查是否指定了插入位置
-        if (params.containsKey("position")) {
+        if (params.containsKey("position") && params.get("position") != null) {
             int position = ((Number) params.get("position")).intValue();
             boolean insertAfter = !params.containsKey("insert_after") || 
                                  ((Boolean) params.get("insert_after"));
+            
+            // 如果卷中没有章节，忽略位置参数，直接添加到末尾
+            if (targetVolume.getChapters().isEmpty()) {
+                // 创建并添加新章节到空卷
+                Chapter newChapter = new Chapter(1, chapterParams.chapterTitle, chapterParams.chapterContent);
+                targetVolume.addChapter(newChapter);
+                
+                // 保存更新后的结构
+                saveVolumesToStory(story, volumes);
+                
+                return CommandResult.success(
+                    "✅ 已在第" + targetVolume.getId() + "卷添加新章节：《" + chapterParams.chapterTitle + "》",
+                    "add_chapter",
+                    newChapter
+                );
+            }
             
             // 验证位置
             if (position < 1 || position > targetVolume.getChapters().size()) {
@@ -366,6 +394,19 @@ public class AgentCommandExecutor {
         
         Volume targetVolume = volumes.get(editParams.volumeId - 1);
         
+        // 如果卷中没有章节，先自动创建一个章节
+        if (targetVolume.getChapters().isEmpty()) {
+            Chapter newChapter = new Chapter(1, "新章节", "");
+            targetVolume.addChapter(newChapter);
+            
+            // 保存更新后的结构
+            saveVolumesToStory(story, volumes);
+            
+            // 重新获取目标章节（现在是第1章）
+            editParams.chapterId = 1;
+            targetVolume = volumes.get(editParams.volumeId - 1);
+        }
+        
         // 验证章节ID
         if (editParams.chapterId < 1 || editParams.chapterId > targetVolume.getChapters().size()) {
             return CommandResult.error("❌ 错误：无效的章节ID");
@@ -430,10 +471,14 @@ public class AgentCommandExecutor {
         }
 
         // 解析参数
-        int volumeId = params.containsKey("volume_id") ? 
-            ((Number) params.get("volume_id")).intValue() : 1;
-        int chapterId = params.containsKey("chapter_id") ? 
-            ((Number) params.get("chapter_id")).intValue() : 1;
+        int volumeId = 1;
+        if (params.containsKey("volume_id") && params.get("volume_id") != null) {
+            volumeId = ((Number) params.get("volume_id")).intValue();
+        }
+        int chapterId = 1;
+        if (params.containsKey("chapter_id") && params.get("chapter_id") != null) {
+            chapterId = ((Number) params.get("chapter_id")).intValue();
+        }
         
         // 解析现有结构
         List<Volume> volumes = parseVolumesFromStory(story);
@@ -484,8 +529,10 @@ public class AgentCommandExecutor {
         }
 
         // 解析参数
-        int volumeId = params.containsKey("volume_id") ? 
-            ((Number) params.get("volume_id")).intValue() : 1;
+        int volumeId = 1;
+        if (params.containsKey("volume_id") && params.get("volume_id") != null) {
+            volumeId = ((Number) params.get("volume_id")).intValue();
+        }
         
         // 解析现有结构
         List<Volume> volumes = parseVolumesFromStory(story);
@@ -551,14 +598,22 @@ public class AgentCommandExecutor {
         }
 
         // 解析参数
-        int fromVolumeId = params.containsKey("from_volume_id") ? 
-            ((Number) params.get("from_volume_id")).intValue() : 1;
-        int fromChapterId = params.containsKey("from_chapter_id") ? 
-            ((Number) params.get("from_chapter_id")).intValue() : 1;
-        int toVolumeId = params.containsKey("to_volume_id") ? 
-            ((Number) params.get("to_volume_id")).intValue() : fromVolumeId;
-        int toPosition = params.containsKey("to_position") ? 
-            ((Number) params.get("to_position")).intValue() : 1;
+        int fromVolumeId = 1;
+        if (params.containsKey("from_volume_id") && params.get("from_volume_id") != null) {
+            fromVolumeId = ((Number) params.get("from_volume_id")).intValue();
+        }
+        int fromChapterId = 1;
+        if (params.containsKey("from_chapter_id") && params.get("from_chapter_id") != null) {
+            fromChapterId = ((Number) params.get("from_chapter_id")).intValue();
+        }
+        int toVolumeId = fromVolumeId;
+        if (params.containsKey("to_volume_id") && params.get("to_volume_id") != null) {
+            toVolumeId = ((Number) params.get("to_volume_id")).intValue();
+        }
+        int toPosition = 1;
+        if (params.containsKey("to_position") && params.get("to_position") != null) {
+            toPosition = ((Number) params.get("to_position")).intValue();
+        }
         boolean insertAfter = !params.containsKey("insert_after") || 
                              ((Boolean) params.get("insert_after"));
         
@@ -682,8 +737,10 @@ public class AgentCommandExecutor {
         }
 
         // 解析参数
-        int volumeId = params.containsKey("volume_id") ? 
-            ((Number) params.get("volume_id")).intValue() : 1;
+        int volumeId = 1;
+        if (params.containsKey("volume_id") && params.get("volume_id") != null) {
+            volumeId = ((Number) params.get("volume_id")).intValue();
+        }
         
         // 解析章节ID列表
         @SuppressWarnings("unchecked")

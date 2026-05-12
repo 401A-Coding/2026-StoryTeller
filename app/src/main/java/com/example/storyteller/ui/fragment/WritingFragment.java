@@ -251,37 +251,70 @@ public class WritingFragment extends BaseFragment {
     }
 
     /**
-     * 设置内联编辑（长按切换编辑模式）
+     * 设置内联编辑（单击切换编辑模式）
      */
-    private void setupInlineEdit(TextView tvDisplay, EditText etEdit, Object dataObj, boolean isChapter) {
-        final boolean[] isEditing = {false};
-
-        tvDisplay.setOnLongClickListener(v -> {
-            if (!isEditing[0]) {
-                tvDisplay.setVisibility(View.GONE);
-                etEdit.setVisibility(View.VISIBLE);
-                etEdit.requestFocus();
-                isEditing[0] = true;
-            }
-            return true;
-        });
-
-        etEdit.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && isEditing[0]) {
-                String newText = etEdit.getText().toString().trim();
-                if (!TextUtils.isEmpty(newText)) {
-                    if (isChapter && dataObj instanceof Chapter) {
-                        ((Chapter) dataObj).setTitle(newText);
-                    } else if (!isChapter && dataObj instanceof Volume) {
-                        ((Volume) dataObj).setTitle(newText);
-                    }
-                }
-                tvDisplay.setText(newText);
-                tvDisplay.setVisibility(View.VISIBLE);
-                etEdit.setVisibility(View.GONE);
-                isEditing[0] = false;
+    private void setupInlineEdit(TextView textView, EditText editText, Object model, boolean isChapter) {
+        // 单击 TextView 切换到编辑模式
+        textView.setOnClickListener(v -> {
+            textView.setVisibility(View.GONE);
+            editText.setVisibility(View.VISIBLE);
+            editText.requestFocus();
+            // 选中全部文本
+            editText.setSelection(editText.getText().length());
+            // 显示软键盘
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
             }
         });
+
+        // EditText 失去焦点时切换回显示模式
+        editText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                finishEditing(editText, textView, model, isChapter);
+            }
+        });
+
+        // 按回车键完成编辑
+        editText.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                actionId == android.view.inputmethod.EditorInfo.IME_NULL) {
+                finishEditing(editText, textView, model, isChapter);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * 完成编辑，切换回显示模式
+     */
+    private void finishEditing(EditText editText, TextView textView, Object model, boolean isChapter) {
+        String newName = editText.getText().toString().trim();
+        if (TextUtils.isEmpty(newName)) {
+            newName = isChapter ? "新章节" : "新卷名";
+        }
+
+        // 更新模型
+        if (model instanceof Volume) {
+            ((Volume) model).setTitle(newName);
+        } else if (model instanceof Chapter) {
+            ((Chapter) model).setTitle(newName);
+        }
+
+        // 切换回显示模式
+        editText.setVisibility(View.GONE);
+        textView.setText(newName);
+        textView.setVisibility(View.VISIBLE);
+
+        // 隐藏软键盘
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);
+        }
+        
+        // 保存修改
+        saveStructure();
     }
 
     /**
@@ -289,10 +322,39 @@ public class WritingFragment extends BaseFragment {
      */
     private void addNewVolume() {
         volumeCount++;
-        Volume newVolume = new Volume(volumeCount, "第" + volumeCount + "卷");
+        Volume newVolume = new Volume(volumeCount, "新卷名");
         volumes.add(newVolume);
         renderVolumes();
+        
+        // 保存
+        saveStructure();
         Toast.makeText(requireContext(), "已添加新卷", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 在指定位置添加新卷
+     * @param insertIndex 插入位置（从 0 开始）
+     */
+    private void addNewVolumeAtPosition(int insertIndex) {
+        // 验证插入位置
+        if (insertIndex < 0 || insertIndex > volumes.size()) {
+            return;
+        }
+        
+        volumeCount++;
+        Volume newVolume = new Volume(volumeCount, "新卷名");
+        volumes.add(insertIndex, newVolume);
+        
+        // 重新编号后续卷
+        for (int i = insertIndex; i < volumes.size(); i++) {
+            volumes.get(i).setId(i + 1);
+        }
+        
+        // 保存并刷新UI
+        saveStructure();
+        renderVolumes();
+        
+        Toast.makeText(requireContext(), "已在第 " + (insertIndex + 1) + " 个位置添加新卷", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -300,13 +362,46 @@ public class WritingFragment extends BaseFragment {
      */
     private void addNewChapter(LinearLayout chapterContainer, Volume volume) {
         int newChapterId = volume.getChapters().size() + 1;
-        Chapter newChapter = new Chapter(newChapterId, "第" + newChapterId + "章", "");
+        Chapter newChapter = new Chapter(newChapterId, "新章节", "");
         volume.getChapters().add(newChapter);
 
         View chapterView = createChapterView(newChapter, volume, newChapterId);
         chapterContainer.addView(chapterView);
 
+        // 保存并刷新
+        saveStructure();
         Toast.makeText(requireContext(), "已添加新章节", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 在指定位置添加新章节
+     * @param volume 所属卷
+     * @param insertIndex 插入位置（从 0 开始）
+     * @param showToast 是否显示提示
+     */
+    private void addNewChapterAtPosition(Volume volume, int insertIndex, boolean showToast) {
+        // 验证插入位置
+        if (insertIndex < 0 || insertIndex > volume.getChapters().size()) {
+            return;
+        }
+        
+        // 创建新章节
+        Chapter newChapter = new Chapter(insertIndex + 1, "新章节", "");
+        volume.getChapters().add(insertIndex, newChapter);
+        
+        // 重新编号后续章节
+        for (int i = insertIndex; i < volume.getChapters().size(); i++) {
+            volume.getChapters().get(i).setId(i + 1);
+        }
+        
+        // 保存并刷新UI
+        saveStructure();
+        renderVolumes();
+        
+        // 只在用户主动操作时显示提示
+        if (showToast) {
+            Toast.makeText(requireContext(), "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -314,20 +409,34 @@ public class WritingFragment extends BaseFragment {
      */
     private void showVolumeMenu(Volume volume, int volumeIndex, View volumeView) {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), volumeView);
+        popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("在上方添加卷");
+        popupMenu.getMenu().add("在下方添加卷");
         popupMenu.getMenu().add("删除卷");
-        popupMenu.getMenu().add("上移");
-        popupMenu.getMenu().add("下移");
 
         popupMenu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            if ("删除卷".equals(title)) {
+            if ("重命名".equals(title)) {
+                // 触发编辑模式
+                TextView tvVolumeName = volumeView.findViewById(R.id.tv_volume_name);
+                EditText etVolumeName = volumeView.findViewById(R.id.et_volume_name);
+                if (tvVolumeName != null && etVolumeName != null) {
+                    tvVolumeName.performClick();
+                }
+                return true;
+            } else if ("在上方添加卷".equals(title)) {
+                // 在当前卷上方添加
+                addNewVolumeAtPosition(volumeIndex);
+                return true;
+            } else if ("在下方添加卷".equals(title)) {
+                // 在当前卷下方添加
+                addNewVolumeAtPosition(volumeIndex + 1);
+                return true;
+            } else if ("删除卷".equals(title)) {
                 deleteVolume(volume, volumeIndex);
-            } else if ("上移".equals(title) && volumeIndex > 0) {
-                moveVolumeUp(volumeIndex);
-            } else if ("下移".equals(title) && volumeIndex < volumes.size() - 1) {
-                moveVolumeDown(volumeIndex);
+                return true;
             }
-            return true;
+            return false;
         });
 
         popupMenu.show();
@@ -338,14 +447,45 @@ public class WritingFragment extends BaseFragment {
      */
     private void showChapterMenu(Chapter chapter, Volume volume, View chapterView) {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), chapterView);
+        popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("在上方添加章节");
+        popupMenu.getMenu().add("在下方添加章节");
         popupMenu.getMenu().add("删除章节");
-        popupMenu.getMenu().add("上移");
-        popupMenu.getMenu().add("下移");
 
         popupMenu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            Toast.makeText(requireContext(), title + "（功能开发中）", Toast.LENGTH_SHORT).show();
-            return true;
+            if ("重命名".equals(title)) {
+                // 触发编辑模式
+                TextView tvChapterName = chapterView.findViewById(R.id.tv_chapter_name);
+                EditText etChapterName = chapterView.findViewById(R.id.et_chapter_name);
+                if (tvChapterName != null && etChapterName != null) {
+                    tvChapterName.performClick();
+                }
+                return true;
+            } else if ("在上方添加章节".equals(title)) {
+                // 在当前章节上方添加
+                int chapterIndex = volume.getChapters().indexOf(chapter);
+                addNewChapterAtPosition(volume, chapterIndex, true);
+                return true;
+            } else if ("在下方添加章节".equals(title)) {
+                // 在当前章节下方添加
+                int chapterIndex = volume.getChapters().indexOf(chapter);
+                addNewChapterAtPosition(volume, chapterIndex + 1, true);
+                return true;
+            } else if ("删除章节".equals(title)) {
+                // 确认删除
+                int chapterIndex = volume.getChapters().indexOf(chapter) + 1;
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("确认删除")
+                    .setMessage("确定要删除第" + chapterIndex + "章《" + chapter.getTitle() + "》吗？")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        deleteChapter(volume, chapter);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+                return true;
+            }
+            return false;
         });
 
         popupMenu.show();
@@ -368,34 +508,37 @@ public class WritingFragment extends BaseFragment {
                 
                 volumeCount = volumes.size();
                 renderVolumes();
+                
+                // 保存
+                saveStructure();
                 Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
             })
             .setNegativeButton("取消", null)
             .show();
     }
-
+    
     /**
-     * 卷上移
+     * 删除章节
      */
-    private void moveVolumeUp(int index) {
-        if (index > 0) {
-            Volume temp = volumes.get(index);
-            volumes.set(index, volumes.get(index - 1));
-            volumes.set(index - 1, temp);
-            renderVolumes();
+    private void deleteChapter(Volume volume, Chapter chapter) {
+        int listIndex = volume.getChapters().indexOf(chapter);
+        
+        if (listIndex < 0 || listIndex >= volume.getChapters().size()) {
+            return;
         }
-    }
-
-    /**
-     * 卷下移
-     */
-    private void moveVolumeDown(int index) {
-        if (index < volumes.size() - 1) {
-            Volume temp = volumes.get(index);
-            volumes.set(index, volumes.get(index + 1));
-            volumes.set(index + 1, temp);
-            renderVolumes();
+        
+        Chapter removedChapter = volume.getChapters().remove(listIndex);
+        
+        // 重新编号章节
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            volume.getChapters().get(i).setId(i + 1);
         }
+        
+        // 保存并刷新UI
+        saveStructure();
+        renderVolumes();
+        
+        Toast.makeText(requireContext(), "已删除章节：《" + removedChapter.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -422,5 +565,12 @@ public class WritingFragment extends BaseFragment {
      */
     public List<Volume> getVolumes() {
         return volumes;
+    }
+    
+    /**
+     * 刷新视图（从数据库重新加载数据）
+     */
+    public void refreshView() {
+        loadStoryData();
     }
 }

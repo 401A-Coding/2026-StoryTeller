@@ -1556,7 +1556,11 @@ public class StoryGenerateActivity extends BaseActivity {
     private void appendMessage(ChatMessage message) {
         messages.add(message);
         adapter.notifyItemInserted(messages.size() - 1);
-        rvChat.scrollToPosition(messages.size() - 1);
+        
+        // 延迟滚动，确保布局完成
+        rvChat.post(() -> {
+            rvChat.smoothScrollToPosition(messages.size() - 1);
+        });
         
         // 如果是 AI 回复且启用打字机效果，启动逐字显示
         if (!message.isFromUser() && message.isTyping()) {
@@ -1588,8 +1592,8 @@ public class StoryGenerateActivity extends BaseActivity {
                     // 通知适配器更新
                     adapter.notifyItemChanged(position);
                     
-                    // 滚动到底部
-                    rvChat.scrollToPosition(messages.size() - 1);
+                    // 滚动到底部（使用 smoothScrollToPosition）
+                    rvChat.smoothScrollToPosition(messages.size() - 1);
                     
                     currentIndex[0]++;
                     

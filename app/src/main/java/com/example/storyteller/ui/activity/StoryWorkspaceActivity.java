@@ -21,6 +21,7 @@ import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.WorkspacePagerAdapter;
 import com.example.storyteller.ui.component.BottomActionBar;
+import com.example.storyteller.ui.fragment.AIPanelFragment;
 import com.example.storyteller.ui.fragment.ArchitectureFragment;
 import com.example.storyteller.ui.fragment.StoryInfoPanelFragment;
 import com.example.storyteller.ui.fragment.WritingFragment;
@@ -46,6 +47,7 @@ public class StoryWorkspaceActivity extends BaseActivity {
     private TextView tvStoryTitle;
     private FloatingActionButton fabAI;
     private StoryInfoPanelFragment storyInfoPanelFragment;
+    private AIPanelFragment aiPanelFragment;
 
     // 数据
     private StoryDao storyDao;
@@ -70,6 +72,9 @@ public class StoryWorkspaceActivity extends BaseActivity {
         
         // 禁用左侧抽屉的手势滑动，只允许通过按钮打开
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
+        
+        // 禁用右侧抽屉的手势滑动，只允许通过按钮关闭
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
 
         // 初始化UI组件
         tabLayout = findViewById(R.id.tab_layout);
@@ -102,8 +107,8 @@ public class StoryWorkspaceActivity extends BaseActivity {
         // 更多操作按钮
         findViewById(R.id.btn_more).setOnClickListener(v -> showMoreMenu());
 
-        // AI助手按钮
-        fabAI.setOnClickListener(v -> openAIDialog());
+        // AI助手按钮 - 打开右侧AI面板
+        fabAI.setOnClickListener(v -> openAIPanel());
     }
 
     @Override
@@ -130,6 +135,9 @@ public class StoryWorkspaceActivity extends BaseActivity {
             
             // 初始化左侧信息面板
             initStoryInfoPanel();
+            
+            // 初始化右侧AI面板
+            initAIPanel();
             
             // 设置ViewPager适配器
             pagerAdapter = new WorkspacePagerAdapter(this, storyId);
@@ -216,8 +224,11 @@ public class StoryWorkspaceActivity extends BaseActivity {
     }
 
     private void aiContinue() {
-        openAIDialog();
-        // TODO: 打开AI对话，预填充"续写"指令
+        openAIPanel();
+        // 预填充“续写”指令
+        if (aiPanelFragment != null) {
+            aiPanelFragment.prefillMessage("请帮我续写下一章内容");
+        }
     }
 
     private void showStats() {
@@ -231,8 +242,11 @@ public class StoryWorkspaceActivity extends BaseActivity {
     }
 
     private void aiOptimize() {
-        openAIDialog();
-        // TODO: 打开AI对话，预填充"优化简介/大纲"指令
+        openAIPanel();
+        // 预填充“优化”指令
+        if (aiPanelFragment != null) {
+            aiPanelFragment.prefillMessage("请帮我优化简介和大纲");
+        }
     }
 
     private void previewArchitecture() {
@@ -290,9 +304,34 @@ public class StoryWorkspaceActivity extends BaseActivity {
         popupMenu.show();
     }
 
-    private void openAIDialog() {
-        Toast.makeText(this, "AI助手（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 打开AI对话界面
+    private void openAIPanel() {
+        if (!drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.openDrawer(GravityCompat.END);
+        } else {
+            drawerLayout.closeDrawer(GravityCompat.END);
+        }
+    }
+
+    /**
+     * 初始化AI助手面板
+     */
+    private void initAIPanel() {
+        if (storyId > 0) {
+            aiPanelFragment = AIPanelFragment.newInstance(storyId);
+            // 设置关闭监听器
+            aiPanelFragment.setOnCloseListener(() -> {
+                drawerLayout.closeDrawer(GravityCompat.END);
+            });
+            // 设置命令执行监听器
+            aiPanelFragment.setOnCommandExecutedListener(() -> {
+                // 命令执行成功后，刷新写作页面的UI
+                refreshWritingFragment();
+            });
+            getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_ai, aiPanelFragment)
+                .commit();
+        }
     }
 
     /**
@@ -316,6 +355,19 @@ public class StoryWorkspaceActivity extends BaseActivity {
             drawerLayout.openDrawer(GravityCompat.START);
         } else {
             drawerLayout.closeDrawer(GravityCompat.START);
+        }
+    }
+    
+    /**
+     * 刷新写作Fragment的UI
+     */
+    private void refreshWritingFragment() {
+        // 获取当前显示的Fragment
+        Fragment currentFragment = getSupportFragmentManager()
+            .findFragmentByTag("f" + WorkspacePagerAdapter.TAB_WRITING);
+        
+        if (currentFragment instanceof WritingFragment) {
+            ((WritingFragment) currentFragment).refreshView();
         }
     }
 }
