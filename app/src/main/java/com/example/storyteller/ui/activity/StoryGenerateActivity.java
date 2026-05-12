@@ -985,42 +985,54 @@ public class StoryGenerateActivity extends BaseActivity {
      * 添加新卷
      */
     private void addNewVolume() {
+        // 默认在末尾添加
+        addNewVolumeAtPosition(volumes.size());
+    }
+    
+    /**
+     * 在指定位置添加新卷
+     * @param insertIndex 插入位置（从 0 开始）
+     */
+    private void addNewVolumeAtPosition(int insertIndex) {
+        // 验证插入位置
+        if (insertIndex < 0 || insertIndex > volumes.size()) {
+            return;
+        }
+        
         volumeCount++;
-
-        Volume volume = new Volume(volumeCount, "新卷名");
-        volumes.add(volume);
-
-        // Inflate volume layout
-        View volumeView = LayoutInflater.from(this).inflate(R.layout.item_volume, layoutContent, false);
-
-        // Setup volume prefix (e.g., "第1卷 · ")
-        TextView tvVolumePrefix = volumeView.findViewById(R.id.tv_volume_prefix);
-        tvVolumePrefix.setText("第" + volumeCount + "卷 · ");
-
-        // Setup volume name TextView (display mode)
-        TextView tvVolumeName = volumeView.findViewById(R.id.tv_volume_name);
-        tvVolumeName.setText(volume.getTitle());
-
-        // Setup volume name EditText (edit mode)
-        EditText etVolumeName = volumeView.findViewById(R.id.et_volume_name);
-        etVolumeName.setText(volume.getTitle());
-
-        // Double tap to edit volume name inline
-        setupInlineEdit(tvVolumeName, etVolumeName, volume, false);
-
-        // Chapter container
-        LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
-
-        // Setup add chapter button
-        Button btnAddChapter = volumeView.findViewById(R.id.btn_add_chapter);
-        btnAddChapter.setOnClickListener(v -> addNewChapter(layoutChapters, volume));
-
-        // Add volume to layout (before the add volume button)
-        int volumeIndex = layoutContent.getChildCount() - 1; // Insert before btnAddVolume
-        layoutContent.addView(volumeView, volumeIndex);
-
-        // Add first chapter automatically (不显示提示)
-        addNewChapterAtPosition(layoutChapters, volume, 0, false);
+        Volume newVolume = new Volume(volumeCount, "新卷名");
+        volumes.add(insertIndex, newVolume);
+        
+        // 重新编号后续卷
+        for (int i = insertIndex; i < volumes.size(); i++) {
+            volumes.get(i).setId(i + 1);
+        }
+        
+        // 清空并重新渲染所有卷
+        layoutContent.removeAllViews();
+        
+        // 重新添加“添加新卷”按钮
+        Button btnAddVolumeNew = new Button(this);
+        btnAddVolumeNew.setId(R.id.btn_add_volume);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = 32;
+        params.bottomMargin = 32;
+        params.gravity = android.view.Gravity.CENTER;
+        btnAddVolumeNew.setLayoutParams(params);
+        btnAddVolumeNew.setText(getString(R.string.btn_add_volume));
+        btnAddVolumeNew.setTextColor(android.graphics.Color.parseColor("#1976D2"));
+        btnAddVolumeNew.setOnClickListener(v -> addNewVolume());
+        layoutContent.addView(btnAddVolumeNew);
+        
+        // 重新渲染所有卷
+        for (int i = 0; i < volumes.size(); i++) {
+            Volume volume = volumes.get(i);
+            renderVolumeToUI(volume, i + 1);
+        }
+        
+        Toast.makeText(this, "已在第 " + (insertIndex + 1) + " 个位置添加新卷", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -1306,6 +1318,8 @@ public class StoryGenerateActivity extends BaseActivity {
     private void showVolumeMenu(Volume volume, int volumeIndex, View anchorView) {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, anchorView);
         popupMenu.getMenu().add("重命名");
+        popupMenu.getMenu().add("在上方添加卷");
+        popupMenu.getMenu().add("在下方添加卷");
         popupMenu.getMenu().add("删除");
         
         popupMenu.setOnMenuItemClickListener(item -> {
@@ -1320,6 +1334,16 @@ public class StoryGenerateActivity extends BaseActivity {
                         tvVolumeName.performClick();
                     }
                 }
+                return true;
+            } else if ("在上方添加卷".equals(title)) {
+                // 在当前卷上方添加
+                int insertIndex = volumeIndex - 1; // volumeIndex 从 1 开始，转换为从 0 开始
+                addNewVolumeAtPosition(insertIndex);
+                return true;
+            } else if ("在下方添加卷".equals(title)) {
+                // 在当前卷下方添加
+                int insertIndex = volumeIndex; // 在当前卷之后
+                addNewVolumeAtPosition(insertIndex);
                 return true;
             } else if ("删除".equals(title)) {
                 // 确认删除
