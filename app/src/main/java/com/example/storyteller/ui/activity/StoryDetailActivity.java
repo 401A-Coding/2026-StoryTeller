@@ -156,6 +156,7 @@ public class StoryDetailActivity extends BaseActivity {
             }
 
             for (int i = 0; i < volumes.size(); i++) {
+                final int volumeIndex = i;
                 Volume volume = volumes.get(i);
                 String volumeTitle = TextUtils.isEmpty(volume.getTitle()) ? "未命名卷" : volume.getTitle().trim();
 
@@ -186,7 +187,7 @@ public class StoryDetailActivity extends BaseActivity {
 
                 // 卷标题
                 TextView tvVolumeTitle = new TextView(this);
-                tvVolumeTitle.setText("第" + (i + 1) + "卷 · " + volumeTitle);
+                tvVolumeTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volumeTitle);
                 tvVolumeTitle.setTextColor(0xFF2A2A2A);
                 tvVolumeTitle.setTextSize(15);
                 tvVolumeTitle.setTypeface(tvVolumeTitle.getTypeface(), android.graphics.Typeface.BOLD);
@@ -232,10 +233,11 @@ public class StoryDetailActivity extends BaseActivity {
 
                         // 点击章节进入编辑
                         final int chapterIndex = j;
+                        final int volIdxForChapter = volumeIndex;
                         chapterRow.setOnClickListener(v -> {
                             Intent editIntent = new Intent(this, StoryGenerateActivity.class);
                             editIntent.putExtra("story_id", storyId);
-                            editIntent.putExtra("volume_index", i);
+                            editIntent.putExtra("volume_index", volIdxForChapter);
                             editIntent.putExtra("chapter_index", chapterIndex);
                             startActivity(editIntent);
                         });
@@ -264,7 +266,7 @@ public class StoryDetailActivity extends BaseActivity {
                 volumeCard.addView(volumeContent);
 
                 // 点击整卷进入卷章节列表（分页展示）
-                final int volumeIdx = i;
+                final int volumeIdx = volumeIndex;
                 volumeCard.setOnClickListener(v -> {
                     Intent volumeIntent = new Intent(StoryDetailActivity.this, VolumeChaptersActivity.class);
                     volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_STORY_ID, storyId);
