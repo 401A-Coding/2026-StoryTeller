@@ -263,8 +263,14 @@ public class StoryDetailActivity extends BaseActivity {
 
                 volumeCard.addView(volumeContent);
 
-                // 点击整卷进入编辑
-                volumeCard.setOnClickListener(v -> startEditStory(storyId));
+                // 点击整卷进入卷章节列表（分页展示）
+                final int volumeIdx = i;
+                volumeCard.setOnClickListener(v -> {
+                    Intent volumeIntent = new Intent(StoryDetailActivity.this, VolumeChaptersActivity.class);
+                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_STORY_ID, storyId);
+                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_VOLUME_INDEX, volumeIdx);
+                    startActivity(volumeIntent);
+                });
 
                 container.addView(volumeCard);
             }

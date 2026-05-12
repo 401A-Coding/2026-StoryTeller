@@ -46,6 +46,9 @@
         <activity
             android:name=".ui.activity.SettingsActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.VolumeChaptersActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
     </application>
 
 </manifest>
