@@ -266,16 +266,8 @@ public class StoryDetailActivity extends BaseActivity {
                         chapterRow.addView(tvChapter);
                         chapterRow.addView(tvArrow);
 
-                        // 点击章节进入编辑
-                        final int chapterIndex = j;
-                        final int volIdxForChapter = volumeIndex;
-                        chapterRow.setOnClickListener(v -> {
-                            Intent editIntent = new Intent(this, StoryGenerateActivity.class);
-                            editIntent.putExtra("story_id", storyId);
-                            editIntent.putExtra("volume_index", volIdxForChapter);
-                            editIntent.putExtra("chapter_index", chapterIndex);
-                            startActivity(editIntent);
-                        });
+                        // 卷卡片中的章节行仅作预览，不可点击
+                        // 点击整张卷卡片可进入卷章节列表
 
                         volumeContent.addView(chapterRow);
 
