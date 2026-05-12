@@ -51,8 +51,8 @@ public class StoryGenerateActivity extends BaseActivity {
     private RecyclerView rvChat;
     private EditText etMessage;
     private ImageButton btnSend;
-    private Button btnAgentMode;
-    private Button btnAskMode;
+    private Button btnModeSelector;
+    private Button btnModelSelector;
     private ProgressBar progressBar;
     private LinearLayout layoutContent;
     private Button btnAddVolume;
@@ -69,7 +69,8 @@ public class StoryGenerateActivity extends BaseActivity {
     
     // Agent Mode
     private AgentCommandExecutor commandExecutor;
-    private boolean isAgentMode = false; // 是否启用智能体模式
+    private String currentMode = "agent"; // 当前选择的模式: agent 或 ask
+    private String currentModel = "flash"; // 当前选择的模型: flash 或 pro
 
     // Storage
     private StoryRepository storyRepository;
@@ -93,8 +94,8 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat = findViewById(R.id.rv_chat);
         etMessage = findViewById(R.id.et_message);
         btnSend = findViewById(R.id.btn_send);
-        btnAgentMode = findViewById(R.id.btn_agent_mode);
-        btnAskMode = findViewById(R.id.btn_ask_mode);
+        btnModeSelector = findViewById(R.id.btn_mode_selector);
+        btnModelSelector = findViewById(R.id.btn_model_selector);
 
         // Content
         layoutContent = findViewById(R.id.layout_content);
@@ -125,42 +126,82 @@ public class StoryGenerateActivity extends BaseActivity {
         rvChat.setAdapter(adapter);
         btnSend.setOnClickListener(v -> sendMessage());
 
-        // Setup agent mode buttons
-        updateAgentModeButtons(); // Initialize button states
+        // Setup mode selector
+        btnModeSelector.setOnClickListener(v -> showModeSelectorPopup());
         
-        btnAgentMode.setOnClickListener(v -> {
-            isAgentMode = true;
-            updateAgentModeButtons();
-            Toast.makeText(this, "已启用 Agent 模式", Toast.LENGTH_SHORT).show();
-        });
-        
-        btnAskMode.setOnClickListener(v -> {
-            isAgentMode = false;
-            updateAgentModeButtons();
-            Toast.makeText(this, "已切换到 Ask 模式", Toast.LENGTH_SHORT).show();
-        });
+        // Setup model selector
+        btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
 
         // Setup add volume button
         btnAddVolume.setOnClickListener(v -> addNewVolume());
     }
 
     /**
-     * 更新 Agent 模式按钮的选中状态
+     * 显示模式选择弹窗（Agent/Ask）
      */
-    private void updateAgentModeButtons() {
-        if (isAgentMode) {
-            // Agent 模式选中
-            btnAgentMode.setTextColor(getResources().getColor(R.color.colorPrimary, null));
-            btnAgentMode.setBackgroundResource(R.drawable.bg_chat_bubble_user);
-            btnAskMode.setTextColor(getResources().getColor(R.color.colorGray, null));
-            btnAskMode.setBackground(null);
+    private void showModeSelectorPopup() {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, btnModeSelector);
+        popupMenu.getMenu().add(0, 1, 0, getString(R.string.agent));
+        popupMenu.getMenu().add(0, 2, 1, getString(R.string.ask));
+        
+        // 标记当前选中的模式
+        if ("agent".equals(currentMode)) {
+            popupMenu.getMenu().getItem(0).setChecked(true);
         } else {
-            // Ask 模式选中
-            btnAskMode.setTextColor(getResources().getColor(R.color.colorPrimary, null));
-            btnAskMode.setBackgroundResource(R.drawable.bg_chat_bubble_user);
-            btnAgentMode.setTextColor(getResources().getColor(R.color.colorGray, null));
-            btnAgentMode.setBackground(null);
+            popupMenu.getMenu().getItem(1).setChecked(true);
         }
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == 1) {
+                currentMode = "agent";
+                btnModeSelector.setText(getString(R.string.agent));
+                Toast.makeText(this, "已启用 Agent 模式", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == 2) {
+                currentMode = "ask";
+                btnModeSelector.setText(getString(R.string.ask));
+                Toast.makeText(this, "已切换到 Ask 模式", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
+        
+        popupMenu.show();
+    }
+    
+    /**
+     * 显示模型选择弹窗（Flash/Pro）
+     */
+    private void showModelSelectorPopup() {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, btnModelSelector);
+        popupMenu.getMenu().add(0, 1, 0, getString(R.string.model_flash));
+        popupMenu.getMenu().add(0, 2, 1, getString(R.string.model_pro));
+        
+        // 标记当前选中的模型
+        if ("flash".equals(currentModel)) {
+            popupMenu.getMenu().getItem(0).setChecked(true);
+        } else {
+            popupMenu.getMenu().getItem(1).setChecked(true);
+        }
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == 1) {
+                currentModel = "flash";
+                btnModelSelector.setText(getString(R.string.model_flash));
+                Toast.makeText(this, "已切换到 Flash 模型", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == 2) {
+                currentModel = "pro";
+                btnModelSelector.setText(getString(R.string.model_pro));
+                Toast.makeText(this, "已切换到 Pro 模型", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
+        
+        popupMenu.show();
     }
 
     @Override
@@ -688,13 +729,14 @@ public class StoryGenerateActivity extends BaseActivity {
         // Show loading
         progressBar.setVisibility(View.VISIBLE);
 
-        if (isAgentMode && isEditMode && currentStory != null) {
+        if ("agent".equals(currentMode) && isEditMode && currentStory != null) {
             // Agent mode: process command
             String context = AgentCommandExecutor.buildStoryContext(currentStory, volumes);
             
             ApiClient.getInstance().processAgentCommand(
                 content,
                 context,
+                currentModel,
                 this,
                 new ApiClient.AgentCallback() {
                     @Override
@@ -729,7 +771,7 @@ public class StoryGenerateActivity extends BaseActivity {
             );
         } else {
             // Normal chat mode: use original generateStory method
-            ApiClient.getInstance().generateStory(content, this, new ApiClient.Callback() {
+            ApiClient.getInstance().generateStory(content, currentModel, this, new ApiClient.Callback() {
                 @Override
                 public void onSuccess(String story) {
                     runOnUiThread(() -> {
