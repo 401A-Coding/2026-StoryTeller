@@ -124,7 +124,7 @@
             android:contentDescription="删除"
             android:padding="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            app:tint="@android:color/white"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_margin="4dp" />

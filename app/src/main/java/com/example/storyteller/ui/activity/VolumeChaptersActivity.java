@@ -1,6 +1,7 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -361,7 +362,9 @@ public class VolumeChaptersActivity extends BaseActivity {
                 chapterRow.setClickable(true);
                 chapterRow.setFocusable(true);
                 try {
-                    chapterRow.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                    TypedArray typedArray = obtainStyledAttributes(new int[]{android.R.attr.selectableItemBackground});
+                    chapterRow.setForeground(typedArray.getDrawable(0));
+                    typedArray.recycle();
                 } catch (Exception ignored) {
                 }
 
