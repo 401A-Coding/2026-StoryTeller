@@ -44,6 +44,7 @@ public class ArchitectureFragment extends BaseFragment {
     // UI组件
     private MaterialCardView cardCover;
     private View vCoverBackground;
+    private View layoutStatusContainer;
     private Spinner spinnerStatus;
     private ImageButton btnFavorite;
     private EditText etTitle;
@@ -101,6 +102,7 @@ public class ArchitectureFragment extends BaseFragment {
         // 初始化封面相关组件
         cardCover = view.findViewById(R.id.card_cover);
         vCoverBackground = view.findViewById(R.id.v_cover_background);
+        layoutStatusContainer = view.findViewById(R.id.layout_status_container);
         spinnerStatus = view.findViewById(R.id.spinner_status);
         btnFavorite = view.findViewById(R.id.btn_favorite);
         
@@ -129,6 +131,11 @@ public class ArchitectureFragment extends BaseFragment {
         
         // 封面点击事件 - 更换封面
         cardCover.setOnClickListener(v -> selectCoverImage());
+        
+        // 状态标签容器点击事件 - 触发下拉
+        layoutStatusContainer.setOnClickListener(v -> {
+            spinnerStatus.performClick();
+        });
         
         // 收藏星标点击事件
         btnFavorite.setOnClickListener(v -> toggleFavorite());
