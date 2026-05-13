@@ -30,9 +30,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 卷章节列表页面
- * 每20章一页，支持滑动翻页和底部页数提示
+ * ⚠️ DEPRECATED - 已废弃
+ * 
+ * 此Activity已被 StoryWorkspaceActivity 取代。
+ * 所有小说浏览和编辑功能现在统一由 StoryWorkspaceActivity 实现。
+ * 
+ * 废弃原因：
+ * 1. StoryWorkspaceActivity 提供了更完整的编辑功能（写作、架构、人物、素材等Tab）
+ * 2. 统一了编辑入口，避免功能分散
+ * 3. 提供更好的用户体验和一致性
+ * 4. 简化导航流程，减少页面层级
+ * 
+ * 原功能说明：
+ * - 分页展示某卷下的所有章节（每页20章）
+ * - 支持左右滑动翻页
+ * - 底部有页数指示器
+ * - 点击章节跳转到编辑页面
+ * 
+ * @deprecated 请使用 {@link StoryWorkspaceActivity} 代替
+ * @see StoryWorkspaceActivity
  */
+@Deprecated
 public class VolumeChaptersActivity extends BaseActivity {
 
     public static final String EXTRA_STORY_ID = "extra_story_id";
@@ -405,10 +423,8 @@ public class VolumeChaptersActivity extends BaseActivity {
 
                 // 点击进入编辑
                 chapterRow.setOnClickListener(v -> {
-                    Intent editIntent = new Intent(VolumeChaptersActivity.this, StoryGenerateActivity.class);
-                    editIntent.putExtra("story_id", storyId);
-                    editIntent.putExtra("volume_index", volumeIndex);
-                    editIntent.putExtra("chapter_index", chapterGlobalIndex);
+                    Intent editIntent = new Intent(VolumeChaptersActivity.this, StoryWorkspaceActivity.class);
+                    editIntent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, storyId);
                     startActivity(editIntent);
                 });
 

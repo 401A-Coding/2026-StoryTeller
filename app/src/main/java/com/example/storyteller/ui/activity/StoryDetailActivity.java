@@ -118,9 +118,9 @@ public class StoryDetailActivity extends BaseActivity {
     }
 
     private void startEditStory(int storyId) {
-        Intent editIntent = new Intent(this, StoryGenerateActivity.class);
+        Intent editIntent = new Intent(this, StoryWorkspaceActivity.class);
         if (storyId > 0) {
-            editIntent.putExtra("story_id", storyId);
+            editIntent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, storyId);
         }
         startActivity(editIntent);
     }
@@ -295,13 +295,12 @@ public class StoryDetailActivity extends BaseActivity {
 
                 volumeCard.addView(volumeContent);
 
-                // 点击整卷进入卷章节列表（分页展示）
+                // 点击整卷进入编辑工作区
                 final int volumeIdx = volumeIndex;
                 volumeCard.setOnClickListener(v -> {
-                    Intent volumeIntent = new Intent(StoryDetailActivity.this, VolumeChaptersActivity.class);
-                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_STORY_ID, storyId);
-                    volumeIntent.putExtra(VolumeChaptersActivity.EXTRA_VOLUME_INDEX, volumeIdx);
-                    startActivity(volumeIntent);
+                    Intent editIntent = new Intent(StoryDetailActivity.this, StoryWorkspaceActivity.class);
+                    editIntent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, storyId);
+                    startActivity(editIntent);
                 });
 
                 container.addView(volumeCard);
@@ -319,7 +318,11 @@ public class StoryDetailActivity extends BaseActivity {
     /**
      * 从纯文本 content 中解析出卷-章结构
      * 支持格式：
-     *   ## 第一卷 标题\n 第1章 标题\n 内容...\n 第2章 标题\n ...
+     *   ## 第一卷 标题
+ 第1章 标题
+ 内容...
+ 第2章 标题
+ ...
      *   ## 第1章 标题\n 内容...\n ## 第2章 标题\n ...
      */
     private List<Volume> parseVolumesFromContent(String content) {

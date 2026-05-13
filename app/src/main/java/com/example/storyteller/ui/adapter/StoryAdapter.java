@@ -148,8 +148,9 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         holder.itemView.setOnClickListener(v -> {
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
-            Intent intent = new Intent(context, StoryWorkspaceActivity.class);
-            intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, story.getId());
+            Intent intent = new Intent(context, StoryDetailActivity.class);
+            intent.putExtra(StoryDetailActivity.EXTRA_STORY_ID, story.getId());
+            intent.putExtra(StoryDetailActivity.EXTRA_STORY_TITLE, story.getTitle());
             context.startActivity(intent);
         });
 
