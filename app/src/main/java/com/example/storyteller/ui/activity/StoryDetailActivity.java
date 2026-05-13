@@ -1,6 +1,7 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -206,7 +207,9 @@ public class StoryDetailActivity extends BaseActivity {
                 volumeCard.setFocusable(true);
                 // 安全设置 foreground，避免在某些设备上崩溃
                 try {
-                    volumeCard.setForeground(getDrawable(android.R.attr.selectableItemBackground));
+                    TypedArray typedArray = obtainStyledAttributes(new int[]{android.R.attr.selectableItemBackground});
+                    volumeCard.setForeground(typedArray.getDrawable(0));
+                    typedArray.recycle();
                 } catch (Exception ignored) {
                 }
 
