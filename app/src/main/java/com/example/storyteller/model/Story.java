@@ -17,6 +17,8 @@ public class Story {
     private String structure;
     // 小说简介
     private String description;
+    // 剧情梳理快照 JSON
+    private String plotSummaryJson;
     // 书架分类：全部/创作中/已完成/已收藏
     private String category;
     // 封面颜色（十六进制颜色值，作为封面图片未设置时的备用背景）
@@ -33,6 +35,7 @@ public class Story {
         this.isCollected = false;
         this.structure = null;
         this.description = null;
+        this.plotSummaryJson = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
@@ -48,13 +51,14 @@ public class Story {
         this.isCollected = isCollected;
         this.structure = null;
         this.description = null;
+        this.plotSummaryJson = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
     }
 
-    // 完整构造方法
-    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description) {
+    // 完整构造方法（含 plotSummaryJson）
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String plotSummaryJson) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -63,6 +67,7 @@ public class Story {
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
+        this.plotSummaryJson = plotSummaryJson;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
@@ -78,13 +83,14 @@ public class Story {
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
+        this.plotSummaryJson = null;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = null;
     }
 
-    // 完整构造方法（含分类、封面颜色和封面图片路径）
-    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String category, String coverColor, String coverPath) {
+    // 完整构造方法（含所有字段）
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String plotSummaryJson, String category, String coverColor, String coverPath) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -93,6 +99,7 @@ public class Story {
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
+        this.plotSummaryJson = plotSummaryJson;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = coverPath;
@@ -132,6 +139,8 @@ public class Story {
     public void setStructure(String structure) { this.structure = structure; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getPlotSummaryJson() { return plotSummaryJson; }
+    public void setPlotSummaryJson(String plotSummaryJson) { this.plotSummaryJson = plotSummaryJson; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
     public String getCoverColor() { return coverColor; }

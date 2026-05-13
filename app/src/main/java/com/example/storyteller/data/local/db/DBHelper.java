@@ -19,6 +19,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_IS_COLLECTED = "is_collected";
     public static final String COL_STORY_STRUCTURE = "structure";  // 存储卷-章结构的JSON数据
     public static final String COL_STORY_DESCRIPTION = "description";  // 小说简介
+    public static final String COL_STORY_PLOT_SUMMARY = "plot_summary_json";  // 剧情梳理结果快照
     public static final String COL_STORY_CATEGORY = "category";  // 书架分类：全部/创作中/已完成/已收藏
     public static final String COL_STORY_COVER_COLOR = "cover_color";  // 封面颜色
     public static final String COL_STORY_COVER_PATH = "cover_path";  // 封面图片路径
@@ -77,7 +78,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_CREATE_TIME + " INTEGER, "
                 + COL_STORY_IS_COLLECTED + " INTEGER DEFAULT 0, "
                 + COL_STORY_STRUCTURE + " TEXT, "
-                + COL_STORY_DESCRIPTION + " TEXT"
+                + COL_STORY_DESCRIPTION + " TEXT, "
+                + COL_STORY_PLOT_SUMMARY + " TEXT"
                 + ")";
 
         String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
@@ -136,10 +138,11 @@ public class DBHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_DESCRIPTION + " TEXT");
         }
         if (oldVersion < 6) {
-            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_CATEGORY + " TEXT DEFAULT '全部'");
-            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2'");
+            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_PLOT_SUMMARY + " TEXT");
         }
         if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_CATEGORY + " TEXT DEFAULT '全部'");
+            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2'");
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_PATH + " TEXT");
         }
     }

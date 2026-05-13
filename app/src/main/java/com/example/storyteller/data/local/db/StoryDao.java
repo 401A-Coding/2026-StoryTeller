@@ -27,6 +27,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
+        values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
@@ -42,6 +43,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
+        values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
@@ -50,6 +52,18 @@ public class StoryDao {
                 values,
                 DBHelper.COL_STORY_ID + "=?",
                 new String[]{String.valueOf(story.getId())}
+        );
+    }
+
+    public int updatePlotSummary(int storyId, String plotSummaryJson) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_PLOT_SUMMARY, plotSummaryJson);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
         );
     }
 
@@ -224,6 +238,12 @@ public class StoryDao {
             description = cursor.getString(descriptionIndex);
         }
 
+        String plotSummaryJson = null;
+        int plotSummaryIndex = cursor.getColumnIndex(DBHelper.COL_STORY_PLOT_SUMMARY);
+        if (plotSummaryIndex >= 0 && !cursor.isNull(plotSummaryIndex)) {
+            plotSummaryJson = cursor.getString(plotSummaryIndex);
+        }
+
         String category = "创作中";
         int categoryIndex = cursor.getColumnIndex(DBHelper.COL_STORY_CATEGORY);
         if (categoryIndex >= 0 && !cursor.isNull(categoryIndex)) {
@@ -242,6 +262,6 @@ public class StoryDao {
             coverPath = cursor.getString(coverPathIndex);
         }
 
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description, category, coverColor, coverPath);
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath);
     }
 }
