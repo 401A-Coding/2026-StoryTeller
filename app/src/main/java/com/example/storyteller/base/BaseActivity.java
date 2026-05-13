@@ -1,10 +1,7 @@
 package com.example.storyteller.base;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -37,24 +34,35 @@ public abstract class BaseActivity extends AppCompatActivity{
     }
 
     /**
-     * 为根布局设置系统栏内边距，避免内容被状态栏/导航栏/刘海屏遮挡
-     * 在子类的 initView() 中调用：applySystemWindowInsets(findViewById(android.R.id.content))
-     * @param rootView 根布局
+     * 默认仅处理顶部 inset，避免页面底部出现额外留白。
      */
     protected void applySystemWindowInsets(View rootView) {
+        applySystemWindowInsets(rootView, true, false);
+    }
+
+    /**
+     * 按需处理系统栏 inset，并保留控件原有 padding。
+     */
+    protected void applySystemWindowInsets(View rootView, boolean applyTopInset, boolean applyBottomInset) {
+        final int originalLeft = rootView.getPaddingLeft();
+        final int originalTop = rootView.getPaddingTop();
+        final int originalRight = rootView.getPaddingRight();
+        final int originalBottom = rootView.getPaddingBottom();
+
         rootView.setOnApplyWindowInsetsListener((v, insets) -> {
             WindowInsetsCompat windowInsets = WindowInsetsCompat.toWindowInsetsCompat(insets, v);
             int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
             int navigationBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
-            // 只设置顶部和底部内边距，左右保持原样
+
             v.setPadding(
-                v.getPaddingLeft(),
-                statusBarHeight,
-                v.getPaddingRight(),
-                navigationBarHeight
+                originalLeft,
+                originalTop + (applyTopInset ? statusBarHeight : 0),
+                originalRight,
+                originalBottom + (applyBottomInset ? navigationBarHeight : 0)
             );
             return insets;
         });
+        rootView.requestApplyInsets();
     }
 
     // 子类必须实现：返回当前页面的布局ID

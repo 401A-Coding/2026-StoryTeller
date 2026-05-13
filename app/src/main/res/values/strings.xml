@@ -7,6 +7,27 @@
     <string name="title_story_generate">故事生成</string>
     <string name="title_character">人物画像</string>
     <string name="title_plot_tree">剧情梳理</string>
+    <string name="plot_overview_title">全书梳理</string>
+    <string name="action_generate_plot_summary">开始梳理剧情</string>
+    <string name="action_regenerate_plot_summary">重新梳理剧情</string>
+    <string name="plot_detail_brief">极简</string>
+    <string name="plot_detail_standard">标准</string>
+    <string name="plot_detail_detailed">详细</string>
+    <string name="plot_status_ready">请选择模型和详略程度，然后开始梳理剧情</string>
+    <string name="plot_status_no_story">还没有可梳理的小说，请先新增或选择一篇故事</string>
+    <string name="plot_status_failed">剧情梳理失败：%1$s</string>
+    <string name="plot_status_partial_failed">第%1$d章梳理失败，已跳过并继续后续章节</string>
+    <string name="plot_model_switched_flash">已切换到 Flash 模型</string>
+    <string name="plot_model_switched_pro">已切换到 Pro 模型</string>
+    <string name="plot_detail_switched_brief">已切换到极简模式</string>
+    <string name="plot_detail_switched_standard">已切换到标准模式</string>
+    <string name="plot_detail_switched_detailed">已切换到详细模式</string>
+    <string name="plot_current_story_format">当前小说：《%1$s》</string>
+    <string name="plot_chapter_label_format">第%1$d卷 · 第%2$d章</string>
+    <string name="plot_no_chapter_summary">暂无章节梳理结果</string>
+    <string name="plot_chapter_source_ai">AI</string>
+    <string name="plot_chapter_source_tolerant">容错</string>
+    <string name="plot_chapter_source_fallback">回退</string>
     <string name="title_material">素材库</string>
     <string name="home_note_story_generate">输入灵感，一键生成故事草稿</string>
     <string name="home_note_character">创建并完善角色设定与关系</string>
@@ -35,6 +56,9 @@
     <string name="action_settings">前往设置</string>
     <string name="action_regenerate_character">重新生成画像</string>
     <string name="action_regenerate_one_character">重新生成该人物</string>
+    <string name="character_model_selector">人物画像模型</string>
+    <string name="character_model_switched_flash">已切换到 Flash 模型</string>
+    <string name="character_model_switched_pro">已切换到 Pro 模型</string>
     <string name="title_character_regenerate">重新生成画像</string>
     <string name="title_character_regenerate_one">重新生成「%1$s」画像</string>
     <string name="hint_character_regenerate">告诉我你希望人物画像更突出什么（例如：更细化性格、补充关系网、突出反差、指定人物数量…）</string>
@@ -132,4 +156,16 @@
     <string name="collapse">收起</string>
     <string name="placeholder_agent_mode">协助你编辑小说</string>
     <string name="placeholder_ask_mode">回答你关于这本小说的问题</string>
+
+    <!-- 书架分类 -->
+    <string name="bookshelf_category_all">全部</string>
+    <string name="bookshelf_category_writing">创作中</string>
+    <string name="bookshelf_category_completed">已完成</string>
+    <string name="bookshelf_category_collected">收藏</string>
+    <string name="bookshelf_empty_hint">还没有小说，点击下方按钮创建吧</string>
+    <string name="bookshelf_change_category">修改分类</string>
+    <string name="bookshelf_change_cover">更换封面</string>
+    <string name="bookshelf_category_hint">选择分类</string>
+    <string name="bookshelf_cover_color_hint">选择封面颜色</string>
+    <string name="bookshelf_story_count_format">共 %1$d 部作品</string>
 </resources>

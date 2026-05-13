@@ -897,7 +897,8 @@ public class AgentCommandExecutor {
             }
         }
         story.setContent(fullContent.toString().trim());
-        
+        story.setPlotSummaryJson(null);
+
         // 保存到数据库
         repository.updateStory(story);
     }

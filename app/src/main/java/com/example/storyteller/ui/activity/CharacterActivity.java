@@ -3,6 +3,7 @@ package com.example.storyteller.ui.activity;
 import android.content.Intent;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.PopupMenu;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -15,8 +16,13 @@ import com.example.storyteller.data.local.db.CharacterDao;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Character;
+import com.example.storyteller.model.PlotChapterSummary;
+import com.example.storyteller.model.PlotOverviewSummary;
+import com.example.storyteller.model.PlotSummarySnapshot;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.CharacterAdapter;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import com.example.storyteller.ui.dialog.CharacterRegenerateBottomSheetDialogFragment;
@@ -25,11 +31,22 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class CharacterActivity extends BaseActivity {
+
+    private static final int MAX_PROMPT_CONTEXT_LENGTH = 9000;
+    private static final int MAX_CHAPTER_EXCERPT_LENGTH = 600;
+    private static final int MAX_PLAIN_CONTENT_LENGTH = 8000;
+    private static final int MAX_PLOT_CACHE_CONTEXT_LENGTH = 4200;
+    private static final Type VOLUME_LIST_TYPE = new TypeToken<List<Volume>>() {}.getType();
+    private static final String PREF_CHARACTER_MODEL = "pref_character_model";
 
     public static final String EXTRA_STORY_ID = StoryAdapter.EXTRA_STORY_ID;
 
@@ -37,10 +54,12 @@ public class CharacterActivity extends BaseActivity {
     private ProgressBar pbLoading;
     private TextView tvStatus;
     private Button btnRegenerate;
+    private Button btnModelSelector;
     private CharacterAdapter adapter;
     private StoryDao storyDao;
     private CharacterDao characterDao;
     private final Gson gson = new Gson();
+    private String currentModel = "pro";
 
     private int generationToken = 0;
 
@@ -60,22 +79,30 @@ public class CharacterActivity extends BaseActivity {
         pbLoading = findViewById(R.id.pb_character_loading);
         tvStatus = findViewById(R.id.tv_character_status);
         btnRegenerate = findViewById(R.id.btn_regenerate_character);
+        btnModelSelector = findViewById(R.id.btn_character_model_selector);
+
+        currentModel = PrefsUtils.getInstance(this).getString(PREF_CHARACTER_MODEL, "pro");
+        updateModelButtonText();
+        btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
 
         rvCharacterList.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CharacterAdapter(this, new ArrayList<>());
         rvCharacterList.setAdapter(adapter);
 
-        adapter.setListener((character, position) -> {
-            Story story = resolveSelectedStory();
-            if (story == null) {
-                Toast.makeText(this, "还没有可分析的小说", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        adapter.setListener(new CharacterAdapter.Listener() {
+            @Override
+            public void onRegenerateCharacter(@androidx.annotation.NonNull Character character, int position) {
+                Story story = resolveSelectedStory();
+                if (story == null) {
+                    Toast.makeText(CharacterActivity.this, "还没有可分析的小说", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-            CharacterRegenerateBottomSheetDialogFragment dialog =
-                    CharacterRegenerateBottomSheetDialogFragment.newInstance(story.getTitle(), character.getName());
-            dialog.setListener(extraDemand -> regenerateSingleCharacter(story, character, position, extraDemand));
-            dialog.show(getSupportFragmentManager(), "character_regenerate_one");
+                CharacterRegenerateBottomSheetDialogFragment dialog =
+                        CharacterRegenerateBottomSheetDialogFragment.newInstance(story.getTitle(), character.getName());
+                dialog.setListener(extraDemand -> regenerateSingleCharacter(story, character, position, extraDemand));
+                dialog.show(getSupportFragmentManager(), "character_regenerate_one");
+            }
         });
 
         findViewById(R.id.btn_back_home).setOnClickListener(v -> {
@@ -123,7 +150,7 @@ public class CharacterActivity extends BaseActivity {
             List<Character> cached = characterDao.getCharactersByStoryId(story.getId());
             if (cached != null && !cached.isEmpty()) {
                 pbLoading.setVisibility(View.GONE);
-                tvStatus.setText(String.format(Locale.CHINA, "已加载《%s》的 %d 位人物画像（本地缓存）", story.getTitle(), cached.size()));
+                tvStatus.setText(String.format(Locale.CHINA, "已加载《%s》的 %d 位人物画像（本地缓存，按重要度排序）", story.getTitle(), cached.size()));
                 adapter.setData(cached);
                 return;
             }
@@ -133,14 +160,14 @@ public class CharacterActivity extends BaseActivity {
         int token = ++generationToken;
 
         if (forceRefresh) {
-            tvStatus.setText(String.format(Locale.CHINA, "正在重新生成《%s》的人物画像...", story.getTitle()));
+            tvStatus.setText(String.format(Locale.CHINA, "正在使用 %s 重新生成《%s》的人物画像...", getModelDisplayName(), story.getTitle()));
         } else {
-            tvStatus.setText(String.format(Locale.CHINA, "正在分析：《%s》", story.getTitle()));
+            tvStatus.setText(String.format(Locale.CHINA, "正在使用 %s 分析《%s》的人物画像...", getModelDisplayName(), story.getTitle()));
         }
 
         String prompt = buildCharacterPrompt(story, extraDemand);
 
-        ApiClient.getInstance().generateStory(prompt, this, new ApiClient.Callback() {
+        ApiClient.getInstance().generateStory(prompt, currentModel, this, new ApiClient.Callback() {
             @Override
             public void onSuccess(String responseText) {
                 runOnUiThread(() -> {
@@ -151,14 +178,14 @@ public class CharacterActivity extends BaseActivity {
                     List<Character> characters = parseCharacters(story, responseText);
                     if (characters.isEmpty()) {
                         if (hasExisting) {
-                            showMessage("重新生成结果不可用：没有识别到主要人物。你可以再补充更明确的要求后重试。", false);
+                            showMessage("重新生成结果不可用：没有识别到人物。你可以切换到 Pro 模型或补充更明确的要求后重试。", false);
                         } else {
-                            showEmpty("没有识别到主要人物，请换一篇更长或人物更明确的故事");
+                            showEmpty("没有识别到人物，请尝试切换到 Pro 模型，或换一篇人物描写更明确的故事");
                         }
                         return;
                     }
                     pbLoading.setVisibility(View.GONE);
-                    tvStatus.setText(String.format(Locale.CHINA, "已识别到 %d 位主要人物", characters.size()));
+                    tvStatus.setText(String.format(Locale.CHINA, "已识别到 %d 位人物（按重要度排序）", characters.size()));
                     adapter.setData(characters);
                     characterDao.replaceCharactersForStory(story.getId(), characters);
                 });
@@ -188,10 +215,10 @@ public class CharacterActivity extends BaseActivity {
 
         btnRegenerate.setEnabled(false);
         int token = ++generationToken;
-        tvStatus.setText(String.format(Locale.CHINA, "正在重新生成「%s」的人物画像...", target.getName()));
+        tvStatus.setText(String.format(Locale.CHINA, "正在使用 %s 重新生成「%s」的人物画像...", getModelDisplayName(), target.getName()));
 
         String prompt = buildSingleCharacterPrompt(story, target, extraDemand);
-        ApiClient.getInstance().generateStory(prompt, this, new ApiClient.Callback() {
+        ApiClient.getInstance().generateStory(prompt, currentModel, this, new ApiClient.Callback() {
             @Override
             public void onSuccess(String responseText) {
                 runOnUiThread(() -> {
@@ -264,51 +291,47 @@ public class CharacterActivity extends BaseActivity {
     }
 
     private String buildCharacterPrompt(Story story, String extraDemand) {
-        String content = story.getContent() == null ? "" : story.getContent().trim();
-        int maxLength = 5000;
-        if (content.length() > maxLength) {
-            content = content.substring(0, maxLength);
-        }
+        String storyContext = buildCharacterPromptContext(story);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("你是小说人物分析助手。请根据下面这篇小说，找出 3 到 5 个主要人物，并为每个人物总结基础形象。\n")
+        builder.append("你是一名严格、谨慎的小说人物分析师。请根据下面给出的小说内容，尽可能完整地提取正文中出现过的人物，并按重要度从高到低排序。\n")
                 .append("要求：\n")
                 .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. JSON 格式如下：\n")
-                .append("{\"characters\":[{\"name\":\"人物名\",\"summary\":\"主人公 / 淳朴带腹黑 / 穿越者\",\"detail\":\"详细介绍\"}]}\n")
-                .append("3. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句。\n")
-                .append("4. detail 要写成完整介绍，包含身份、性格、动机、关系、成长弧线。\n")
-                .append("5. 若把握不足，summary 仍给出最确定的身份与特征词。\n")
-                .append("\n小说标题：")
-                .append(story.getTitle())
-                .append("\n")
-                .append("小说内容：\n")
-                .append(content);
+                .append("2. 尽量提取所有出现过且可辨识的人物，包括主角、核心配角、次要人物、过场人物；重要人物排前面，不重要的小人物放后面。\n")
+                .append("3. 严禁杜撰原文未明确出现的人名、身份、关系、经历；不确定就不要写。\n")
+                .append("4. 如果人物没有明确姓名，可以直接使用正文中自然出现的称呼，例如“主角”“客栈掌柜”“班主任”；不要硬编具体姓名。\n")
+                .append("5. 如果是第一人称叙事，叙述者“我”通常也是人物之一；若正文没有姓名，可以直接写“我”或文本中的自然称呼。\n")
+                .append("6. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句，不要空话。\n")
+                .append("7. detail 只写文本中能支持的内容，建议包含：身份/定位、性格特点、关键动机、主要关系、当前成长状态；文本没有明确给出的地方请写“文中暂未明确”。\n")
+                .append("8. 每个人物补充 evidence 字段，写 1 到 2 条证据，简述他出现在哪一卷/章、做了什么；证据必须来自给定文本。\n")
+                .append("9. 可以增加 importance 字段（high / medium / low），但最重要的是保证 characters 数组本身已经按重要度排序。\n")
+                .append("10. JSON 格式如下：\n")
+                .append("{\"characters\":[{\"name\":\"人物名\",\"summary\":\"冷静 / 谨慎 / 复仇者\",\"detail\":\"详细介绍\",\"importance\":\"high\",\"evidence\":[\"第1卷第2章：……\",\"第1卷第4章：……\"]}]}\n")
+                .append("\n在输出前请先自行检查：人物是否真的在正文出现、排序是否把核心人物放在前面、描述是否有原文依据。\n\n")
+                .append(storyContext);
 
         if (!TextUtils.isEmpty(extraDemand)) {
             builder.append("\n\n用户补充的生成需求（请尽量满足）：\n")
                     .append(extraDemand)
-                    .append("\n\n请根据用户补充需求优化人物画像，但依然只输出 JSON。\n");
+                    .append("\n\n请根据用户补充需求优化人物画像，但依然必须遵守“不能杜撰、必须以正文为准”的原则，只输出 JSON。\n");
         }
         return builder.toString();
     }
 
     private String buildSingleCharacterPrompt(Story story, Character target, String extraDemand) {
-        String content = story.getContent() == null ? "" : story.getContent().trim();
-        int maxLength = 5000;
-        if (content.length() > maxLength) {
-            content = content.substring(0, maxLength);
-        }
+        String storyContext = buildCharacterPromptContext(story);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("你是小说人物分析助手。请根据下面这篇小说，只针对指定人物生成/优化人物画像。\n")
+        builder.append("你是一名严格、谨慎的小说人物分析师。请根据下面这篇小说，只针对指定人物生成或优化人物画像。\n")
                 .append("要求：\n")
                 .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
                 .append("2. 只输出一个人物，且人物名必须与指定人物名完全一致。\n")
-                .append("3. JSON 格式如下：\n")
-                .append("{\"character\":{\"name\":\"人物名\",\"summary\":\"主人公 / 淳朴带腹黑 / 穿越者\",\"detail\":\"详细介绍\"}}\n")
-                .append("4. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句。\n")
-                .append("5. detail 要写成完整介绍，包含身份、性格、动机、关系、成长弧线。\n")
+                .append("3. 严禁杜撰该人物在正文中没有出现过的经历、关系和设定；不确定就写“文中暂未明确”。\n")
+                .append("4. 如果指定人物没有明确姓名，可以保留当前自然称呼；如果正文信息很少，也不要强行补全，只保留能确认的事实。\n")
+                .append("5. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句。\n")
+                .append("6. detail 只写有文本依据的介绍，优先包含身份/定位、性格特点、关键动机、主要关系、当前成长状态。\n")
+                .append("7. JSON 格式如下：\n")
+                .append("{\"character\":{\"name\":\"人物名\",\"summary\":\"冷静 / 谨慎 / 复仇者\",\"detail\":\"详细介绍\",\"evidence\":[\"第1卷第2章：……\"]}}\n")
                 .append("\n指定人物名：")
                 .append(target.getName())
                 .append("\n")
@@ -318,24 +341,66 @@ public class CharacterActivity extends BaseActivity {
                 .append("\n")
                 .append("detail：")
                 .append(target.getDetail() == null ? "" : target.getDetail())
-                .append("\n")
-                .append("\n小说标题：")
-                .append(story.getTitle())
-                .append("\n")
-                .append("小说内容：\n")
-                .append(content);
+                .append("\n\n在输出前请先自行检查：是否确实是这个人物、是否存在原文证据、是否有未经文本支持的臆测。\n\n")
+                .append(storyContext);
 
         if (!TextUtils.isEmpty(extraDemand)) {
             builder.append("\n\n用户补充的生成需求（请尽量满足）：\n")
                     .append(extraDemand)
-                    .append("\n\n请根据用户补充需求优化该人物画像，但依然只输出 JSON。\n");
+                    .append("\n\n请根据用户补充需求优化该人物画像，但依然必须遵守“不能杜撰、必须以正文为准”的原则，只输出 JSON。\n");
         }
         return builder.toString();
+    }
+
+    private void showModelSelectorPopup() {
+        PopupMenu popupMenu = new PopupMenu(this, btnModelSelector);
+        popupMenu.getMenu().add(0, 1, 0, getString(R.string.model_flash));
+        popupMenu.getMenu().add(0, 2, 1, getString(R.string.model_pro));
+
+        if ("flash".equals(currentModel)) {
+            popupMenu.getMenu().getItem(0).setChecked(true);
+        } else {
+            popupMenu.getMenu().getItem(1).setChecked(true);
+        }
+
+        popupMenu.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == 1) {
+                currentModel = "flash";
+                PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
+                updateModelButtonText();
+                Toast.makeText(this, R.string.character_model_switched_flash, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == 2) {
+                currentModel = "pro";
+                PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
+                updateModelButtonText();
+                Toast.makeText(this, R.string.character_model_switched_pro, Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
+
+        popupMenu.show();
+    }
+
+    private void updateModelButtonText() {
+        if (btnModelSelector == null) {
+            return;
+        }
+        btnModelSelector.setText("flash".equals(currentModel)
+                ? getString(R.string.model_flash)
+                : getString(R.string.model_pro));
+    }
+
+    private String getModelDisplayName() {
+        return "flash".equals(currentModel) ? getString(R.string.model_flash) : getString(R.string.model_pro);
     }
 
     private List<Character> parseCharacters(Story story, String responseText) {
         List<Character> result = new ArrayList<>();
         String jsonText = extractJson(responseText);
+        Map<String, Character> deduplicated = new LinkedHashMap<>();
         try {
             JsonObject root = gson.fromJson(jsonText, JsonObject.class);
             if (root == null || !root.has("characters") || !root.get("characters").isJsonArray()) {
@@ -348,7 +413,11 @@ public class CharacterActivity extends BaseActivity {
                     continue;
                 }
                 JsonObject obj = element.getAsJsonObject();
-                String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : "未命名人物";
+                String rawName = safeGetString(obj, "name", "");
+                String name = normalizeCharacterName(rawName);
+                if (TextUtils.isEmpty(name)) {
+                    name = "未命名人物";
+                }
                 String summary = "";
                 if (obj.has("summary") && !obj.get("summary").isJsonNull()) {
                     summary = obj.get("summary").getAsString();
@@ -362,11 +431,18 @@ public class CharacterActivity extends BaseActivity {
                 if (TextUtils.isEmpty(summary)) {
                     summary = "人物待补充 / 画像待生成";
                 }
-                result.add(new Character(story.getId(), name, summary, detail, 0));
+
+                String key = name.toLowerCase(Locale.ROOT);
+                Character existing = deduplicated.get(key);
+                Character candidate = new Character(story.getId(), name, summary, detail, 0);
+                if (existing == null || scoreCharacter(candidate) > scoreCharacter(existing)) {
+                    deduplicated.put(key, candidate);
+                }
             }
         } catch (Exception e) {
             Toast.makeText(this, "解析人物画像失败，请重试", Toast.LENGTH_SHORT).show();
         }
+        result.addAll(deduplicated.values());
         return result;
     }
 
@@ -394,7 +470,7 @@ public class CharacterActivity extends BaseActivity {
                 return null;
             }
 
-            String name = safeGetString(obj, "name", original.getName());
+            String name = normalizeCharacterName(safeGetString(obj, "name", original.getName()));
             String summary = safeGetString(obj, "summary", safeGetString(obj, "profile", original.getProfile()));
             String detail = safeGetString(obj, "detail", original.getDetail());
             if (TextUtils.isEmpty(summary)) {
@@ -404,12 +480,217 @@ public class CharacterActivity extends BaseActivity {
                 detail = summary;
             }
 
+            if (!TextUtils.equals(name, original.getName())) {
+                name = original.getName();
+            }
+
             Character updated = new Character(story.getId(), name, summary, detail, original.getAvatarResId());
             updated.setId(original.getId());
             return updated;
         } catch (Exception e) {
             return null;
         }
+    }
+
+
+    private String buildStoryContextForPrompt(Story story, int maxLength) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("小说标题：")
+                .append(TextUtils.isEmpty(story.getTitle()) ? "未命名小说" : story.getTitle())
+                .append("\n");
+
+        if (!TextUtils.isEmpty(story.getGenre())) {
+            builder.append("小说类型：")
+                    .append(story.getGenre().trim())
+                    .append("\n");
+        }
+        if (!TextUtils.isEmpty(story.getDescription())) {
+            builder.append("小说简介：")
+                    .append(story.getDescription().trim())
+                    .append("\n");
+        }
+
+        List<Volume> volumes = parseStoryVolumes(story);
+        if (!volumes.isEmpty()) {
+            builder.append("小说正文（按卷章整理）：\n");
+            for (int i = 0; i < volumes.size(); i++) {
+                Volume volume = volumes.get(i);
+                String volumeTitle = safeTrim(volume.getTitle(), "未命名卷");
+                appendWithLimit(builder, "\n第" + (i + 1) + "卷：" + volumeTitle + "\n", maxLength);
+                List<Chapter> chapters = volume.getChapters();
+                if (chapters == null || chapters.isEmpty()) {
+                    appendWithLimit(builder, "（本卷暂无章节内容）\n", maxLength);
+                    continue;
+                }
+                for (int j = 0; j < chapters.size(); j++) {
+                    Chapter chapter = chapters.get(j);
+                    String chapterTitle = safeTrim(chapter.getTitle(), "未命名章");
+                    String chapterContent = trimContent(chapter.getContent(), MAX_CHAPTER_EXCERPT_LENGTH);
+                    appendWithLimit(builder, "第" + (j + 1) + "章：" + chapterTitle + "\n", maxLength);
+                    if (!TextUtils.isEmpty(chapterContent)) {
+                        appendWithLimit(builder, chapterContent + "\n\n", maxLength);
+                    }
+                    if (builder.length() >= maxLength) {
+                        break;
+                    }
+                }
+                if (builder.length() >= maxLength) {
+                    break;
+                }
+            }
+        } else {
+            builder.append("小说正文：\n")
+                    .append(trimContent(story.getContent(), MAX_PLAIN_CONTENT_LENGTH));
+        }
+
+        if (builder.length() > maxLength) {
+            return builder.substring(0, maxLength) + "\n（以下内容因长度限制已省略）";
+        }
+        return builder.toString();
+    }
+
+    private String buildCharacterPromptContext(Story story) {
+        PlotSummarySnapshot snapshot = readPlotSummarySnapshot(story);
+        String cachedContext = buildCharacterContextFromSnapshot(story, snapshot);
+        if (!TextUtils.isEmpty(cachedContext)) {
+            return cachedContext;
+        }
+        return buildStoryContextForPrompt(story, MAX_PROMPT_CONTEXT_LENGTH);
+    }
+
+    private PlotSummarySnapshot readPlotSummarySnapshot(Story story) {
+        if (story == null || TextUtils.isEmpty(story.getPlotSummaryJson())) {
+            return null;
+        }
+        try {
+            return gson.fromJson(story.getPlotSummaryJson(), PlotSummarySnapshot.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String buildCharacterContextFromSnapshot(Story story, PlotSummarySnapshot snapshot) {
+        if (snapshot == null) {
+            return "";
+        }
+        if (!TextUtils.isEmpty(snapshot.getCharacterContext())) {
+            return snapshot.getCharacterContext();
+        }
+        List<PlotChapterSummary> chapterSummaries = snapshot.getChapterSummaries();
+        if (chapterSummaries == null || chapterSummaries.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        appendWithLimit(builder, "小说标题：" + safeTrim(story.getTitle(), "未命名小说") + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+        if (!TextUtils.isEmpty(story.getDescription())) {
+            appendWithLimit(builder, "小说简介：" + story.getDescription().trim() + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+        }
+
+        PlotOverviewSummary overview = snapshot.getOverview();
+        if (overview != null) {
+            if (!TextUtils.isEmpty(overview.getOverallSummary())) {
+                appendWithLimit(builder, "全书梳理：" + overview.getOverallSummary() + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            }
+            if (overview.getMainLine() != null && !overview.getMainLine().isEmpty()) {
+                appendWithLimit(builder, "主线：" + TextUtils.join("；", overview.getMainLine()) + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            }
+        }
+
+        appendWithLimit(builder, "章节梳理：\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+        for (PlotChapterSummary chapter : chapterSummaries) {
+            appendWithLimit(builder,
+                    chapter.getChapterLabel() + " " + safeTrim(chapter.getChapterTitle(), "未命名章") + "\n",
+                    MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            if (!TextUtils.isEmpty(chapter.getBriefSummary())) {
+                appendWithLimit(builder, "概述：" + chapter.getBriefSummary() + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            }
+            if (chapter.getKeyEvents() != null && !chapter.getKeyEvents().isEmpty()) {
+                appendWithLimit(builder, "事件：" + TextUtils.join("；", chapter.getKeyEvents()) + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            }
+            if (chapter.getCharacters() != null && !chapter.getCharacters().isEmpty()) {
+                appendWithLimit(builder, "人物：" + TextUtils.join("、", chapter.getCharacters()) + "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            }
+            appendWithLimit(builder, "\n", MAX_PLOT_CACHE_CONTEXT_LENGTH);
+            if (builder.length() >= MAX_PLOT_CACHE_CONTEXT_LENGTH) {
+                break;
+            }
+        }
+        return builder.toString().trim();
+    }
+
+    private List<Volume> parseStoryVolumes(Story story) {
+        if (story == null || TextUtils.isEmpty(story.getStructure())) {
+            return new ArrayList<>();
+        }
+        try {
+            List<Volume> volumes = gson.fromJson(story.getStructure(), VOLUME_LIST_TYPE);
+            return volumes == null ? new ArrayList<>() : volumes;
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+
+    private String normalizeCharacterName(String rawName) {
+        if (TextUtils.isEmpty(rawName)) {
+            return "";
+        }
+        String normalized = rawName.trim()
+                .replace("“", "")
+                .replace("”", "")
+                .replace("'", "")
+                .replace("\"", "")
+                .replace("《", "")
+                .replace("》", "")
+                .replace("：", "")
+                .replace(":", "");
+        return normalized.trim();
+    }
+
+    private int scoreCharacter(Character character) {
+        int score = 0;
+        if (character == null) {
+            return score;
+        }
+        if (!TextUtils.isEmpty(character.getProfile())) {
+            score += character.getProfile().length();
+        }
+        if (!TextUtils.isEmpty(character.getDetail())) {
+            score += character.getDetail().length() * 2;
+        }
+        return score;
+    }
+
+    private void appendWithLimit(StringBuilder builder, String text, int maxLength) {
+        if (builder.length() >= maxLength || TextUtils.isEmpty(text)) {
+            return;
+        }
+        int remaining = maxLength - builder.length();
+        if (text.length() <= remaining) {
+            builder.append(text);
+        } else {
+            builder.append(text, 0, remaining);
+        }
+    }
+
+    private String trimContent(String content, int maxLength) {
+        if (TextUtils.isEmpty(content)) {
+            return "";
+        }
+        String trimmed = content.trim();
+        if (trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLength) + "……";
+    }
+
+    private String safeTrim(String text, String fallback) {
+        if (TextUtils.isEmpty(text)) {
+            return fallback;
+        }
+        String trimmed = text.trim();
+        return TextUtils.isEmpty(trimmed) ? fallback : trimmed;
     }
 
     private String safeGetString(JsonObject obj, String key, String fallback) {
