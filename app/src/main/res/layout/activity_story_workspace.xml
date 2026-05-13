@@ -170,7 +170,9 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="#FFFFFF"
-        android:elevation="8dp" />
+        android:elevation="8dp"
+        android:clickable="true"
+        android:focusable="true" />
 
     <!-- 右侧抽屉 - AI助手面板 -->
     <FrameLayout

@@ -72,6 +72,39 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         // 设置 DrawerLayout 遮罩层颜色（半透明黑色）
         drawerLayout.setScrimColor(0x80000000); // 50% 透明度的黑色
         
+        // 添加抽屉监听器，确保抽屉打开时主内容区域不可交互
+        drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+                // 抽屉滑动时的回调
+            }
+
+            @Override
+            public void onDrawerOpened(@NonNull View drawerView) {
+                // 抽屉打开时，禁用主内容区域的点击
+                View mainContent = findViewById(R.id.coordinator_layout);
+                if (mainContent != null) {
+                    mainContent.setClickable(false);
+                    mainContent.setFocusable(false);
+                }
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View drawerView) {
+                // 抽屉关闭时，恢复主内容区域的点击
+                View mainContent = findViewById(R.id.coordinator_layout);
+                if (mainContent != null) {
+                    mainContent.setClickable(true);
+                    mainContent.setFocusable(true);
+                }
+            }
+
+            @Override
+            public void onDrawerStateChanged(int newState) {
+                // 抽屉状态改变时的回调
+            }
+        });
+        
         // 禁用左侧抽屉的手势滑动，只允许通过按钮打开
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
         
@@ -347,6 +380,8 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             aiPanelFragment.setOnCommandExecutedListener(() -> {
                 // 命令执行成功后，刷新写作页面的UI
                 refreshWritingFragment();
+                // 同时刷新目录视图
+                refreshTocView();
             });
             getSupportFragmentManager()
                 .beginTransaction()
@@ -397,6 +432,19 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     }
     
     /**
+     * 刷新目录视图（公开方法，供WritingFragment调用）
+     */
+    public void refreshTocView() {
+        android.util.Log.d("StoryWorkspace", "refreshTocView: 刷新目录视图");
+        if (storyInfoPanelFragment != null) {
+            android.util.Log.d("StoryWorkspace", "调用 storyInfoPanelFragment.refreshTocView");
+            storyInfoPanelFragment.refreshTocView();
+        } else {
+            android.util.Log.e("StoryWorkspace", "storyInfoPanelFragment 为 null");
+        }
+    }
+    
+    /**
      * 重新加载小说数据
      */
     private void reloadStory(int newStoryId) {
@@ -406,6 +454,45 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+    
+    /**
+     * 导航到指定章节
+     * @param volumeIndex 卷索引
+     * @param chapterIndex 章索引
+     */
+    public void navigateToChapter(int volumeIndex, int chapterIndex) {
+        android.util.Log.d("StoryWorkspace", "navigateToChapter: 卷" + volumeIndex + " 章" + chapterIndex);
+        // 切换到写作Tab
+        if (viewPager != null && pagerAdapter != null) {
+            android.util.Log.d("StoryWorkspace", "切换到写作Tab");
+            viewPager.setCurrentItem(WorkspacePagerAdapter.TAB_WRITING, true);
+            
+            // 延迟一下，等待Tab切换完成后再通知WritingFragment
+            viewPager.postDelayed(() -> {
+                android.util.Log.d("StoryWorkspace", "调用 refreshWritingFragmentAndNavigate");
+                refreshWritingFragmentAndNavigate(volumeIndex, chapterIndex);
+            }, 300);
+        } else {
+            android.util.Log.e("StoryWorkspace", "viewPager 或 pagerAdapter 为 null");
+        }
+    }
+    
+    /**
+     * 刷新写作Fragment并导航到指定章节
+     */
+    private void refreshWritingFragmentAndNavigate(int volumeIndex, int chapterIndex) {
+        android.util.Log.d("StoryWorkspace", "refreshWritingFragmentAndNavigate: 卷" + volumeIndex + " 章" + chapterIndex);
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof WritingFragment) {
+                android.util.Log.d("StoryWorkspace", "找到 WritingFragment，调用 navigateToChapter");
+                ((WritingFragment) fragment).navigateToChapter(volumeIndex, chapterIndex);
+                return;
+            }
+        }
+        android.util.Log.e("StoryWorkspace", "未找到 WritingFragment");
     }
 
     /**

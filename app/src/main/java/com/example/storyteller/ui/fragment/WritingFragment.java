@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.widget.NestedScrollView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
@@ -314,6 +315,8 @@ public class WritingFragment extends BaseFragment {
                     }
                     // 静默保存
                     saveStructureSilently();
+                    // 通知目录刷新
+                    notifyTocRefresh();
                 }
             }
         });
@@ -427,6 +430,9 @@ public class WritingFragment extends BaseFragment {
         
         // 静默保存（因为TextWatcher已经实时保存了，这里只是确保最终状态一致）
         saveStructureSilently();
+        
+        // 通知目录刷新
+        notifyTocRefresh();
     }
 
     /**
@@ -440,6 +446,9 @@ public class WritingFragment extends BaseFragment {
         
         // 先静默保存
         saveStructureSilently();
+        
+        // 通知目录刷新
+        notifyTocRefresh();
         
         // 再显示操作结果
         Toast.makeText(requireContext(), "已添加新卷", Toast.LENGTH_SHORT).show();
@@ -468,6 +477,9 @@ public class WritingFragment extends BaseFragment {
         saveStructureSilently();
         renderVolumes();
         
+        // 通知目录刷新
+        notifyTocRefresh();
+        
         // 再显示操作结果
         Toast.makeText(requireContext(), "已在第 " + (insertIndex + 1) + " 个位置添加新卷", Toast.LENGTH_SHORT).show();
     }
@@ -485,6 +497,9 @@ public class WritingFragment extends BaseFragment {
 
         // 先静默保存
         saveStructureSilently();
+        
+        // 通知目录刷新
+        notifyTocRefresh();
         
         // 再显示操作结果
         Toast.makeText(requireContext(), "已添加新章节", Toast.LENGTH_SHORT).show();
@@ -514,6 +529,9 @@ public class WritingFragment extends BaseFragment {
         // 先保存并刷新UI
         saveStructureSilently();
         renderVolumes();
+        
+        // 通知目录刷新
+        notifyTocRefresh();
         
         // 再显示操作结果（只在用户主动操作时显示）
         if (showToast) {
@@ -629,6 +647,9 @@ public class WritingFragment extends BaseFragment {
                 // 先静默保存
                 saveStructureSilently();
                 
+                // 通知目录刷新
+                notifyTocRefresh();
+                
                 // 再显示操作结果
                 Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
             })
@@ -657,8 +678,24 @@ public class WritingFragment extends BaseFragment {
         saveStructureSilently();
         renderVolumes();
         
+        // 通知目录刷新
+        notifyTocRefresh();
+        
         // 再显示操作结果
         Toast.makeText(requireContext(), "已删除章节：《" + removedChapter.getTitle() + "》", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 通知目录刷新
+     */
+    private void notifyTocRefresh() {
+        android.util.Log.d("WritingFragment", "notifyTocRefresh: 通知目录刷新");
+        if (getActivity() instanceof com.example.storyteller.ui.activity.StoryWorkspaceActivity) {
+            android.util.Log.d("WritingFragment", "调用 StoryWorkspaceActivity.refreshTocView");
+            ((com.example.storyteller.ui.activity.StoryWorkspaceActivity) getActivity()).refreshTocView();
+        } else {
+            android.util.Log.e("WritingFragment", "getActivity 不是 StoryWorkspaceActivity 实例");
+        }
     }
 
     /**
@@ -722,5 +759,184 @@ public class WritingFragment extends BaseFragment {
      */
     public List<Volume> getVolumes() {
         return volumes;
+    }
+    
+    /**
+     * 导航到指定章节
+     * @param volumeIndex 卷索引
+     * @param chapterIndex 章索引
+     */
+    public void navigateToChapter(int volumeIndex, int chapterIndex) {
+        android.util.Log.d("WritingFragment", "navigateToChapter: 卷" + volumeIndex + " 章" + chapterIndex);
+        android.util.Log.d("WritingFragment", "当前volumes数量: " + (volumes != null ? volumes.size() : 0));
+        
+        if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+            android.util.Log.e("WritingFragment", "无效的卷索引: " + volumeIndex);
+            Toast.makeText(requireContext(), "无效的卷", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Volume volume = volumes.get(volumeIndex);
+        List<Chapter> chapters = volume.getChapters();
+        
+        android.util.Log.d("WritingFragment", "该卷章节数量: " + (chapters != null ? chapters.size() : 0));
+        
+        if (chapters == null || chapterIndex < 0 || chapterIndex >= chapters.size()) {
+            android.util.Log.e("WritingFragment", "无效的章节索引: " + chapterIndex);
+            Toast.makeText(requireContext(), "无效的章节", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 滚动到对应的章节
+        scrollToChapter(volumeIndex, chapterIndex);
+    }
+    
+    /**
+     * 滚动到指定章节
+     */
+    private void scrollToChapter(int volumeIndex, int chapterIndex) {
+        if (layoutContent == null) {
+            android.util.Log.e("WritingFragment", "layoutContent 为 null");
+            return;
+        }
+        
+        // 查找目标章节的 EditText（内容编辑器）
+        View targetView = findChapterContentView(volumeIndex, chapterIndex);
+        
+        if (targetView != null) {
+            android.util.Log.d("WritingFragment", "找到目标章节视图，开始滚动");
+            
+            // 查找父布局中的 NestedScrollView 或 ScrollView
+            android.view.ViewParent parent = layoutContent.getParent();
+            NestedScrollView nestedScrollView = null;
+            android.widget.ScrollView scrollView = null;
+            
+            while (parent != null) {
+                if (parent instanceof NestedScrollView) {
+                    nestedScrollView = (NestedScrollView) parent;
+                    break;
+                } else if (parent instanceof android.widget.ScrollView) {
+                    scrollView = (android.widget.ScrollView) parent;
+                    break;
+                }
+                parent = parent.getParent();
+            }
+            
+            if (nestedScrollView != null) {
+                android.util.Log.d("WritingFragment", "找到 NestedScrollView");
+                // 计算滚动位置
+                int[] location = new int[2];
+                targetView.getLocationInWindow(location);
+                int[] scrollViewLocation = new int[2];
+                nestedScrollView.getLocationInWindow(scrollViewLocation);
+                int scrollY = location[1] - scrollViewLocation[1] - 200; // 留一些顶部空间
+                
+                // 执行平滑滚动
+                nestedScrollView.smoothScrollTo(0, scrollY);
+                android.util.Log.d("WritingFragment", "滚动到位置: " + scrollY);
+                
+                // 延迟聚焦到编辑框
+                finalizeChapterNavigation(targetView, volumeIndex, chapterIndex);
+                
+            } else if (scrollView != null) {
+                android.util.Log.d("WritingFragment", "找到 ScrollView");
+                // 计算滚动位置
+                int[] location = new int[2];
+                targetView.getLocationInWindow(location);
+                int scrollY = location[1] - scrollView.getTop() - 200; // 留一些顶部空间
+                
+                // 执行滚动
+                scrollView.smoothScrollTo(0, scrollY);
+                android.util.Log.d("WritingFragment", "滚动到位置: " + scrollY);
+                
+                // 延迟聚焦到编辑框
+                finalizeChapterNavigation(targetView, volumeIndex, chapterIndex);
+                
+            } else {
+                android.util.Log.e("WritingFragment", "未找到 ScrollView 或 NestedScrollView");
+                Toast.makeText(requireContext(), "无法定位到章节", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            android.util.Log.e("WritingFragment", "未找到目标章节视图");
+            Toast.makeText(requireContext(), "未找到对应章节", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * 完成章节导航的最后步骤（聚焦和显示键盘）
+     */
+    private void finalizeChapterNavigation(View targetView, int volumeIndex, int chapterIndex) {
+        targetView.postDelayed(() -> {
+            if (targetView instanceof EditText) {
+                EditText etContent = (EditText) targetView;
+                etContent.requestFocus();
+                // 显示光标在末尾
+                etContent.setSelection(etContent.getText().length());
+                
+                // 显示软键盘
+                android.view.inputmethod.InputMethodManager imm = 
+                    (android.view.inputmethod.InputMethodManager) requireActivity()
+                        .getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(etContent, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                }
+                
+                android.util.Log.d("WritingFragment", "已聚焦到章节编辑框");
+            }
+            
+            // 显示提示信息
+            Chapter chapter = volumes.get(volumeIndex).getChapters().get(chapterIndex);
+            String message = "第" + (volumeIndex + 1) + "卷 - " + 
+                            (TextUtils.isEmpty(chapter.getTitle()) ? "第" + (chapterIndex + 1) + "章" : chapter.getTitle());
+            Toast.makeText(requireContext(), "已定位到：" + message, Toast.LENGTH_SHORT).show();
+        }, 500);
+    }
+    
+    /**
+     * 查找指定章节的内容编辑框
+     */
+    private View findChapterContentView(int volumeIndex, int chapterIndex) {
+        if (layoutContent == null) {
+            return null;
+        }
+        
+        // 遍历所有子视图，找到对应的卷和章节
+        int currentVolumeIdx = -1;
+        int currentChapterIdx = -1;
+        
+        for (int i = 0; i < layoutContent.getChildCount(); i++) {
+            View child = layoutContent.getChildAt(i);
+            
+            // 检查是否是卷视图（item_volume）
+            if (child.getTag() != null && child.getTag() instanceof Integer) {
+                int tagValue = (Integer) child.getTag();
+                // 假设我们给卷视图设置了Tag
+            }
+            
+            // 通过findViewById查找卷内的章节容器
+            LinearLayout layoutChapters = child.findViewById(R.id.layout_chapters_container);
+            if (layoutChapters != null) {
+                currentVolumeIdx++;
+                
+                if (currentVolumeIdx == volumeIndex) {
+                    // 找到了目标卷，现在查找目标章节
+                    if (chapterIndex < layoutChapters.getChildCount()) {
+                        View chapterView = layoutChapters.getChildAt(chapterIndex);
+                        if (chapterView != null) {
+                            // 找到章节的内容编辑框
+                            EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
+                            if (etContent != null) {
+                                android.util.Log.d("WritingFragment", 
+                                    "找到章节编辑框: 卷" + volumeIndex + " 章" + chapterIndex);
+                                return etContent;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
+        return null;
     }
 }
