@@ -28,6 +28,9 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
+        values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
+        values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
+        values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -41,6 +44,9 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
+        values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
+        values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
+        values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -64,6 +70,54 @@ public class StoryDao {
     public int deleteStory(int storyId) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         return db.delete(DBHelper.TABLE_STORY, DBHelper.COL_STORY_ID + "=?", new String[]{String.valueOf(storyId)});
+    }
+
+    public int updateStoryCategory(int storyId, String category) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_CATEGORY, category);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    public int updateStoryCoverPath(int storyId, String coverPath) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_COVER_PATH, coverPath);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    public int updateStoryCoverColor(int storyId, String coverColor) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_COVER_COLOR, coverColor);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    public int updateStoryCollected(int storyId, boolean collected) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_IS_COLLECTED, collected ? 1 : 0);
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
     }
 
     public int setCollected(int storyId, boolean collected) {
@@ -190,6 +244,24 @@ public class StoryDao {
             plotSummaryJson = cursor.getString(plotSummaryIndex);
         }
 
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson);
+        String category = "创作中";
+        int categoryIndex = cursor.getColumnIndex(DBHelper.COL_STORY_CATEGORY);
+        if (categoryIndex >= 0 && !cursor.isNull(categoryIndex)) {
+            category = cursor.getString(categoryIndex);
+        }
+
+        String coverColor = "#1976D2";
+        int coverColorIndex = cursor.getColumnIndex(DBHelper.COL_STORY_COVER_COLOR);
+        if (coverColorIndex >= 0 && !cursor.isNull(coverColorIndex)) {
+            coverColor = cursor.getString(coverColorIndex);
+        }
+        
+        String coverPath = null;
+        int coverPathIndex = cursor.getColumnIndex(DBHelper.COL_STORY_COVER_PATH);
+        if (coverPathIndex >= 0 && !cursor.isNull(coverPathIndex)) {
+            coverPath = cursor.getString(coverPathIndex);
+        }
+
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath);
     }
 }

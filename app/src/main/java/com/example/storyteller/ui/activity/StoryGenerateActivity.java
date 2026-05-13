@@ -88,6 +88,8 @@ public class StoryGenerateActivity extends BaseActivity {
     private int volumeCount = 0;
     private Story currentStory; // 当前正在编辑的故事
     private boolean isEditMode = false; // 是否为编辑模式
+    private int focusedVolumeIndex = -1; // 从卷章节列表进入时，聚焦的卷索引
+    private int focusedChapterIndex = -1; // 从卷章节列表进入时，聚焦的章节索引
     
     // Agent Mode
     private AgentCommandExecutor commandExecutor;
@@ -330,9 +332,18 @@ public class StoryGenerateActivity extends BaseActivity {
         // Check if we're editing an existing story
         Intent intent = getIntent();
         int storyId = intent.getIntExtra("story_id", -1);
+        focusedVolumeIndex = intent.getIntExtra("volume_index", -1);
+        focusedChapterIndex = intent.getIntExtra("chapter_index", -1);
         if (storyId > 0) {
             // 编辑模式：加载已有小说
             loadExistingStory(storyId);
+            
+            // 如果传入了卷和章节索引，加载完成后滚动到对应位置
+            if (focusedVolumeIndex >= 0 && focusedChapterIndex >= 0) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    scrollToChapter(focusedVolumeIndex, focusedChapterIndex);
+                }, 500);
+            }
         } else {
             // 新建模式：设置默认标题
             tvStoryTitle.setText("新小说");
@@ -384,6 +395,52 @@ public class StoryGenerateActivity extends BaseActivity {
                 // Fallback: parse from plain text content
                 parseStoryContent(currentStory.getContent());
             }
+            
+            // 如果是从卷章节列表进入（focusedVolumeIndex >= 0），只显示该卷，隐藏其他卷
+            if (focusedVolumeIndex >= 0) {
+                hideOtherVolumes();
+            }
+        }
+    }
+    
+    /**
+     * 隐藏除聚焦卷之外的其他卷，同时隐藏添加新卷按钮
+     */
+    private void hideOtherVolumes() {
+        if (focusedVolumeIndex < 0) return;
+        
+        int childCount = layoutContent.getChildCount();
+        int visibleVolumeCount = 0;
+        
+        for (int i = 0; i < childCount; i++) {
+            View child = layoutContent.getChildAt(i);
+            
+            // 隐藏添加新卷按钮（聚焦模式下不允许添加新卷）
+            if (child.getId() == R.id.btn_add_volume) {
+                child.setVisibility(View.GONE);
+                continue;
+            }
+            
+            // 查找卷视图
+            TextView tvVolumePrefix = child.findViewById(R.id.tv_volume_prefix);
+            if (tvVolumePrefix != null) {
+                String prefixText = tvVolumePrefix.getText().toString();
+                String targetVolumeText = "第" + (focusedVolumeIndex + 1) + "卷";
+                
+                if (prefixText.contains(targetVolumeText)) {
+                    // 这是目标卷，显示它
+                    child.setVisibility(View.VISIBLE);
+                    visibleVolumeCount++;
+                } else {
+                    // 不是目标卷，隐藏它
+                    child.setVisibility(View.GONE);
+                }
+            }
+        }
+        
+        // 如果找到了目标卷，更新标题提示
+        if (visibleVolumeCount > 0) {
+            tvStoryTitle.setText(currentStory.getTitle() + " - 第" + (focusedVolumeIndex + 1) + "卷");
         }
     }
 
