@@ -117,10 +117,15 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         tvStoryTitle = findViewById(R.id.tv_story_title);
         fabAI = findViewById(R.id.fab_ai);
 
-        // 底部操作栏
+        // 底部操作栏 - 暂时隐藏（功能开发中）
         MaterialCardView cardBottomBar = findViewById(R.id.bottom_action_bar);
         LinearLayout layoutActions = findViewById(R.id.layout_bottom_actions);
         bottomActionBar = new BottomActionBar(this, cardBottomBar, layoutActions);
+        
+        // 确保底部栏保持隐藏
+        if (cardBottomBar != null) {
+            cardBottomBar.setVisibility(View.GONE);
+        }
 
         // 返回按钮 - 自动保存并退出
         findViewById(R.id.btn_back).setOnClickListener(v -> {
@@ -200,12 +205,13 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
                 @Override
                 public void onPageSelected(int position) {
                     super.onPageSelected(position);
-                    updateBottomActionBar(position);
+                    // 暂时禁用底部操作栏更新（功能开发中）
+                    // updateBottomActionBar(position);
                 }
             });
 
-            // 初始化底部操作栏（默认显示写作Tab的按钮）
-            updateBottomActionBar(WorkspacePagerAdapter.TAB_WRITING);
+            // 初始化底部操作栏（默认显示写作Tab的按钮）- 暂时禁用
+            // updateBottomActionBar(WorkspacePagerAdapter.TAB_WRITING);
         } else {
             Toast.makeText(this, "未找到作品", Toast.LENGTH_SHORT).show();
             finish();

@@ -4,11 +4,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -88,45 +90,44 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         Story story = storyList.get(position);
 
-        // 设置封面：优先显示用户上传的图片，否则显示颜色背景
+        // 设置封面背景：优先显示用户上传的图片，否则显示渐变背景
         String coverPath = story.getCoverPath();
         if (!TextUtils.isEmpty(coverPath)) {
             File coverFile = new File(coverPath);
             if (coverFile.exists()) {
                 holder.ivCoverImage.setVisibility(View.VISIBLE);
                 holder.ivCoverImage.setImageBitmap(BitmapFactory.decodeFile(coverPath));
-                // 设置颜色背景作为图片加载时的备用
-                String coverColorStr = story.getCoverColor();
-                if (TextUtils.isEmpty(coverColorStr)) {
-                    coverColorStr = "#1976D2";
-                }
-                try {
-                    holder.layoutCover.setBackgroundColor(Color.parseColor(coverColorStr));
-                } catch (Exception e) {
-                    holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
-                }
+                // 隐藏渐变背景
+                holder.vCoverBackground.setVisibility(View.GONE);
             } else {
-                // 图片文件不存在，使用颜色背景
+                // 图片文件不存在，使用渐变背景
                 holder.ivCoverImage.setVisibility(View.GONE);
-                setCoverColor(holder, story);
+                holder.vCoverBackground.setVisibility(View.VISIBLE);
+                setCoverGradient(holder, story);
             }
         } else {
-            // 没有上传图片，使用颜色背景
+            // 没有上传图片，使用渐变背景
             holder.ivCoverImage.setVisibility(View.GONE);
-            setCoverColor(holder, story);
+            holder.vCoverBackground.setVisibility(View.VISIBLE);
+            setCoverGradient(holder, story);
         }
 
-        // 收藏五角星标记
+        // 收藏按钮 - 始终显示，根据状态切换图标
         if (story.isCollected()) {
-            holder.ivFavoriteStar.setVisibility(View.VISIBLE);
+            holder.btnFavorite.setImageResource(R.drawable.ic_star_filled);
         } else {
-            holder.ivFavoriteStar.setVisibility(View.GONE);
+            holder.btnFavorite.setImageResource(R.drawable.ic_star_border);
         }
+        
+        // 收藏按钮点击事件
+        holder.btnFavorite.setOnClickListener(v -> {
+            toggleFavorite(story, holder);
+        });
 
         // 封面标题
         holder.tvCoverTitle.setText(story.getTitle());
 
-        // 封面分类标签
+        // 封面状态标签
         String category = story.getCategory();
         if (TextUtils.isEmpty(category)) {
             category = "创作中";
@@ -136,12 +137,6 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         // 底部信息
         holder.tvTitle.setText(story.getTitle());
         holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
-
-        // 长按显示操作菜单（修改分类/更换封面/上传封面图片）
-        holder.itemView.setOnLongClickListener(v -> {
-            showStoryActionMenu(story);
-            return true;
-        });
 
         // 点击进入编辑页面
         holder.itemView.setOnClickListener(v -> {
@@ -183,116 +178,62 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         });
     }
 
-    private void setCoverColor(StoryViewHolder holder, Story story) {
-        String coverColorStr = story.getCoverColor();
-        if (TextUtils.isEmpty(coverColorStr)) {
-            coverColorStr = "#1976D2";
-        }
-        try {
-            int coverColor = Color.parseColor(coverColorStr);
-            holder.layoutCover.setBackgroundColor(coverColor);
-        } catch (Exception e) {
-            holder.layoutCover.setBackgroundColor(Color.parseColor("#1976D2"));
-        }
-    }
-
     /**
-     * 显示故事操作菜单（修改分类/收藏/上传封面图片）
+     * 设置封面渐变背景
      */
-    private void showStoryActionMenu(Story story) {
-        String favoriteText = story.isCollected() ? "取消收藏" : "收藏";
-        String[] items = {
-            context.getString(R.string.bookshelf_change_category),
-            favoriteText,
-            "上传封面图片"
-        };
-        new AlertDialog.Builder(context)
-            .setTitle(story.getTitle())
-            .setItems(items, (dialog, which) -> {
-                if (which == 0) {
-                    showCategoryDialog(story);
-                } else if (which == 1) {
-                    toggleFavorite(story);
-                } else if (which == 2) {
-                    if (pickCoverImageListener != null) {
-                        pickCoverImageListener.onPickCoverImage(story.getId());
-                    }
-                }
-            })
-            .show();
+    private void setCoverGradient(StoryViewHolder holder, Story story) {
+        String title = story.getTitle();
+        int[] colors = getGradientColors(title);
+        GradientDrawable gradient = new GradientDrawable();
+        gradient.setOrientation(GradientDrawable.Orientation.TL_BR);
+        gradient.setColors(colors);
+        holder.vCoverBackground.setBackground(gradient);
     }
-
+    
+    /**
+     * 根据标题生成渐变色（与ArchitectureFragment保持一致）
+     */
+    private int[] getGradientColors(String title) {
+        if (title == null || title.isEmpty()) {
+            return new int[]{0xFF1976D2, 0xFF42A5F5};
+        }
+        
+        // 预定义的渐变色组合
+        int[][] gradients = {
+            {0xFF667eea, 0xFF764ba2}, // 紫蓝渐变
+            {0xFFf093fb, 0xFFf5576c}, // 粉红渐变
+            {0xFF4facfe, 0xFF00f2fe}, // 蓝青渐变
+            {0xFF43e97b, 0xFF38f9d7}, // 绿青渐变
+            {0xFFfa709a, 0xFFfee140}, // 粉黄渐变
+            {0xFF30cfd0, 0xFF330867}, // 青紫渐变
+            {0xFFa8edea, 0xFFfed6e3}, // 浅蓝粉渐变
+            {0xFFff9a9e, 0xFFfecfef}, // 粉色渐变
+        };
+        
+        int index = Math.abs(title.hashCode()) % gradients.length;
+        return gradients[index];
+    }
+    
     /**
      * 切换收藏状态
      */
-    private void toggleFavorite(Story story) {
+    private void toggleFavorite(Story story, StoryViewHolder holder) {
         boolean newCollected = !story.isCollected();
         StoryDao storyDao = new StoryDao(context);
         storyDao.updateStoryCollected(story.getId(), newCollected);
         story.setCollected(newCollected);
-        notifyDataSetChanged();
+        
+        // 更新图标
+        if (newCollected) {
+            holder.btnFavorite.setImageResource(R.drawable.ic_star_filled);
+        } else {
+            holder.btnFavorite.setImageResource(R.drawable.ic_star_border);
+        }
+        
         Toast.makeText(context, newCollected ? "已收藏" : "已取消收藏", Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * 显示修改分类对话框
-     */
-    private void showCategoryDialog(Story story) {
-        String[] categories = {
-            context.getString(R.string.bookshelf_category_writing),
-            context.getString(R.string.bookshelf_category_completed)
-        };
-        int currentIndex = 0;
-        String currentCategory = story.getCategory();
-        for (int i = 0; i < categories.length; i++) {
-            if (categories[i].equals(currentCategory)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        new AlertDialog.Builder(context)
-            .setTitle(context.getString(R.string.bookshelf_category_hint))
-            .setSingleChoiceItems(categories, currentIndex, (dialog, which) -> {
-                String newCategory = categories[which];
-                StoryDao storyDao = new StoryDao(context);
-                storyDao.updateStoryCategory(story.getId(), newCategory);
-                story.setCategory(newCategory);
-                notifyDataSetChanged();
-                if (categoryChangeListener != null) {
-                    categoryChangeListener.onCategoryChanged(story.getId(), newCategory);
-                }
-                dialog.dismiss();
-            })
-            .setNegativeButton("取消", null)
-            .show();
-    }
 
-    /**
-     * 显示更换封面颜色对话框
-     */
-    private void showCoverColorDialog(Story story) {
-        String[] colorNames = {"蓝色", "绿色", "橙色", "紫色", "玫红", "青色", "棕色", "灰蓝", "深橙", "靛蓝", "青绿", "黄绿"};
-        String[] colorValues = {
-            "#1976D2", "#388E3C", "#F57C00", "#7B1FA2",
-            "#C2185B", "#0097A7", "#5D4037", "#455A64",
-            "#E64A19", "#303F9F", "#00796B", "#AFB42B"
-        };
-        new AlertDialog.Builder(context)
-            .setTitle(context.getString(R.string.bookshelf_cover_color_hint))
-            .setItems(colorNames, (dialog, which) -> {
-                String newColor = colorValues[which];
-                StoryDao storyDao = new StoryDao(context);
-                storyDao.updateStoryCoverColor(story.getId(), newColor);
-                story.setCoverColor(newColor);
-                notifyDataSetChanged();
-                if (coverChangeListener != null) {
-                    coverChangeListener.onCoverChanged(story.getId(), newColor);
-                }
-                dialog.dismiss();
-            })
-            .setNegativeButton("取消", null)
-            .show();
-    }
 
     @Override
     public int getItemCount() {
@@ -306,8 +247,9 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     public static class StoryViewHolder extends RecyclerView.ViewHolder {
         View layoutCover;
+        View vCoverBackground;
         ImageView ivCoverImage;
-        ImageView ivFavoriteStar;
+        ImageButton btnFavorite;
         TextView tvCoverTitle;
         TextView tvCoverCategory;
         TextView tvTitle;
@@ -317,8 +259,9 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             layoutCover = itemView.findViewById(R.id.layout_cover);
+            vCoverBackground = itemView.findViewById(R.id.v_cover_background);
             ivCoverImage = itemView.findViewById(R.id.iv_cover_image);
-            ivFavoriteStar = itemView.findViewById(R.id.iv_favorite_star);
+            btnFavorite = itemView.findViewById(R.id.btn_favorite);
             tvCoverTitle = itemView.findViewById(R.id.tv_cover_title);
             tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
             tvTitle = itemView.findViewById(R.id.tv_title);

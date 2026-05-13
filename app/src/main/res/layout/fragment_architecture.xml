@@ -34,11 +34,96 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
+                <!-- 封面容器 - 居中显示，书本比例 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_cover"
+                    android:layout_width="180dp"
+                    android:layout_height="240dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="16dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <!-- 渐变背景 -->
+                        <View
+                            android:id="@+id/v_cover_background"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"/>
+
+                        <!-- 装饰性几何图形 -->
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_gravity="bottom|end"
+                            android:layout_margin="-20dp"
+                            android:background="@drawable/circle_decoration"/>
+
+                        <!-- 状态标签 - 左上角（带下拉箭头） -->
+                        <LinearLayout
+                            android:id="@+id/layout_status_container"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_status_chip"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="6dp">
+
+                            <Spinner
+                                android:id="@+id/spinner_status"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@null"
+                                android:popupBackground="@android:color/white"
+                                android:spinnerMode="dropdown"/>
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_marginStart="4dp"
+                                android:src="@drawable/ic_arrow_drop_down"
+                                app:tint="#FFFFFF"/>
+                        </LinearLayout>
+
+                        <!-- 收藏星标 - 右上角 -->
+                        <ImageButton
+                            android:id="@+id/btn_favorite"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_gravity="top|end"
+                            android:layout_marginEnd="10dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_circle_transparent"
+                            android:contentDescription="收藏"
+                            android:padding="6dp"
+                            android:src="@drawable/ic_star_border"/>
+
+                        <!-- 点击更换提示 -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|center_horizontal"
+                            android:layout_marginBottom="12dp"
+                            android:text="点击更换"
+                            android:textColor="#80FFFFFF"
+                            android:textSize="12sp"/>
+
+                    </FrameLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- 标题 -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="20dp"
                     android:text="标题 *"
                     android:textColor="#1F1F1F"
                     android:textSize="14sp" />
@@ -55,23 +140,71 @@
                     android:padding="12dp"
                     android:textSize="15sp" />
 
-                <!-- 系列/类型 -->
+                <!-- 类型标签 -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="系列/类型"
+                    android:text="类型标签"
                     android:textColor="#1F1F1F"
                     android:textSize="14sp" />
 
-                <Spinner
-                    android:id="@+id/spinner_genre"
+                <!-- 已选标签 -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_selected_genres"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:padding="12dp"
-                    android:spinnerMode="dropdown" />
+                    app:chipSpacingHorizontal="8dp"
+                    app:chipSpacingVertical="4dp" />
+
+                <!-- 预设标签 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="双击快速添加："
+                    android:textColor="#666666"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_preset_genres"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="false"
+                    app:chipSpacingHorizontal="8dp"
+                    app:chipSpacingVertical="4dp" />
+
+                <!-- 自定义标签输入 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/et_custom_genre"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_outline_edittext"
+                        android:hint="输入自定义标签"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:padding="10dp"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/btn_add_genre"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="添加"
+                        android:textSize="12sp"
+                        style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+                </LinearLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -148,27 +281,6 @@
                     android:background="@drawable/bg_outline_edittext"
                     android:gravity="top|start"
                     android:hint="输入故事的主要情节脉络"
-                    android:inputType="textMultiLine"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
-
-                <!-- 总结 -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="总结（可选）"
-                    android:textColor="#1F1F1F"
-                    android:textSize="14sp" />
-
-                <EditText
-                    android:id="@+id/et_architecture_summary"
-                    android:layout_width="match_parent"
-                    android:layout_height="100dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:gravity="top|start"
-                    android:hint="整体评价和风格说明"
                     android:inputType="textMultiLine"
                     android:padding="12dp"
                     android:textSize="14sp" />

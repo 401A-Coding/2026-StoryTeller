@@ -126,12 +126,13 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-    <!-- 底部操作栏 -->
+    <!-- 底部操作栏 - 暂时隐藏（功能开发中） -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottom_action_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
+        android:visibility="gone"
         app:cardElevation="8dp">
 
         <HorizontalScrollView
@@ -156,7 +157,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="80dp"
+        android:layout_marginBottom="16dp"
         android:contentDescription="AI助手"
         android:src="@drawable/ic_robot"
         app:tint="#FFFFFF" />
