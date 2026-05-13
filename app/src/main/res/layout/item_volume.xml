@@ -5,7 +5,7 @@
     android:id="@+id/card_volume"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_marginBottom="16dp"
     app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="8dp"
     app:cardElevation="2dp">
@@ -50,7 +50,8 @@
                 android:textColor="#212121"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:saveEnabled="false" />
 
             <TextView
                 android:id="@+id/tv_volume_name"

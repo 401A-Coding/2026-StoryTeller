@@ -19,7 +19,7 @@ import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.StoryDetailActivity;
+import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
@@ -143,13 +143,12 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             return true;
         });
 
-        // 点击进入详情
+        // 点击进入编辑页面
         holder.itemView.setOnClickListener(v -> {
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
             PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
-            Intent intent = new Intent(context, StoryDetailActivity.class);
-            intent.putExtra(EXTRA_STORY_ID, story.getId());
-            intent.putExtra(EXTRA_STORY_TITLE, story.getTitle());
+            Intent intent = new Intent(context, StoryWorkspaceActivity.class);
+            intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, story.getId());
             context.startActivity(intent);
         });
 

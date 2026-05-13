@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/layout_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 空状态提示 -->
+        <TextView
+            android:id="@+id/tv_empty_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="32dp"
+            android:text="暂无内容\n\n点击下方按钮添加第一卷"
+            android:textColor="#999999"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+        <!-- 动态添加的卷和章节将在这里显示 -->
+
+        <!-- 添加新卷按钮 -->
+        <Button
+            android:id="@+id/btn_add_volume"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"
+            android:text="+ 添加新卷"
+            android:textAllCaps="false"
+            android:textColor="#1976D2" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

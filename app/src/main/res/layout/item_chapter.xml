@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="24dp"
     android:orientation="vertical">
 
     <!-- 章节标题卡片 -->
@@ -52,7 +52,8 @@
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:imeOptions="actionDone"
-                android:inputType="text" />
+                android:inputType="text"
+                android:saveEnabled="false" />
 
             <TextView
                 android:id="@+id/tv_chapter_name"
@@ -79,7 +80,8 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
         app:cardBackgroundColor="#FFFFFF"
         app:cardCornerRadius="8dp"
         app:cardElevation="1dp">

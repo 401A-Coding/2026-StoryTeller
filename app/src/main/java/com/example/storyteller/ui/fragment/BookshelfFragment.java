@@ -21,7 +21,6 @@ import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.StoryGenerateActivity;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import com.google.android.material.tabs.TabLayout;
 
@@ -290,21 +289,20 @@ public class BookshelfFragment extends BaseFragment {
             String seriesName = etSeriesName.getText().toString().trim();
             String description = etDescription.getText().toString().trim();
 
-            // 创建新故事，默认分类为"创作中"，默认封面颜色为蓝色
+            // Create empty story
             Story newStory = new Story(title, "", TextUtils.isEmpty(seriesName) ? "创作" : seriesName, System.currentTimeMillis());
             if (!TextUtils.isEmpty(description)) {
                 newStory.setDescription(description);
             }
-            newStory.setCategory(getString(R.string.bookshelf_category_writing));
-            newStory.setCoverColor("#1976D2");
 
-            // 初始化一卷一章
+            // Initialize with one volume and one chapter
             java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
-            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "第一卷");
-            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "第一章", "");
+            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "新卷名");
+            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "新章节", "");
             volume.addChapter(chapter);
             volumes.add(volume);
 
+            // Save structure as JSON
             String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
             newStory.setStructure(structureJson);
 
@@ -315,8 +313,13 @@ public class BookshelfFragment extends BaseFragment {
                 dialog.dismiss();
                 refreshStories();
 
-                Intent intent = new Intent(requireContext(), StoryGenerateActivity.class);
-                intent.putExtra("story_id", (int) id);
+                // Set as current selected story
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, title);
+
+                // Navigate directly to workspace page
+                Intent intent = new Intent(requireContext(), com.example.storyteller.ui.activity.StoryWorkspaceActivity.class);
+                intent.putExtra(com.example.storyteller.ui.activity.StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);
                 startActivity(intent);
             } else {
                 Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();
