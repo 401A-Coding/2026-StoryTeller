@@ -2,20 +2,31 @@ package com.example.storyteller.ui.fragment;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
-import androidx.recyclerview.widget.LinearLayoutManager;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.StoryAdapter;
+import com.google.android.material.tabs.TabLayout;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +35,20 @@ import java.util.Locale;
 public class BookshelfFragment extends BaseFragment {
     private StoryDao storyDao;
     private StoryAdapter adapter;
+    private TabLayout tabCategory;
+    private TextView tvStoryCount;
+    private TextView tvEmptyHint;
+    private RecyclerView recyclerView;
+
+    // 当前选中的分类索引：0=全部, 1=创作中, 2=已完成, 3=已收藏
+    private int currentCategoryIndex = 0;
+
+    // 当前正在设置封面的故事ID
+    private int pendingCoverStoryId = -1;
+
+    // 图片选择启动器
+    private final ActivityResultLauncher<String> pickImageLauncher =
+        registerForActivityResult(new ActivityResultContracts.GetContent(), this::onImageSelected);
 
     @Override
     protected int getLayoutId() {
@@ -32,19 +57,50 @@ public class BookshelfFragment extends BaseFragment {
 
     @Override
     protected void initView(View view) {
-        RecyclerView recyclerView = view.findViewById(R.id.rv_story_list);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        storyDao = new StoryDao(requireContext());
-        adapter = new StoryAdapter(requireContext(), sortStoriesForBookshelf(storyDao.getAllStories()));
+        recyclerView = view.findViewById(R.id.rv_story_list);
+        tabCategory = view.findViewById(R.id.tab_category);
+        tvStoryCount = view.findViewById(R.id.tv_story_count);
+        tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
 
-        // Set delete listener
-        adapter.setOnStoryDeleteListener(storyId -> {
-            refreshStories();
+        // 使用网格布局，每行2列
+        recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
+
+        storyDao = new StoryDao(requireContext());
+        adapter = new StoryAdapter(requireContext(), getFilteredStories());
+
+        // 设置删除监听
+        adapter.setOnStoryDeleteListener(storyId -> refreshStories());
+
+        // 设置分类变更监听
+        adapter.setOnStoryCategoryChangeListener((storyId, newCategory) -> refreshStories());
+
+        // 设置封面变更监听
+        adapter.setOnStoryCoverChangeListener((storyId, newCoverColor) -> refreshStories());
+
+        // 设置上传封面图片监听
+        adapter.setOnPickCoverImageListener(storyId -> {
+            pendingCoverStoryId = storyId;
+            pickImageLauncher.launch("image/*");
         });
 
         recyclerView.setAdapter(adapter);
 
-        // Create story button
+        // 分类标签切换
+        tabCategory.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentCategoryIndex = tab.getPosition();
+                refreshStories();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
+
+        // 创建故事按钮
         Button btnCreateStory = view.findViewById(R.id.btn_create_story);
         btnCreateStory.setOnClickListener(v -> showCreateStoryDialog());
     }
@@ -60,12 +116,122 @@ public class BookshelfFragment extends BaseFragment {
         refreshStories();
     }
 
+    /**
+     * 处理选择的封面图片
+     */
+    private void onImageSelected(Uri imageUri) {
+        if (imageUri == null || pendingCoverStoryId < 0) {
+            pendingCoverStoryId = -1;
+            return;
+        }
+
+        try {
+            // 将图片复制到应用内部存储
+            String fileName = "cover_" + pendingCoverStoryId + "_" + System.currentTimeMillis() + ".jpg";
+            File coverDir = new File(requireContext().getFilesDir(), "covers");
+            if (!coverDir.exists()) {
+                coverDir.mkdirs();
+            }
+            File coverFile = new File(coverDir, fileName);
+
+            // 复制图片文件
+            try (InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
+                 FileOutputStream outputStream = new FileOutputStream(coverFile)) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+            }
+
+            // 更新数据库中的封面路径
+            String coverPath = coverFile.getAbsolutePath();
+            storyDao.updateStoryCoverPath(pendingCoverStoryId, coverPath);
+
+            Toast.makeText(requireContext(), "封面已更新", Toast.LENGTH_SHORT).show();
+            refreshStories();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(), "设置封面失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        pendingCoverStoryId = -1;
+    }
+
     private void refreshStories() {
         if (storyDao == null || adapter == null) {
             return;
         }
-        List<Story> stories = storyDao.getAllStories();
-        adapter.setData(sortStoriesForBookshelf(stories));
+        List<Story> filteredStories = getFilteredStories();
+        adapter.setData(filteredStories);
+
+        // 更新作品数量
+        tvStoryCount.setText(getString(R.string.bookshelf_story_count_format, filteredStories.size()));
+
+        // 更新空状态
+        if (filteredStories.isEmpty()) {
+            tvEmptyHint.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            tvEmptyHint.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * 根据当前选中的分类获取过滤后的故事列表
+     */
+    private List<Story> getFilteredStories() {
+        List<Story> allStories = storyDao.getAllStories();
+        List<Story> filteredStories;
+
+        switch (currentCategoryIndex) {
+            case 1: // 创作中
+                filteredStories = filterByCategory(allStories, getString(R.string.bookshelf_category_writing));
+                break;
+            case 2: // 已完成
+                filteredStories = filterByCategory(allStories, getString(R.string.bookshelf_category_completed));
+                break;
+            case 3: // 收藏（独立于创作中/已完成，任何故事都可以收藏）
+                filteredStories = getCollectedStories(allStories);
+                break;
+            default: // 全部
+                filteredStories = new ArrayList<>(allStories);
+                break;
+        }
+
+        return sortStoriesForBookshelf(filteredStories);
+    }
+
+    /**
+     * 按分类过滤
+     */
+    private List<Story> filterByCategory(List<Story> stories, String category) {
+        List<Story> result = new ArrayList<>();
+        for (Story story : stories) {
+            String storyCategory = story.getCategory();
+            if (TextUtils.isEmpty(storyCategory)) {
+                storyCategory = "创作中";
+            }
+            if (category.equals(storyCategory)) {
+                result.add(story);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 获取已收藏的故事
+     */
+    private List<Story> getCollectedStories(List<Story> stories) {
+        List<Story> result = new ArrayList<>();
+        for (Story story : stories) {
+            if (story.isCollected()) {
+                result.add(story);
+            }
+        }
+        return result;
     }
 
     private List<Story> sortStoriesForBookshelf(List<Story> source) {
