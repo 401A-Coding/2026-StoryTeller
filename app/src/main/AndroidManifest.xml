@@ -29,9 +29,6 @@
             android:name=".ui.activity.StoryWorkspaceActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
-            android:name=".ui.activity.StoryDetailActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        <activity
             android:name=".ui.activity.CharacterActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
@@ -46,12 +43,6 @@
         <activity
             android:name=".ui.activity.SettingsActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        <!-- ⚠️ DEPRECATED - 已废弃，使用 StoryWorkspaceActivity 代替 -->
-        <!--
-        <activity
-            android:name=".ui.activity.VolumeChaptersActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        -->
     </application>
 
 </manifest>
