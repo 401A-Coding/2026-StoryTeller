@@ -30,11 +30,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
+import java.util.List;
+
 /**
  * 作品工作区Activity
  * 整合写作、架构、人物、素材等所有功能模块
  */
-public class StoryWorkspaceActivity extends BaseActivity {
+public class StoryWorkspaceActivity extends BaseActivity implements ArchitectureFragment.OnArchitectureChangedListener {
 
     public static final String EXTRA_STORY_ID = "extra_story_id";
 
@@ -87,8 +89,11 @@ public class StoryWorkspaceActivity extends BaseActivity {
         LinearLayout layoutActions = findViewById(R.id.layout_bottom_actions);
         bottomActionBar = new BottomActionBar(this, cardBottomBar, layoutActions);
 
-        // 返回按钮
-        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+        // 返回按钮 - 自动保存并退出
+        findViewById(R.id.btn_back).setOnClickListener(v -> {
+            saveCurrentWork();
+            finish();
+        });
         
         // 点击标题区域打开左侧抽屉（整个容器都可点击）
         View titleContainer = findViewById(R.id.layout_title_container);
@@ -114,6 +119,15 @@ public class StoryWorkspaceActivity extends BaseActivity {
     @Override
     protected void initData() {
         storyDao = new StoryDao(this);
+
+        // 设置返回按钮处理 - 自动保存并退出
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                saveCurrentWork();
+                finish();
+            }
+        });
 
         // 获取作品ID
         Intent intent = getIntent();
@@ -257,33 +271,40 @@ public class StoryWorkspaceActivity extends BaseActivity {
     // ========== Toolbar按钮功能 ==========
 
     private void saveCurrentWork() {
-        // 保存左侧信息面板数据
+        saveCurrentWorkInternal(true);
+    }
+
+    /**
+     * 静默保存当前工作（不显示Toast）
+     */
+    public void saveCurrentWorkSilently() {
+        saveCurrentWorkInternal(false);
+    }
+
+    /**
+     * 内部保存方法
+     * @param showToast 是否显示Toast提示
+     */
+    private void saveCurrentWorkInternal(boolean showToast) {
+        // 保存左侧信息面板数据（静默保存）
         if (storyInfoPanelFragment != null) {
-            storyInfoPanelFragment.savePanelData();
+            storyInfoPanelFragment.savePanelDataSilently();
         }
         
-        // 根据当前Tab调用对应Fragment的保存方法
-        int currentPosition = viewPager.getCurrentItem();
+        // 遍历所有Fragment，找到WritingFragment和ArchitectureFragment并保存（静默保存）
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
         
-        // 获取当前Fragment
-        Fragment currentFragment = getSupportFragmentManager().findFragmentByTag(
-            "f" + currentPosition
-        );
-        
-        if (currentFragment == null && pagerAdapter != null) {
-            // 如果找不到，尝试从ViewPager2获取
-            currentFragment = getSupportFragmentManager()
-                .getFragments()
-                .get(currentPosition);
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof WritingFragment) {
+                ((WritingFragment) fragment).saveStructureSilently();
+            } else if (fragment instanceof ArchitectureFragment) {
+                ((ArchitectureFragment) fragment).saveChangesSilently();
+            }
         }
         
-        if (currentFragment instanceof WritingFragment) {
-            ((WritingFragment) currentFragment).saveStructure();
-        } else if (currentFragment instanceof ArchitectureFragment) {
-            // TODO: 调用ArchitectureFragment的保存方法
-            Toast.makeText(this, "保存架构信息", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show();
+        // 显示统一的保存提示
+        if (showToast) {
+            Toast.makeText(this, "已保存所有更新", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -364,12 +385,14 @@ public class StoryWorkspaceActivity extends BaseActivity {
      * 刷新写作Fragment的UI
      */
     private void refreshWritingFragment() {
-        // 获取当前显示的Fragment
-        Fragment currentFragment = getSupportFragmentManager()
-            .findFragmentByTag("f" + WorkspacePagerAdapter.TAB_WRITING);
+        // 遍历所有Fragment来查找WritingFragment
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
         
-        if (currentFragment instanceof WritingFragment) {
-            ((WritingFragment) currentFragment).refreshView();
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof WritingFragment) {
+                ((WritingFragment) fragment).refreshView();
+                return;
+            }
         }
     }
     
@@ -383,5 +406,27 @@ public class StoryWorkspaceActivity extends BaseActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    /**
+     * ArchitectureFragment数据变化回调
+     * 当架构Tab中的标题、类型、简介发生变化时调用
+     */
+    @Override
+    public void onArchitectureChanged(Story story) {
+        if (story != null) {
+            String newTitle = story.getTitle();
+            if (!TextUtils.isEmpty(newTitle)) {
+                // 实时更新顶部标题
+                if (tvStoryTitle != null) {
+                    tvStoryTitle.setText(newTitle);
+                }
+                
+                // 实时更新左侧抽屉中的标题
+                if (storyInfoPanelFragment != null) {
+                    storyInfoPanelFragment.updateTitle(newTitle);
+                }
+            }
+        }
     }
 }

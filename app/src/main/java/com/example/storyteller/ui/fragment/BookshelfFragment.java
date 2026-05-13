@@ -147,6 +147,10 @@ public class BookshelfFragment extends BaseFragment {
                 dialog.dismiss();
                 refreshStories();
 
+                // Set as current selected story
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
+                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, title);
+
                 // Navigate directly to workspace page
                 Intent intent = new Intent(requireContext(), com.example.storyteller.ui.activity.StoryWorkspaceActivity.class);
                 intent.putExtra(com.example.storyteller.ui.activity.StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);

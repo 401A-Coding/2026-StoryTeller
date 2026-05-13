@@ -151,15 +151,15 @@ public class StoryInfoPanelFragment extends BaseFragment {
         // 更新标题
         tvStoryTitle.setText(currentStory.getTitle());
 
-        // 加载简介（用于设定面板）
-        if (!TextUtils.isEmpty(currentStory.getDescription())) {
-            etWorldSetting.setText(currentStory.getDescription());
-        }
+        // 设定面板暂时留空（设定不是简介，需要单独的字段存储）
+        etWorldSetting.setText("");
+        
+        // TODO: 后续添加专门的setting字段到Story模型
 
-        // 加载内容（用于大纲面板 - 暂时使用content字段）
-        if (!TextUtils.isEmpty(currentStory.getContent())) {
-            etOutline.setText(currentStory.getContent());
-        }
+        // 大纲面板暂时留空（大纲不是正文，需要单独的字段存储）
+        etOutline.setText("");
+        
+        // TODO: 后续添加专门的outline字段到Story模型
 
         // 文档面板暂时为空
         // TODO: 后续可以添加专门的docs字段到Story模型
@@ -179,6 +179,15 @@ public class StoryInfoPanelFragment extends BaseFragment {
         // 只在第一次加载时添加Tab，避免重复添加
         if (tabStoryInfo.getTabCount() == 0) {
             setupTabs();
+        }
+    }
+
+    /**
+     * 公开方法：更新标题（用于实时同步）
+     */
+    public void updateTitle(String newTitle) {
+        if (tvStoryTitle != null && !TextUtils.isEmpty(newTitle)) {
+            tvStoryTitle.setText(newTitle);
         }
     }
 
@@ -278,30 +287,47 @@ public class StoryInfoPanelFragment extends BaseFragment {
     }
 
     /**
-     * 保存面板数据
+     * 保存面板数据（带Toast提示）
      */
     public void savePanelData() {
+        savePanelDataInternal(true);
+    }
+
+    /**
+     * 静默保存面板数据（不显示Toast）
+     */
+    public void savePanelDataSilently() {
+        savePanelDataInternal(false);
+    }
+
+    /**
+     * 内部保存方法
+     * @param showToast 是否显示Toast提示
+     */
+    private void savePanelDataInternal(boolean showToast) {
         if (currentStory == null) {
             return;
         }
 
-        // 更新简介（设定面板）
-        currentStory.setDescription(etWorldSetting.getText().toString().trim());
+        // 设定面板暂时不保存（需要单独的setting字段）
+        // TODO: 后续添加专门的setting字段到Story模型
+        // currentStory.setSetting(etWorldSetting.getText().toString().trim());
 
-        // 更新内容（大纲面板 - 暂时使用content字段）
-        // 注意：这里不应该覆盖content，因为content是完整的故事内容
+        // 大纲面板暂时不保存（需要单独的outline字段）
         // TODO: 后续添加专门的outline字段到Story模型
-        // currentStory.setContent(etOutline.getText().toString().trim());
+        // currentStory.setOutline(etOutline.getText().toString().trim());
 
         // 文档面板暂时不保存
         // TODO: 后续添加专门的docs字段到Story模型
 
-        // 保存到数据库
+        // 保存到数据库（目前实际上没有保存任何内容）
         int result = storyRepository.updateStory(currentStory);
-        if (result > 0) {
-            Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
+        if (showToast) {
+            if (result > 0) {
+                Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -350,9 +376,14 @@ public class StoryInfoPanelFragment extends BaseFragment {
 
         android.util.Log.d("StoryInfoPanel", "开始切换小说: " + story.getTitle() + ", ID: " + story.getId());
 
-        // 保存当前小说数据（如果有修改）
+        // 保存当前小说数据（静默保存）
         if (currentStory != null) {
-            savePanelData();
+            savePanelDataSilently();
+            
+            // 通知父Activity保存其他Fragment的数据
+            if (getActivity() instanceof com.example.storyteller.ui.activity.StoryWorkspaceActivity) {
+                ((com.example.storyteller.ui.activity.StoryWorkspaceActivity) getActivity()).saveCurrentWorkSilently();
+            }
         }
 
         // 更新当前小说

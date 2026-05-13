@@ -32,6 +32,12 @@ public class ArchitectureFragment extends BaseFragment {
     private Story currentStory;
     private int storyId;
     private StoryDao storyDao;
+    
+    // 标记是否正在加载数据，避免加载时触发自动保存
+    private boolean isLoadingData = false;
+    
+    // 架构变化监听器
+    private OnArchitectureChangedListener listener;
 
     // 类型选项
     private static final String[] GENRE_OPTIONS = {
@@ -67,7 +73,7 @@ public class ArchitectureFragment extends BaseFragment {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerGenre.setAdapter(adapter);
 
-        // 字数统计
+        // 字数统计（不触发自动保存）
         etDescription.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -78,7 +84,41 @@ public class ArchitectureFragment extends BaseFragment {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) {}
+            public void afterTextChanged(android.text.Editable s) {
+                // 简介变化时自动保存（加载数据时不触发）
+                if (!isLoadingData) {
+                    autoSaveChanges();
+                }
+            }
+        });
+
+        // 标题变化时自动保存（加载数据时不触发）
+        etTitle.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                if (!isLoadingData) {
+                    autoSaveChanges();
+                }
+            }
+        });
+
+        // 类型变化时自动保存（加载数据时不触发）
+        spinnerGenre.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (!isLoadingData) {
+                    autoSaveChanges();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
@@ -92,6 +132,11 @@ public class ArchitectureFragment extends BaseFragment {
 
         if (storyId > 0) {
             loadStoryData();
+            
+            // 加载完成后，自动设置监听器
+            if (getActivity() instanceof OnArchitectureChangedListener) {
+                listener = (OnArchitectureChangedListener) getActivity();
+            }
         } else {
             Toast.makeText(requireContext(), "未找到作品", Toast.LENGTH_SHORT).show();
         }
@@ -101,9 +146,13 @@ public class ArchitectureFragment extends BaseFragment {
      * 加载作品数据
      */
     private void loadStoryData() {
+        // 标记正在加载，避免触发自动保存
+        isLoadingData = true;
+        
         currentStory = storyDao.getStoryById(storyId);
         if (currentStory == null) {
             Toast.makeText(requireContext(), "加载作品失败", Toast.LENGTH_SHORT).show();
+            isLoadingData = false;
             return;
         }
 
@@ -119,14 +168,23 @@ public class ArchitectureFragment extends BaseFragment {
                     break;
                 }
             }
+        } else {
+            // 如果没有类型，默认选择第一个
+            spinnerGenre.setSelection(0);
         }
 
         // 设置简介
         String description = currentStory.getDescription();
-        if (!TextUtils.isEmpty(description)) {
+        if (description != null) {
             etDescription.setText(description);
             tvDescriptionCount.setText(description.length() + "/500");
+        } else {
+            etDescription.setText("");
+            tvDescriptionCount.setText("0/500");
         }
+
+        // 标记加载完成
+        isLoadingData = false;
 
         // 注意：大纲和总结目前存储在NovelSummary中，这里暂时留空
         // 后续可以扩展Story模型或创建关联表来存储这些信息
@@ -142,25 +200,106 @@ public class ArchitectureFragment extends BaseFragment {
     }
 
     /**
-     * 保存修改
+     * 设置架构变化监听器
      */
-    private void saveChanges() {
+    public void setOnArchitectureChangedListener(OnArchitectureChangedListener listener) {
+        this.listener = listener;
+    }
+
+    /**
+     * 自动保存修改（静默保存，不显示Toast）
+     */
+    private void autoSaveChanges() {
+        if (currentStory == null || isLoadingData) {
+            return;
+        }
+
+        // 获取当前输入的值
+        String title = etTitle.getText().toString().trim();
+        String description = etDescription.getText().toString();
+        String newGenre = (String) spinnerGenre.getSelectedItem();
+
+        // 验证标题（标题不能为空）
+        if (TextUtils.isEmpty(title)) {
+            return;
+        }
+
+        // 验证简介长度
+        if (description.length() > 500) {
+            return;
+        }
+
+        // 检查是否有变化
+        String currentTitle = currentStory.getTitle();
+        String currentGenre = currentStory.getGenre();
+        String currentDescription = currentStory.getDescription();
+
+        // 如果没有任何变化，不需要保存
+        boolean titleChanged = !title.equals(currentTitle);
+        boolean genreChanged = !(newGenre != null && newGenre.equals(currentGenre));
+        boolean descriptionChanged = !(description != null ? description.equals(currentDescription) : currentDescription == null);
+        
+        if (!titleChanged && !genreChanged && !descriptionChanged) {
+            return;
+        }
+
+        // 更新数据
+        currentStory.setTitle(title);
+        currentStory.setGenre(newGenre);
+        currentStory.setDescription(description);
+
+        // 保存到数据库（静默保存）
+        int result = storyDao.updateStory(currentStory);
+        
+        // 通知监听器数据已更新
+        if (listener != null) {
+            listener.onArchitectureChanged(currentStory);
+        }
+    }
+
+    /**
+     * 手动保存修改（显示Toast提示）
+     */
+    public void saveChanges() {
+        saveChangesInternal(true);
+    }
+
+    /**
+     * 静默保存修改（不显示Toast）
+     */
+    public void saveChangesSilently() {
+        saveChangesInternal(false);
+    }
+
+    /**
+     * 内部保存方法
+     * @param showToast 是否显示Toast提示
+     */
+    private void saveChangesInternal(boolean showToast) {
         if (currentStory == null) {
-            Toast.makeText(requireContext(), "作品数据不存在", Toast.LENGTH_SHORT).show();
+            if (showToast) {
+                Toast.makeText(requireContext(), "作品数据不存在", Toast.LENGTH_SHORT).show();
+            }
             return;
         }
 
         // 验证标题
         String title = etTitle.getText().toString().trim();
         if (TextUtils.isEmpty(title)) {
-            Toast.makeText(requireContext(), "请输入作品标题", Toast.LENGTH_SHORT).show();
+            if (showToast) {
+                Toast.makeText(requireContext(), "请输入作品标题", Toast.LENGTH_SHORT).show();
+            }
             return;
         }
 
+        // 获取简介（不要trim，保留原始内容）
+        String description = etDescription.getText().toString();
+        
         // 验证简介长度
-        String description = etDescription.getText().toString().trim();
         if (description.length() > 500) {
-            Toast.makeText(requireContext(), "简介不能超过500字", Toast.LENGTH_SHORT).show();
+            if (showToast) {
+                Toast.makeText(requireContext(), "简介不能超过500字", Toast.LENGTH_SHORT).show();
+            }
             return;
         }
 
@@ -171,15 +310,18 @@ public class ArchitectureFragment extends BaseFragment {
 
         // 保存到数据库
         int result = storyDao.updateStory(currentStory);
-        if (result > 0) {
-            Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
-            
-            // 通知Activity数据已更新（如果需要刷新其他部分）
-            if (getActivity() instanceof OnArchitectureChangedListener) {
-                ((OnArchitectureChangedListener) getActivity()).onArchitectureChanged(currentStory);
+        
+        if (showToast) {
+            if (result > 0) {
+                Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
+                
+                // 通知监听器数据已更新
+                if (listener != null) {
+                    listener.onArchitectureChanged(currentStory);
+                }
+            } else {
+                Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
             }
-        } else {
-            Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
         }
     }
 

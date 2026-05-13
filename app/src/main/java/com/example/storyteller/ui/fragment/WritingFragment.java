@@ -270,6 +270,8 @@ public class WritingFragment extends BaseFragment {
             @Override
             public void afterTextChanged(android.text.Editable s) {
                 chapter.setContent(s.toString());
+                // 实时静默保存正文内容（作为退出保存的额外保险）
+                saveStructureSilently();
             }
         });
 
@@ -290,6 +292,31 @@ public class WritingFragment extends BaseFragment {
         textView.setOnClickListener(null);
         editText.setOnFocusChangeListener(null);
         editText.setOnEditorActionListener(null);
+        
+        // 添加实时保存的TextWatcher
+        editText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                // 实时静默保存标题修改
+                String newName = s.toString().trim();
+                if (!TextUtils.isEmpty(newName)) {
+                    // 更新模型
+                    if (model instanceof Volume) {
+                        ((Volume) model).setTitle(newName);
+                    } else if (model instanceof Chapter) {
+                        ((Chapter) model).setTitle(newName);
+                    }
+                    // 静默保存
+                    saveStructureSilently();
+                }
+            }
+        });
         
         // 单击 TextView 切换到编辑模式
         textView.setOnClickListener(v -> {
@@ -398,8 +425,8 @@ public class WritingFragment extends BaseFragment {
             imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);
         }
         
-        // 保存修改
-        saveStructure();
+        // 静默保存（因为TextWatcher已经实时保存了，这里只是确保最终状态一致）
+        saveStructureSilently();
     }
 
     /**
@@ -411,8 +438,10 @@ public class WritingFragment extends BaseFragment {
         volumes.add(newVolume);
         renderVolumes();
         
-        // 保存
-        saveStructure();
+        // 先静默保存
+        saveStructureSilently();
+        
+        // 再显示操作结果
         Toast.makeText(requireContext(), "已添加新卷", Toast.LENGTH_SHORT).show();
     }
     
@@ -435,10 +464,11 @@ public class WritingFragment extends BaseFragment {
             volumes.get(i).setId(i + 1);
         }
         
-        // 保存并刷新UI
-        saveStructure();
+        // 先保存并刷新UI
+        saveStructureSilently();
         renderVolumes();
         
+        // 再显示操作结果
         Toast.makeText(requireContext(), "已在第 " + (insertIndex + 1) + " 个位置添加新卷", Toast.LENGTH_SHORT).show();
     }
 
@@ -453,8 +483,10 @@ public class WritingFragment extends BaseFragment {
         View chapterView = createChapterView(newChapter, volume, newChapterId);
         chapterContainer.addView(chapterView);
 
-        // 保存并刷新
-        saveStructure();
+        // 先静默保存
+        saveStructureSilently();
+        
+        // 再显示操作结果
         Toast.makeText(requireContext(), "已添加新章节", Toast.LENGTH_SHORT).show();
     }
     
@@ -479,11 +511,11 @@ public class WritingFragment extends BaseFragment {
             volume.getChapters().get(i).setId(i + 1);
         }
         
-        // 保存并刷新UI
-        saveStructure();
+        // 先保存并刷新UI
+        saveStructureSilently();
         renderVolumes();
         
-        // 只在用户主动操作时显示提示
+        // 再显示操作结果（只在用户主动操作时显示）
         if (showToast) {
             Toast.makeText(requireContext(), "已在第 " + (insertIndex + 1) + " 个位置添加新章节", Toast.LENGTH_SHORT).show();
         }
@@ -594,8 +626,10 @@ public class WritingFragment extends BaseFragment {
                 volumeCount = volumes.size();
                 renderVolumes();
                 
-                // 保存
-                saveStructure();
+                // 先静默保存
+                saveStructureSilently();
+                
+                // 再显示操作结果
                 Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
             })
             .setNegativeButton("取消", null)
@@ -619,29 +653,67 @@ public class WritingFragment extends BaseFragment {
             volume.getChapters().get(i).setId(i + 1);
         }
         
-        // 保存并刷新UI
-        saveStructure();
+        // 先静默保存并刷新UI
+        saveStructureSilently();
         renderVolumes();
         
+        // 再显示操作结果
         Toast.makeText(requireContext(), "已删除章节：《" + removedChapter.getTitle() + "》", Toast.LENGTH_SHORT).show();
     }
 
     /**
-     * 保存卷章结构
+     * 保存卷章结构（公开方法，带Toast提示）
      */
     public void saveStructure() {
+        saveStructureInternal(true);
+    }
+
+    /**
+     * 静默保存卷章结构（不显示Toast）
+     */
+    public void saveStructureSilently() {
+        saveStructureInternal(false);
+    }
+
+    /**
+     * 内部保存方法
+     * @param showToast 是否显示Toast提示
+     */
+    private void saveStructureInternal(boolean showToast) {
         if (currentStory == null) {
+            android.util.Log.e("WritingFragment", "保存失败: currentStory为null");
             return;
         }
 
+        // 更新卷章结构
         String structureJson = JsonUtils.toJson(volumes);
         currentStory.setStructure(structureJson);
+        
+        // 同时更新完整内容（从所有章节构建）
+        StringBuilder fullContent = new StringBuilder();
+        for (Volume volume : volumes) {
+            for (Chapter chapter : volume.getChapters()) {
+                // 添加章节标题
+                if (!TextUtils.isEmpty(chapter.getTitle())) {
+                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                }
+                // 添加章节内容
+                if (!TextUtils.isEmpty(chapter.getContent())) {
+                    fullContent.append(chapter.getContent()).append("\n\n");
+                }
+            }
+        }
+        currentStory.setContent(fullContent.toString().trim());
 
         int result = storyRepository.updateStory(currentStory);
         if (result > 0) {
-            Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
+            if (showToast) {
+                Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
+            if (showToast) {
+                Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
