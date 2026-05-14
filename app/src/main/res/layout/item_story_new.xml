@@ -100,6 +100,19 @@
             android:ellipsize="end"
             android:textColor="@android:color/black" />
 
+        <!-- 系列名 -->
+        <TextView
+            android:id="@+id/tv_series"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
         <!-- 简介 -->
         <TextView
             android:id="@+id/tv_description"

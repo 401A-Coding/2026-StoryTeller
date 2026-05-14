@@ -122,6 +122,15 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         // 标题
         holder.tvTitle.setText(story.getTitle());
 
+        // 系列名（如果有）
+        String seriesName = story.getSeriesName();
+        if (!TextUtils.isEmpty(seriesName)) {
+            holder.tvSeries.setVisibility(View.VISIBLE);
+            holder.tvSeries.setText("📚 " + seriesName);
+        } else {
+            holder.tvSeries.setVisibility(View.GONE);
+        }
+
         // 简介（如果有）
         String description = story.getDescription();
         if (!TextUtils.isEmpty(description)) {
@@ -360,6 +369,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         TextView tvCoverCategory;
         ImageButton btnMoreMenu;
         TextView tvTitle;
+        TextView tvSeries;
         TextView tvDescription;
         TextView tvStats;
         TextView tvTime;
@@ -372,6 +382,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
             btnMoreMenu = itemView.findViewById(R.id.btn_more_menu);
             tvTitle = itemView.findViewById(R.id.tv_title);
+            tvSeries = itemView.findViewById(R.id.tv_series);
             tvDescription = itemView.findViewById(R.id.tv_description);
             tvStats = itemView.findViewById(R.id.tv_stats);
             tvTime = itemView.findViewById(R.id.tv_time);
