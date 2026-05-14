@@ -27,6 +27,11 @@ public class StoryRepositoryImpl implements StoryRepository {
     }
     
     @Override
+    public int updateStoryWriting(int storyId, String structure, int wordCount, String content) {
+        return storyDao.updateStoryWriting(storyId, structure, wordCount, content);
+    }
+    
+    @Override
     public List<Story> getAllStories() {
         return storyDao.getAllStories();
     }

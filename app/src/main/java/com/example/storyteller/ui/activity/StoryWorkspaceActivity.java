@@ -330,7 +330,7 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             storyInfoPanelFragment.savePanelDataSilently();
         }
         
-        // 遍历所有Fragment，找到WritingFragment和ArchitectureFragment并保存（静默保存）
+        // 遍历所有Fragment，保存 WritingFragment 和 ArchitectureFragment
         List<Fragment> fragments = getSupportFragmentManager().getFragments();
         
         for (Fragment fragment : fragments) {
@@ -521,5 +521,17 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
                 }
             }
         }
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        // 退出前先保存所有数据（显示提示）
+        saveCurrentWorkInternal(true);
+        
+        // 延迟一下再finish，确保数据库事务完成
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            finish();
+        }, 100);
     }
 }

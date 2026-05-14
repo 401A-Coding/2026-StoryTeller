@@ -564,7 +564,9 @@ public class StoryInfoPanelFragment extends BaseFragment {
         // 文档面板暂时不保存
         // TODO: 后续添加专门的docs字段到Story模型
 
-        // 保存到数据库（目前实际上没有保存任何内容）
+        // 注意：目前 StoryInfoPanelFragment 不负责保存任何字段
+        // 避免覆盖其他 Fragment 的数据
+        /* 暂时禁用，避免覆盖其他Fragment的数据
         int result = storyRepository.updateStory(currentStory);
         if (showToast) {
             if (result > 0) {
@@ -573,6 +575,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
             }
         }
+        */
     }
 
     /**

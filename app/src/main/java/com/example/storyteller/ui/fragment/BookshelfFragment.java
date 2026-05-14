@@ -186,7 +186,12 @@ public class BookshelfFragment extends BaseFragment {
         if (storyDao == null || adapter == null) {
             return;
         }
+        
+        // 强制重新获取数据库连接，确保读取最新数据
+        storyDao = new StoryDao(requireContext());
+        
         List<Story> filteredStories = getFilteredStories();
+        
         adapter.setData(filteredStories);
 
         // 更新作品数量
@@ -203,10 +208,18 @@ public class BookshelfFragment extends BaseFragment {
     }
 
     /**
+     * 公开方法：刷新书架数据（供MainActivity调用）
+     */
+    public void refreshStoriesPublic() {
+        refreshStories();
+    }
+
+    /**
      * 获取过滤后的故事列表
      */
     private List<Story> getFilteredStories() {
         List<Story> allStories = storyDao.getAllStories();
+        
         List<Story> filteredStories = new ArrayList<>(allStories);
 
         // 应用筛选条件
