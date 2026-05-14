@@ -526,12 +526,12 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        // 退出前先保存所有数据（显示提示）
-        saveCurrentWorkInternal(true);
+        // 退出前先保存所有数据（静默保存，不显示Toast）
+        saveCurrentWorkSilently();
         
-        // 延迟一下再finish，确保数据库事务完成
+        // 延迟一下再调用super，确保数据库事务完成
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            finish();
+            StoryWorkspaceActivity.super.onBackPressed();
         }, 100);
     }
 }
