@@ -20,6 +20,11 @@ public interface StoryRepository {
     int updateStory(Story story);
     
     /**
+     * 只更新写作相关字段（structure、wordCount、content）
+     */
+    int updateStoryWriting(int storyId, String structure, int wordCount, String content);
+    
+    /**
      * 获取所有故事
      */
     List<Story> getAllStories();

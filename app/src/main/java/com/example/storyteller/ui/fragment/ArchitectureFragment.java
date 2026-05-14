@@ -225,7 +225,6 @@ public class ArchitectureFragment extends BaseFragment {
             isLoadingData = false;
             return;
         }
-
         // 填充数据
         etTitle.setText(currentStory.getTitle());
         
@@ -341,14 +340,20 @@ public class ArchitectureFragment extends BaseFragment {
             return;
         }
 
-        // 更新数据
+        // 更新内存中的数据
         currentStory.setTitle(title);
         currentStory.setCategory(newStatus);
         currentStory.setGenre(newGenresJson); // 存储为JSON数组
         currentStory.setDescription(description);
 
-        // 保存到数据库（静默保存）
-        int result = storyDao.updateStory(currentStory);
+        // 只更新架构相关字段，不覆盖字数和结构信息
+        int result = storyDao.updateStoryArchitecture(
+            currentStory.getId(), 
+            title, 
+            newStatus, 
+            newGenresJson, 
+            description
+        );
         
         // 通知监听器数据已更新
         if (listener != null) {
@@ -402,7 +407,7 @@ public class ArchitectureFragment extends BaseFragment {
             return;
         }
 
-        // 更新数据
+        // 更新内存中的数据
         currentStory.setTitle(title);
         String newStatus = (String) spinnerStatus.getSelectedItem();
         currentStory.setCategory(newStatus);
@@ -414,8 +419,14 @@ public class ArchitectureFragment extends BaseFragment {
         
         currentStory.setDescription(description);
 
-        // 保存到数据库
-        int result = storyDao.updateStory(currentStory);
+        // 只更新架构相关字段，不覆盖字数和结构信息
+        int result = storyDao.updateStoryArchitecture(
+            currentStory.getId(), 
+            title, 
+            newStatus, 
+            genresJson, 
+            description
+        );
         
         if (showToast) {
             if (result > 0) {

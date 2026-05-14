@@ -99,7 +99,10 @@ public class WritingFragment extends BaseFragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // View销毁时，清除编辑状态
+        // View销毁时，先保存数据，防止切换Tab导致数据丢失
+        android.util.Log.d("WritingFragment", "onDestroyView: 保存数据");
+        saveStructureSilently();
+        // 清除编辑状态
         currentEditingEditText = null;
     }
 
@@ -757,7 +760,14 @@ public class WritingFragment extends BaseFragment {
         }
         currentStory.setContent(fullContent.toString().trim());
 
-        int result = storyRepository.updateStory(currentStory);
+        // 只更新写作相关字段，不覆盖架构信息
+        int result = storyRepository.updateStoryWriting(
+            currentStory.getId(),
+            structureJson,
+            totalWordCount,
+            currentStory.getContent()
+        );
+        
         if (result > 0) {
             if (showToast) {
                 Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();

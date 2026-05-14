@@ -127,9 +127,9 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             cardBottomBar.setVisibility(View.GONE);
         }
 
-        // 返回按钮 - 自动保存并退出
+        // 返回按钮 - 静默保存并退出
         findViewById(R.id.btn_back).setOnClickListener(v -> {
-            saveCurrentWork();
+            saveCurrentWorkSilently();
             finish();
         });
         
@@ -158,11 +158,11 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     protected void initData() {
         storyDao = new StoryDao(this);
 
-        // 设置返回按钮处理 - 自动保存并退出
+        // 设置返回按钮处理 - 静默保存并退出
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                saveCurrentWork();
+                saveCurrentWorkSilently();
                 finish();
             }
         });
@@ -330,7 +330,7 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             storyInfoPanelFragment.savePanelDataSilently();
         }
         
-        // 遍历所有Fragment，找到WritingFragment和ArchitectureFragment并保存（静默保存）
+        // 遍历所有Fragment，保存 WritingFragment 和 ArchitectureFragment
         List<Fragment> fragments = getSupportFragmentManager().getFragments();
         
         for (Fragment fragment : fragments) {
@@ -454,10 +454,9 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
      * 重新加载小说数据
      */
     private void reloadStory(int newStoryId) {
-        // 最简单可靠的方法：重新启动Activity
+        // 重新启动Activity，但不清除任务栈，保持返回导航正常
         Intent intent = new Intent(this, StoryWorkspaceActivity.class);
         intent.putExtra(EXTRA_STORY_ID, newStoryId);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }

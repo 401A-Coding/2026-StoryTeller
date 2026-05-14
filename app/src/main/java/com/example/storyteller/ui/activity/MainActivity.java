@@ -66,6 +66,21 @@ public class MainActivity extends BaseActivity {
         bottomNav.setSelectedItemId(getMenuIdForTab(targetTab));
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 如果当前是书架Tab，通知Fragment刷新数据
+        if (bottomNav.getSelectedItemId() == R.id.menu_bookshelf) {
+            Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+            if (currentFragment instanceof com.example.storyteller.ui.fragment.BookshelfFragment) {
+                // 延迟一下，确保 StoryWorkspaceActivity 的数据库事务已完成
+                currentFragment.getView().postDelayed(() -> {
+                    ((com.example.storyteller.ui.fragment.BookshelfFragment) currentFragment).refreshStoriesPublic();
+                }, 50);
+            }
+        }
+    }
+
     private int getMenuIdForTab(String tab) {
         if (TAB_BOOKSHELF.equals(tab)) {
             return R.id.menu_bookshelf;

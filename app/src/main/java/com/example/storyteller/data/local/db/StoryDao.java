@@ -51,11 +51,50 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
+        
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
                 DBHelper.COL_STORY_ID + "=?",
                 new String[]{String.valueOf(story.getId())}
+        );
+    }
+
+    /**
+     * 只更新架构相关字段（标题、分类、标签、简介），不覆盖字数和结构
+     */
+    public int updateStoryArchitecture(int storyId, String title, String category, String genre, String description) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_TITLE, title);
+        values.put(DBHelper.COL_STORY_CATEGORY, category);
+        values.put(DBHelper.COL_STORY_GENRE, genre);
+        values.put(DBHelper.COL_STORY_DESCRIPTION, description);
+        
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    /**
+     * 只更新写作相关字段（structure、wordCount、content），不覆盖架构信息
+     */
+    public int updateStoryWriting(int storyId, String structure, int wordCount, String content) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_STRUCTURE, structure);
+        values.put(DBHelper.COL_STORY_WORD_COUNT, wordCount);
+        values.put(DBHelper.COL_STORY_CONTENT, content);
+        values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
         );
     }
 
@@ -253,6 +292,7 @@ public class StoryDao {
     public List<Story> getAllStories() {
         List<Story> stories = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
+        
         Cursor cursor = db.query(
                 DBHelper.TABLE_STORY,
                 null,
@@ -269,6 +309,7 @@ public class StoryDao {
             }
             cursor.close();
         }
+        
         return stories;
     }
 
