@@ -81,7 +81,12 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_IS_COLLECTED + " INTEGER DEFAULT 0, "
                 + COL_STORY_STRUCTURE + " TEXT, "
                 + COL_STORY_DESCRIPTION + " TEXT, "
-                + COL_STORY_PLOT_SUMMARY + " TEXT"
+                + COL_STORY_PLOT_SUMMARY + " TEXT, "
+                + COL_STORY_CATEGORY + " TEXT DEFAULT '创作中', "
+                + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2', "
+                + COL_STORY_COVER_PATH + " TEXT, "
+                + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0, "
+                + COL_STORY_SERIES_NAME + " TEXT"
                 + ")";
 
         String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
@@ -148,10 +153,18 @@ public class DBHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_PATH + " TEXT");
         }
         if (oldVersion < 8) {
-            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0");
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
         }
         if (oldVersion < 9) {
-            db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_SERIES_NAME + " TEXT");
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_SERIES_NAME + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
         }
     }
 }

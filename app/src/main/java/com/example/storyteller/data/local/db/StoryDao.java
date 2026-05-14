@@ -366,9 +366,14 @@ public class StoryDao {
         }
 
         String seriesName = null;
-        int seriesNameIndex = cursor.getColumnIndex(DBHelper.COL_STORY_SERIES_NAME);
-        if (seriesNameIndex >= 0 && !cursor.isNull(seriesNameIndex)) {
-            seriesName = cursor.getString(seriesNameIndex);
+        try {
+            int seriesNameIndex = cursor.getColumnIndex(DBHelper.COL_STORY_SERIES_NAME);
+            if (seriesNameIndex >= 0 && !cursor.isNull(seriesNameIndex)) {
+                seriesName = cursor.getString(seriesNameIndex);
+            }
+        } catch (Exception e) {
+            // 如果系列名字段不存在，使用null
+            seriesName = null;
         }
 
         return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName);

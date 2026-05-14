@@ -40,6 +40,7 @@ public class BookshelfFragment extends BaseFragment {
     private TextView tvEmptyHint;
     private RecyclerView recyclerView;
     private EditText etSearch;
+    private TextView btnSort;
 
     // 当前选中的分类索引：0=全部, 1=创作中, 2=已完成, 3=已收藏
     private int currentCategoryIndex = 0;
@@ -49,6 +50,9 @@ public class BookshelfFragment extends BaseFragment {
 
     // 搜索关键词
     private String searchKeyword = "";
+
+    // 当前排序方式：0=创建时间降序, 1=创建时间升序, 2=标题升序, 3=字数降序
+    private int currentSortType = 0;
 
     // 图片选择启动器
     private final ActivityResultLauncher<String> pickImageLauncher =
@@ -66,6 +70,7 @@ public class BookshelfFragment extends BaseFragment {
         tvStoryCount = view.findViewById(R.id.tv_story_count);
         tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
         etSearch = view.findViewById(R.id.et_search);
+        btnSort = view.findViewById(R.id.btn_sort);
 
         // 使用网格布局，每行2列
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
@@ -120,6 +125,9 @@ public class BookshelfFragment extends BaseFragment {
             public void onTabReselected(TabLayout.Tab tab) {}
         });
 
+        // 排序按钮点击
+        btnSort.setOnClickListener(v -> showSortMenu());
+
         // 创建故事按钮
         Button btnCreateStory = view.findViewById(R.id.btn_create_story);
         btnCreateStory.setOnClickListener(v -> showCreateStoryDialog());
@@ -127,6 +135,7 @@ public class BookshelfFragment extends BaseFragment {
 
     @Override
     protected void initData() {
+        updateSortButtonText();
         refreshStories();
     }
 
@@ -303,34 +312,80 @@ public class BookshelfFragment extends BaseFragment {
         return result;
     }
 
+    /**
+     * 根据当前排序方式排序
+     */
     private List<Story> sortStoriesForBookshelf(List<Story> source) {
         if (source == null || source.isEmpty()) {
             return source;
         }
 
         List<Story> sortedStories = new ArrayList<>(source);
-        String selectedStoryId = PrefsUtils.getInstance(requireContext())
-            .getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
         Collator collator = Collator.getInstance(Locale.CHINA);
 
-        sortedStories.sort((left, right) -> {
-            boolean leftIsSelected = selectedStoryId.equals(String.valueOf(left.getId()));
-            boolean rightIsSelected = selectedStoryId.equals(String.valueOf(right.getId()));
-            if (leftIsSelected != rightIsSelected) {
-                return leftIsSelected ? -1 : 1;
-            }
-
-            String leftTitle = left.getTitle() == null ? "" : left.getTitle().trim();
-            String rightTitle = right.getTitle() == null ? "" : right.getTitle().trim();
-            int titleCompare = collator.compare(leftTitle, rightTitle);
-            if (titleCompare != 0) {
-                return titleCompare;
-            }
-
-            return Long.compare(right.getCreateTime(), left.getCreateTime());
-        });
+        switch (currentSortType) {
+            case 0: // 创建时间降序（最新在前）
+                sortedStories.sort((left, right) -> 
+                    Long.compare(right.getCreateTime(), left.getCreateTime()));
+                break;
+            
+            case 1: // 创建时间升序（最早在前）
+                sortedStories.sort((left, right) -> 
+                    Long.compare(left.getCreateTime(), right.getCreateTime()));
+                break;
+            
+            case 2: // 标题升序（A-Z）
+                sortedStories.sort((left, right) -> {
+                    String leftTitle = left.getTitle() == null ? "" : left.getTitle().trim();
+                    String rightTitle = right.getTitle() == null ? "" : right.getTitle().trim();
+                    return collator.compare(leftTitle, rightTitle);
+                });
+                break;
+            
+            case 3: // 字数降序（多到少）
+                sortedStories.sort((left, right) -> 
+                    Integer.compare(right.getWordCount(), left.getWordCount()));
+                break;
+        }
 
         return sortedStories;
+    }
+
+    /**
+     * 显示排序菜单
+     */
+    private void showSortMenu() {
+        String[] sortOptions = {
+            "创建时间（最新在前）",
+            "创建时间（最早在前）",
+            "标题（A-Z）",
+            "字数（多到少）"
+        };
+        
+        new AlertDialog.Builder(requireContext())
+            .setTitle("选择排序方式")
+            .setSingleChoiceItems(sortOptions, currentSortType, (dialog, which) -> {
+                currentSortType = which;
+                refreshStories();
+                dialog.dismiss();
+                
+                // 更新按钮文本
+                updateSortButtonText();
+            })
+            .show();
+    }
+
+    /**
+     * 更新排序按钮文本
+     */
+    private void updateSortButtonText() {
+        String[] sortLabels = {
+            "⇅ 最新",
+            "⇅ 最早",
+            "⇅ 标题",
+            "⇅ 字数"
+        };
+        btnSort.setText(sortLabels[currentSortType]);
     }
 
     /**
