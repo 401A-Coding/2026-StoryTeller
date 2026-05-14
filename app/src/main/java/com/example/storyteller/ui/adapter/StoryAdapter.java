@@ -82,7 +82,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     @NonNull
     @Override
     public StoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_story, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_story_new, parent, false);
         return new StoryViewHolder(view);
     }
 
@@ -112,21 +112,6 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             setCoverGradient(holder, story);
         }
 
-        // 收藏按钮 - 始终显示，根据状态切换图标
-        if (story.isCollected()) {
-            holder.btnFavorite.setImageResource(R.drawable.ic_star_filled);
-        } else {
-            holder.btnFavorite.setImageResource(R.drawable.ic_star_border);
-        }
-        
-        // 收藏按钮点击事件
-        holder.btnFavorite.setOnClickListener(v -> {
-            toggleFavorite(story, holder);
-        });
-
-        // 封面标题
-        holder.tvCoverTitle.setText(story.getTitle());
-
         // 封面状态标签
         String category = story.getCategory();
         if (TextUtils.isEmpty(category)) {
@@ -134,9 +119,25 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         }
         holder.tvCoverCategory.setText(category);
 
-        // 底部信息
+        // 标题
         holder.tvTitle.setText(story.getTitle());
-        holder.tvTime.setText(dateFormat.format(new Date(story.getCreateTime())));
+
+        // 简介（如果有）
+        String description = story.getDescription();
+        if (!TextUtils.isEmpty(description)) {
+            holder.tvDescription.setVisibility(View.VISIBLE);
+            holder.tvDescription.setText(description);
+        } else {
+            holder.tvDescription.setVisibility(View.GONE);
+        }
+
+        // 统计信息：卷/章/字数
+        String statsText = buildStatsText(story);
+        holder.tvStats.setText(statsText);
+        
+        // 时间信息
+        String timeText = dateFormat.format(new Date(story.getCreateTime()));
+        holder.tvTime.setText(timeText);
 
         // 点击进入编辑页面
         holder.itemView.setOnClickListener(v -> {
@@ -147,34 +148,9 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             context.startActivity(intent);
         });
 
-        // 删除按钮
-        holder.btnDelete.setOnClickListener(v -> {
-            new AlertDialog.Builder(context)
-                .setTitle("删除故事")
-                .setMessage("确定要删除《" + story.getTitle() + "》吗？")
-                .setPositiveButton("删除", (dialog, which) -> {
-                    StoryDao storyDao = new StoryDao(context);
-
-                    String currentSelectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
-                    boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) &&
-                        currentSelectedId.equals(String.valueOf(story.getId()));
-
-                    int result = storyDao.deleteStory(story.getId());
-                    if (result > 0) {
-                        if (isDeletingSelectedStory) {
-                            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
-                            PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
-                        }
-                        Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show();
-                        if (deleteListener != null) {
-                            deleteListener.onStoryDeleted(story.getId());
-                        }
-                    } else {
-                        Toast.makeText(context, "删除失败", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("取消", null)
-                .show();
+        // 三点菜单按钮
+        holder.btnMoreMenu.setOnClickListener(v -> {
+            showMoreMenu(v, story, position);
         });
     }
 
@@ -215,22 +191,154 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     }
     
     /**
+     * 构建统计信息文本
+     */
+    private String buildStatsText(Story story) {
+        // 从 structure 中解析卷数和章数
+        int volumeCount = 0;
+        int chapterCount = 0;
+        
+        String structureJson = story.getStructure();
+        if (!TextUtils.isEmpty(structureJson)) {
+            try {
+                java.util.List<com.example.storyteller.model.Volume> volumes = 
+                    com.example.storyteller.utils.JsonUtils.fromJson(structureJson,
+                        new com.google.gson.reflect.TypeToken<java.util.List<com.example.storyteller.model.Volume>>(){}.getType());
+                
+                if (volumes != null) {
+                    volumeCount = volumes.size();
+                    for (com.example.storyteller.model.Volume volume : volumes) {
+                        if (volume.getChapters() != null) {
+                            chapterCount += volume.getChapters().size();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        
+        int wordCount = story.getWordCount();
+        String wordCountText = formatWordCount(wordCount);
+        
+        return "📚 " + volumeCount + "卷 · " + chapterCount + "章 · 📖 " + wordCountText;
+    }
+    
+    /**
+     * 格式化字数
+     */
+    private String formatWordCount(int wordCount) {
+        if (wordCount < 10000) {
+            return wordCount + "字";
+        } else {
+            double wan = wordCount / 10000.0;
+            return String.format("%.1f万字", wan);
+        }
+    }
+    
+    /**
+     * 显示更多操作菜单
+     */
+    private void showMoreMenu(View anchorView, Story story, int position) {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(context, anchorView);
+        popupMenu.getMenu().add("⭐ " + (story.isCollected() ? "取消收藏" : "收藏"));
+        popupMenu.getMenu().add("📷 上传封面");
+        popupMenu.getMenu().add("📝 修改分类");
+        popupMenu.getMenu().add("🗑️ 删除故事");
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            String title = item.getTitle().toString();
+            if (title.contains("收藏")) {
+                toggleFavorite(story);
+                return true;
+            } else if (title.contains("上传封面")) {
+                if (pickCoverImageListener != null) {
+                    pickCoverImageListener.onPickCoverImage(story.getId());
+                }
+                return true;
+            } else if (title.contains("修改分类")) {
+                showCategoryChangeDialog(story);
+                return true;
+            } else if (title.contains("删除")) {
+                showDeleteConfirmDialog(story, position);
+                return true;
+            }
+            return false;
+        });
+        
+        popupMenu.show();
+    }
+    
+    /**
      * 切换收藏状态
      */
-    private void toggleFavorite(Story story, StoryViewHolder holder) {
+    private void toggleFavorite(Story story) {
         boolean newCollected = !story.isCollected();
         StoryDao storyDao = new StoryDao(context);
         storyDao.updateStoryCollected(story.getId(), newCollected);
         story.setCollected(newCollected);
         
-        // 更新图标
-        if (newCollected) {
-            holder.btnFavorite.setImageResource(R.drawable.ic_star_filled);
-        } else {
-            holder.btnFavorite.setImageResource(R.drawable.ic_star_border);
-        }
-        
         Toast.makeText(context, newCollected ? "已收藏" : "已取消收藏", Toast.LENGTH_SHORT).show();
+        
+        // 通知刷新
+        if (categoryChangeListener != null) {
+            categoryChangeListener.onCategoryChanged(story.getId(), story.getCategory());
+        }
+    }
+    
+    /**
+     * 显示修改分类对话框
+     */
+    private void showCategoryChangeDialog(Story story) {
+        String[] categories = {"创作中", "已完成"};
+        new AlertDialog.Builder(context)
+            .setTitle("修改分类")
+            .setItems(categories, (dialog, which) -> {
+                String newCategory = categories[which];
+                StoryDao storyDao = new StoryDao(context);
+                storyDao.updateStoryCategory(story.getId(), newCategory);
+                story.setCategory(newCategory);
+                
+                Toast.makeText(context, "已修改为：" + newCategory, Toast.LENGTH_SHORT).show();
+                
+                // 通知刷新
+                if (categoryChangeListener != null) {
+                    categoryChangeListener.onCategoryChanged(story.getId(), newCategory);
+                }
+            })
+            .show();
+    }
+    
+    /**
+     * 显示删除确认对话框
+     */
+    private void showDeleteConfirmDialog(Story story, int position) {
+        new AlertDialog.Builder(context)
+            .setTitle("删除故事")
+            .setMessage("确定要删除《" + story.getTitle() + "》吗？")
+            .setPositiveButton("删除", (dialog, which) -> {
+                StoryDao storyDao = new StoryDao(context);
+
+                String currentSelectedId = PrefsUtils.getInstance(context).getString(PREF_SELECTED_STORY_ID, "");
+                boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) &&
+                    currentSelectedId.equals(String.valueOf(story.getId()));
+
+                int result = storyDao.deleteStory(story.getId());
+                if (result > 0) {
+                    if (isDeletingSelectedStory) {
+                        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
+                        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
+                    }
+                    Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show();
+                    if (deleteListener != null) {
+                        deleteListener.onStoryDeleted(story.getId());
+                    }
+                } else {
+                    Toast.makeText(context, "删除失败", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("取消", null)
+            .show();
     }
 
 
@@ -249,24 +357,24 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         View layoutCover;
         View vCoverBackground;
         ImageView ivCoverImage;
-        ImageButton btnFavorite;
-        TextView tvCoverTitle;
         TextView tvCoverCategory;
+        ImageButton btnMoreMenu;
         TextView tvTitle;
+        TextView tvDescription;
+        TextView tvStats;
         TextView tvTime;
-        ImageView btnDelete;
 
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             layoutCover = itemView.findViewById(R.id.layout_cover);
             vCoverBackground = itemView.findViewById(R.id.v_cover_background);
             ivCoverImage = itemView.findViewById(R.id.iv_cover_image);
-            btnFavorite = itemView.findViewById(R.id.btn_favorite);
-            tvCoverTitle = itemView.findViewById(R.id.tv_cover_title);
             tvCoverCategory = itemView.findViewById(R.id.tv_cover_category);
+            btnMoreMenu = itemView.findViewById(R.id.btn_more_menu);
             tvTitle = itemView.findViewById(R.id.tv_title);
+            tvDescription = itemView.findViewById(R.id.tv_description);
+            tvStats = itemView.findViewById(R.id.tv_stats);
             tvTime = itemView.findViewById(R.id.tv_time);
-            btnDelete = itemView.findViewById(R.id.btn_delete);
         }
     }
 }

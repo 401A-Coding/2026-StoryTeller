@@ -25,6 +25,8 @@ public class Story {
     private String coverColor;
     // 封面图片路径（用户上传的封面图片文件路径）
     private String coverPath;
+    // 总字数
+    private int wordCount;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -39,6 +41,7 @@ public class Story {
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
+        this.wordCount = 0;
     }
 
     // 数据库查询用构造方法
@@ -55,6 +58,7 @@ public class Story {
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
+        this.wordCount = 0;
     }
 
     // 完整构造方法（含 plotSummaryJson）
@@ -71,6 +75,7 @@ public class Story {
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
+        this.wordCount = 0;
     }
 
     // 完整构造方法（含分类和封面颜色）
@@ -87,6 +92,7 @@ public class Story {
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = null;
+        this.wordCount = 0;
     }
 
     // 完整构造方法（含所有字段）
@@ -103,6 +109,24 @@ public class Story {
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = coverPath;
+        this.wordCount = 0;
+    }
+
+    // 完整构造方法（含wordCount）
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String plotSummaryJson, String category, String coverColor, String coverPath, int wordCount) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.genre = genre;
+        this.createTime = createTime;
+        this.isCollected = isCollected;
+        this.structure = structure;
+        this.description = description;
+        this.plotSummaryJson = plotSummaryJson;
+        this.category = category;
+        this.coverColor = coverColor;
+        this.coverPath = coverPath;
+        this.wordCount = wordCount;
     }
 
     /**
@@ -147,4 +171,6 @@ public class Story {
     public void setCoverColor(String coverColor) { this.coverColor = coverColor; }
     public String getCoverPath() { return coverPath; }
     public void setCoverPath(String coverPath) { this.coverPath = coverPath; }
+    public int getWordCount() { return wordCount; }
+    public void setWordCount(int wordCount) { this.wordCount = wordCount; }
 }

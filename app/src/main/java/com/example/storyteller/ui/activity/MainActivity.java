@@ -6,6 +6,7 @@ import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.ui.fragment.BookshelfFragment;
 import com.example.storyteller.ui.fragment.HomeFragment;
 import com.example.storyteller.ui.fragment.MineFragment;
+import com.example.storyteller.utils.DatabaseMigrationUtils;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.fragment.app.Fragment;
 
@@ -50,6 +51,9 @@ public class MainActivity extends BaseActivity {
 
     @Override
     protected void initData() {
+        // 初始化故事字数统计（仅在首次启动或数据库升级后执行）
+        DatabaseMigrationUtils.initializeWordCounts(this);
+        
         String targetTab = getIntent() != null ? getIntent().getStringExtra(EXTRA_TARGET_TAB) : null;
         bottomNav.setSelectedItemId(getMenuIdForTab(targetTab));
     }

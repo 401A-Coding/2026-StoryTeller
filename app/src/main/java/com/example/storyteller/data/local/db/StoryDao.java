@@ -31,6 +31,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
+        values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -47,6 +48,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
+        values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -118,6 +120,99 @@ public class StoryDao {
                 DBHelper.COL_STORY_ID + "=?",
                 new String[]{String.valueOf(storyId)}
         );
+    }
+
+    /**
+     * 增加故事字数（创建章节时调用）
+     */
+    public void incrementWordCount(int storyId, int wordCount) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        db.execSQL(
+                "UPDATE " + DBHelper.TABLE_STORY + 
+                " SET " + DBHelper.COL_STORY_WORD_COUNT + " = " + DBHelper.COL_STORY_WORD_COUNT + " + ?, " +
+                DBHelper.COL_STORY_CREATE_TIME + " = ? " +
+                "WHERE " + DBHelper.COL_STORY_ID + " = ?",
+                new Object[]{wordCount, System.currentTimeMillis(), storyId}
+        );
+    }
+
+    /**
+     * 减少故事字数（删除章节时调用）
+     */
+    public void decrementWordCount(int storyId, int wordCount) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        db.execSQL(
+                "UPDATE " + DBHelper.TABLE_STORY + 
+                " SET " + DBHelper.COL_STORY_WORD_COUNT + " = " + DBHelper.COL_STORY_WORD_COUNT + " - ?, " +
+                DBHelper.COL_STORY_CREATE_TIME + " = ? " +
+                "WHERE " + DBHelper.COL_STORY_ID + " = ?",
+                new Object[]{wordCount, System.currentTimeMillis(), storyId}
+        );
+    }
+
+    /**
+     * 重新计算故事字数（编辑章节或数据修复时调用）
+     */
+    public void recalculateWordCount(int storyId) {
+        Story story = getStoryById(storyId);
+        if (story == null) {
+            return;
+        }
+        
+        int totalWords = calculateWordCountFromStructure(story.getStructure());
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_WORD_COUNT, totalWords);
+        values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    /**
+     * 批量初始化所有故事的字数（一次性任务）
+     */
+    public void recalculateAllWordCounts() {
+        List<Story> allStories = getAllStories();
+        for (Story story : allStories) {
+            recalculateWordCount(story.getId());
+        }
+    }
+
+    /**
+     * 从JSON结构计算字数
+     */
+    private int calculateWordCountFromStructure(String structureJson) {
+        if (structureJson == null || structureJson.isEmpty()) {
+            return 0;
+        }
+        
+        try {
+            // 使用TypeToken解析List<Volume>
+            java.util.List<com.example.storyteller.model.Volume> volumes = 
+                com.example.storyteller.utils.JsonUtils.fromJson(structureJson,
+                    new com.google.gson.reflect.TypeToken<java.util.List<com.example.storyteller.model.Volume>>(){}.getType());
+            
+            int total = 0;
+            if (volumes != null) {
+                for (com.example.storyteller.model.Volume volume : volumes) {
+                    if (volume.getChapters() != null) {
+                        for (com.example.storyteller.model.Chapter chapter : volume.getChapters()) {
+                            if (chapter.getContent() != null) {
+                                total += chapter.getContent().length();
+                            }
+                        }
+                    }
+                }
+            }
+            return total;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 
     public int setCollected(int storyId, boolean collected) {
@@ -262,6 +357,12 @@ public class StoryDao {
             coverPath = cursor.getString(coverPathIndex);
         }
 
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath);
+        int wordCount = 0;
+        int wordCountIndex = cursor.getColumnIndex(DBHelper.COL_STORY_WORD_COUNT);
+        if (wordCountIndex >= 0 && !cursor.isNull(wordCountIndex)) {
+            wordCount = cursor.getInt(wordCountIndex);
+        }
+
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount);
     }
 }

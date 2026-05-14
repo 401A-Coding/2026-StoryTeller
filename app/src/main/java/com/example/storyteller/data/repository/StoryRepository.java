@@ -33,4 +33,9 @@ public interface StoryRepository {
      * 删除故事
      */
     int deleteStory(int storyId);
+    
+    /**
+     * 减少故事字数
+     */
+    void decrementWordCount(int storyId, int wordCount);
 }

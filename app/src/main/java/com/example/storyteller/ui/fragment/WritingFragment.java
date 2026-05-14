@@ -667,6 +667,9 @@ public class WritingFragment extends BaseFragment {
             return;
         }
         
+        // 计算删除的字数
+        int deletedWordCount = chapter.getContent() != null ? chapter.getContent().length() : 0;
+        
         Chapter removedChapter = volume.getChapters().remove(listIndex);
         
         // 重新编号章节
@@ -676,6 +679,12 @@ public class WritingFragment extends BaseFragment {
         
         // 先静默保存并刷新UI
         saveStructureSilently();
+        
+        // 更新字数统计
+        if (currentStory != null && deletedWordCount > 0) {
+            storyRepository.decrementWordCount(currentStory.getId(), deletedWordCount);
+        }
+        
         renderVolumes();
         
         // 通知目录刷新
@@ -722,9 +731,20 @@ public class WritingFragment extends BaseFragment {
             return;
         }
 
+        // 计算总字数
+        int totalWordCount = 0;
+        for (Volume volume : volumes) {
+            for (Chapter chapter : volume.getChapters()) {
+                if (chapter.getContent() != null) {
+                    totalWordCount += chapter.getContent().length();
+                }
+            }
+        }
+        
         // 更新卷章结构
         String structureJson = JsonUtils.toJson(volumes);
         currentStory.setStructure(structureJson);
+        currentStory.setWordCount(totalWordCount);
         
         // 同时更新完整内容（从所有章节构建）
         StringBuilder fullContent = new StringBuilder();
