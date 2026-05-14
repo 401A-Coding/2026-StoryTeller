@@ -127,9 +127,9 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             cardBottomBar.setVisibility(View.GONE);
         }
 
-        // 返回按钮 - 自动保存并退出
+        // 返回按钮 - 静默保存并退出
         findViewById(R.id.btn_back).setOnClickListener(v -> {
-            saveCurrentWork();
+            saveCurrentWorkSilently();
             finish();
         });
         
@@ -158,11 +158,11 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     protected void initData() {
         storyDao = new StoryDao(this);
 
-        // 设置返回按钮处理 - 自动保存并退出
+        // 设置返回按钮处理 - 静默保存并退出
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                saveCurrentWork();
+                saveCurrentWorkSilently();
                 finish();
             }
         });
