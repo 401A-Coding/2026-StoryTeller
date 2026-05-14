@@ -27,6 +27,8 @@ public class Story {
     private String coverPath;
     // 总字数
     private int wordCount;
+    // 系列名称（可为空）
+    private String seriesName;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -42,6 +44,7 @@ public class Story {
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
         this.wordCount = 0;
+        this.seriesName = null;
     }
 
     // 数据库查询用构造方法
@@ -59,6 +62,7 @@ public class Story {
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
         this.wordCount = 0;
+        this.seriesName = null;
     }
 
     // 完整构造方法（含 plotSummaryJson）
@@ -76,6 +80,7 @@ public class Story {
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
         this.wordCount = 0;
+        this.seriesName = null;
     }
 
     // 完整构造方法（含分类和封面颜色）
@@ -93,6 +98,7 @@ public class Story {
         this.coverColor = coverColor;
         this.coverPath = null;
         this.wordCount = 0;
+        this.seriesName = null;
     }
 
     // 完整构造方法（含所有字段）
@@ -110,6 +116,7 @@ public class Story {
         this.coverColor = coverColor;
         this.coverPath = coverPath;
         this.wordCount = 0;
+        this.seriesName = null;
     }
 
     // 完整构造方法（含wordCount）
@@ -127,6 +134,25 @@ public class Story {
         this.coverColor = coverColor;
         this.coverPath = coverPath;
         this.wordCount = wordCount;
+        this.seriesName = null;
+    }
+
+    // 完整构造方法（含seriesName）
+    public Story(int id, String title, String content, String genre, long createTime, boolean isCollected, String structure, String description, String plotSummaryJson, String category, String coverColor, String coverPath, int wordCount, String seriesName) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.genre = genre;
+        this.createTime = createTime;
+        this.isCollected = isCollected;
+        this.structure = structure;
+        this.description = description;
+        this.plotSummaryJson = plotSummaryJson;
+        this.category = category;
+        this.coverColor = coverColor;
+        this.coverPath = coverPath;
+        this.wordCount = wordCount;
+        this.seriesName = seriesName;
     }
 
     /**
@@ -173,4 +199,6 @@ public class Story {
     public void setCoverPath(String coverPath) { this.coverPath = coverPath; }
     public int getWordCount() { return wordCount; }
     public void setWordCount(int wordCount) { this.wordCount = wordCount; }
+    public String getSeriesName() { return seriesName; }
+    public void setSeriesName(String seriesName) { this.seriesName = seriesName; }
 }

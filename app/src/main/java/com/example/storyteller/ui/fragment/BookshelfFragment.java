@@ -39,12 +39,16 @@ public class BookshelfFragment extends BaseFragment {
     private TextView tvStoryCount;
     private TextView tvEmptyHint;
     private RecyclerView recyclerView;
+    private EditText etSearch;
 
     // 当前选中的分类索引：0=全部, 1=创作中, 2=已完成, 3=已收藏
     private int currentCategoryIndex = 0;
 
     // 当前正在设置封面的故事ID
     private int pendingCoverStoryId = -1;
+
+    // 搜索关键词
+    private String searchKeyword = "";
 
     // 图片选择启动器
     private final ActivityResultLauncher<String> pickImageLauncher =
@@ -61,6 +65,7 @@ public class BookshelfFragment extends BaseFragment {
         tabCategory = view.findViewById(R.id.tab_category);
         tvStoryCount = view.findViewById(R.id.tv_story_count);
         tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
+        etSearch = view.findViewById(R.id.et_search);
 
         // 使用网格布局，每行2列
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
@@ -84,6 +89,21 @@ public class BookshelfFragment extends BaseFragment {
         });
 
         recyclerView.setAdapter(adapter);
+
+        // 搜索框文本变化监听
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                searchKeyword = s.toString().trim();
+                refreshStories();
+            }
+        });
 
         // 分类标签切换
         tabCategory.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -201,6 +221,11 @@ public class BookshelfFragment extends BaseFragment {
                 break;
         }
 
+        // 应用搜索过滤
+        if (!TextUtils.isEmpty(searchKeyword)) {
+            filteredStories = filterBySearch(filteredStories, searchKeyword);
+        }
+
         return sortStoriesForBookshelf(filteredStories);
     }
 
@@ -231,6 +256,50 @@ public class BookshelfFragment extends BaseFragment {
                 result.add(story);
             }
         }
+        return result;
+    }
+
+    /**
+     * 按搜索关键词过滤
+     */
+    private List<Story> filterBySearch(List<Story> stories, String keyword) {
+        if (TextUtils.isEmpty(keyword)) {
+            return stories;
+        }
+        
+        String lowerKeyword = keyword.toLowerCase();
+        List<Story> result = new ArrayList<>();
+        
+        for (Story story : stories) {
+            boolean matched = false;
+            
+            // 搜索标题
+            String title = story.getTitle();
+            if (!TextUtils.isEmpty(title) && title.toLowerCase().contains(lowerKeyword)) {
+                matched = true;
+            }
+            
+            // 搜索简介
+            if (!matched) {
+                String description = story.getDescription();
+                if (!TextUtils.isEmpty(description) && description.toLowerCase().contains(lowerKeyword)) {
+                    matched = true;
+                }
+            }
+            
+            // 搜索系列名
+            if (!matched) {
+                String seriesName = story.getSeriesName();
+                if (!TextUtils.isEmpty(seriesName) && seriesName.toLowerCase().contains(lowerKeyword)) {
+                    matched = true;
+                }
+            }
+            
+            if (matched) {
+                result.add(story);
+            }
+        }
+        
         return result;
     }
 
@@ -290,9 +359,12 @@ public class BookshelfFragment extends BaseFragment {
             String description = etDescription.getText().toString().trim();
 
             // Create empty story
-            Story newStory = new Story(title, "", TextUtils.isEmpty(seriesName) ? "创作" : seriesName, System.currentTimeMillis());
+            Story newStory = new Story(title, "", "创作", System.currentTimeMillis());
             if (!TextUtils.isEmpty(description)) {
                 newStory.setDescription(description);
+            }
+            if (!TextUtils.isEmpty(seriesName)) {
+                newStory.setSeriesName(seriesName);
             }
 
             // Initialize with one volume and one chapter

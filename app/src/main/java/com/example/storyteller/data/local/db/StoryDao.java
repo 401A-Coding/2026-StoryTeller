@@ -32,6 +32,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
+        values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -49,6 +50,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
+        values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
         return db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -363,6 +365,12 @@ public class StoryDao {
             wordCount = cursor.getInt(wordCountIndex);
         }
 
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount);
+        String seriesName = null;
+        int seriesNameIndex = cursor.getColumnIndex(DBHelper.COL_STORY_SERIES_NAME);
+        if (seriesNameIndex >= 0 && !cursor.isNull(seriesNameIndex)) {
+            seriesName = cursor.getString(seriesNameIndex);
+        }
+
+        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName);
     }
 }

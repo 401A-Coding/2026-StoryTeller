@@ -17,6 +17,29 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 搜索框 -->
+    <EditText
+        android:id="@+id/et_search"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:hint="搜索标题或系列..."
+        android:inputType="text"
+        android:maxLines="1"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:background="@drawable/bg_outline_edittext"
+        android:textSize="14sp"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawablePadding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/tv_bookshelf_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- 分类标签栏 -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_category"
@@ -32,7 +55,7 @@
         app:tabIndicator="@null"
         app:tabBackground="@drawable/tab_category_bg"
         app:tabRippleColor="@null"
-        app:layout_constraintTop_toBottomOf="@id/tv_bookshelf_title"
+        app:layout_constraintTop_toBottomOf="@id/et_search"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
