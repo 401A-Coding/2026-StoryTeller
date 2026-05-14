@@ -680,11 +680,6 @@ public class WritingFragment extends BaseFragment {
         // 先静默保存并刷新UI
         saveStructureSilently();
         
-        // 更新字数统计
-        if (currentStory != null && deletedWordCount > 0) {
-            storyRepository.decrementWordCount(currentStory.getId(), deletedWordCount);
-        }
-        
         renderVolumes();
         
         // 通知目录刷新

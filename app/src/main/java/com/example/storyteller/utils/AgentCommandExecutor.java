@@ -886,6 +886,7 @@ public class AgentCommandExecutor {
         
         // 同时更新故事内容（从所有章节构建完整内容）
         StringBuilder fullContent = new StringBuilder();
+        int totalWordCount = 0; // 计算总字数
         for (Volume volume : volumes) {
             for (Chapter chapter : volume.getChapters()) {
                 if (!TextUtils.isEmpty(chapter.getTitle())) {
@@ -893,10 +894,12 @@ public class AgentCommandExecutor {
                 }
                 if (!TextUtils.isEmpty(chapter.getContent())) {
                     fullContent.append(chapter.getContent()).append("\n\n");
+                    totalWordCount += chapter.getContent().length(); // 累加字数
                 }
             }
         }
         story.setContent(fullContent.toString().trim());
+        story.setWordCount(totalWordCount); // 更新字数统计
         story.setPlotSummaryJson(null);
 
         // 保存到数据库
