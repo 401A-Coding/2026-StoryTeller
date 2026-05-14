@@ -12,10 +12,7 @@
         android:layout_height="200dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="4dp"
-        app:cardUseCompatPadding="false"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?attr/selectableItemBackground">
+        app:cardUseCompatPadding="false">
 
         <!-- 封面区域 -->
         <FrameLayout
