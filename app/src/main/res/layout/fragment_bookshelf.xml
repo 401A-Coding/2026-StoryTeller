@@ -26,11 +26,23 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+        <!-- 帮助按钮 -->
+        <ImageButton
+            android:id="@+id/btn_help"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="使用帮助"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_help"
+            app:tint="#2196F3" />
+
         <Button
             android:id="@+id/btn_create_story"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="+ 创建小说"
+            android:text="+ 创建"
             android:textAllCaps="false"
             android:textSize="14sp"
             android:paddingStart="12dp"

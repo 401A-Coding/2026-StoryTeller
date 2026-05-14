@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -115,6 +116,10 @@ public class BookshelfFragment extends BaseFragment {
 
         // 筛选按钮点击
         btnFilter.setOnClickListener(v -> showFilterMenu());
+
+        // 帮助按钮点击
+        ImageButton btnHelp = view.findViewById(R.id.btn_help);
+        btnHelp.setOnClickListener(v -> showHelpDialog());
 
         // 创建故事按钮
         Button btnCreateStory = view.findViewById(R.id.btn_create_story);
@@ -443,6 +448,37 @@ public class BookshelfFragment extends BaseFragment {
         } else {
             btnFilter.setText("☰ 筛选");
         }
+    }
+
+    /**
+     * 显示使用帮助对话框
+     */
+    private void showHelpDialog() {
+        String helpMessage = 
+            "📚 管理你的小说\n\n" +
+            "快速上手指南：\n\n" +
+            "1️⃣ 创建小说\n" +
+            "   • 点击右上角“+ 创建”按钮\n" +
+            "   • 输入标题、系列名（可选）和简介\n" +
+            "   • 自动创建一个卷和一个章节\n\n" +
+            "2️⃣ 查找小说\n" +
+            "   • 使用搜索框按标题或系列名搜索\n" +
+            "   • 点击“⇅ 排序”按时间/标题/字数排序\n" +
+            "   • 点击“☰ 筛选”按收藏/状态筛选\n\n" +
+            "3️⃣ 编辑小说\n" +
+            "   • 点击卡片任意位置进入编辑页面\n" +
+            "   • 在架构Tab修改标题、分类、标签等\n" +
+            "   • 在目录Tab编写章节内容\n\n" +
+            "4️⃣ 管理小说\n" +
+            "   • 点击三点菜单：收藏/上传封面/修改分类/删除\n" +
+            "   • 定期整理书架，保持创作节奏\n\n" +
+            "💡 提示：点击卡片直接进入编辑，无需经过详情页！";
+        
+        new AlertDialog.Builder(requireContext())
+            .setTitle("❓ 使用帮助")
+            .setMessage(helpMessage)
+            .setPositiveButton("知道了", null)
+            .show();
     }
 
     /**
