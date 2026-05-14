@@ -40,4 +40,9 @@ public class StoryRepositoryImpl implements StoryRepository {
     public int deleteStory(int storyId) {
         return storyDao.deleteStory(storyId);
     }
+    
+    @Override
+    public void decrementWordCount(int storyId, int wordCount) {
+        storyDao.decrementWordCount(storyId, wordCount);
+    }
 }

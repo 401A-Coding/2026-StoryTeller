@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 7;
+    private static final int DB_VERSION = 9;
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -23,6 +23,8 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_CATEGORY = "category";  // 书架分类：全部/创作中/已完成/已收藏
     public static final String COL_STORY_COVER_COLOR = "cover_color";  // 封面颜色
     public static final String COL_STORY_COVER_PATH = "cover_path";  // 封面图片路径
+    public static final String COL_STORY_WORD_COUNT = "word_count";  // 总字数
+    public static final String COL_STORY_SERIES_NAME = "series_name";  // 系列名称
 
     // 素材表字段
     public static final String TABLE_MATERIAL = "material";
@@ -79,7 +81,12 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_IS_COLLECTED + " INTEGER DEFAULT 0, "
                 + COL_STORY_STRUCTURE + " TEXT, "
                 + COL_STORY_DESCRIPTION + " TEXT, "
-                + COL_STORY_PLOT_SUMMARY + " TEXT"
+                + COL_STORY_PLOT_SUMMARY + " TEXT, "
+                + COL_STORY_CATEGORY + " TEXT DEFAULT '创作中', "
+                + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2', "
+                + COL_STORY_COVER_PATH + " TEXT, "
+                + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0, "
+                + COL_STORY_SERIES_NAME + " TEXT"
                 + ")";
 
         String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
@@ -144,6 +151,20 @@ public class DBHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_CATEGORY + " TEXT DEFAULT '全部'");
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2'");
             db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_COVER_PATH + " TEXT");
+        }
+        if (oldVersion < 8) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+        }
+        if (oldVersion < 9) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_SERIES_NAME + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
         }
     }
 }

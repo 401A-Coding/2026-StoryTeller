@@ -78,7 +78,7 @@ public class ArchitectureFragment extends BaseFragment {
     
     // 状态选项
     private static final String[] STATUS_OPTIONS = {
-        "创作中", "已完结", "暂停更新"
+        "创作中", "已完成", "暂停更新"
     };
     
     // 封面图片请求码
