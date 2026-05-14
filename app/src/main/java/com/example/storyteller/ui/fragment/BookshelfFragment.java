@@ -22,7 +22,6 @@ import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.StoryAdapter;
-import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,15 +34,12 @@ import java.util.Locale;
 public class BookshelfFragment extends BaseFragment {
     private StoryDao storyDao;
     private StoryAdapter adapter;
-    private TabLayout tabCategory;
     private TextView tvStoryCount;
     private TextView tvEmptyHint;
     private RecyclerView recyclerView;
     private EditText etSearch;
     private TextView btnSort;
-
-    // 当前选中的分类索引：0=全部, 1=创作中, 2=已完成, 3=已收藏
-    private int currentCategoryIndex = 0;
+    private TextView btnFilter;
 
     // 当前正在设置封面的故事ID
     private int pendingCoverStoryId = -1;
@@ -53,6 +49,10 @@ public class BookshelfFragment extends BaseFragment {
 
     // 当前排序方式：0=创建时间降序, 1=创建时间升序, 2=标题升序, 3=字数降序
     private int currentSortType = 0;
+
+    // 筛选条件
+    private boolean filterOnlyCollected = false; // 仅显示收藏
+    private String filterByStatus = null; // 按状态筛选：null=全部, "创作中", "已完成"
 
     // 图片选择启动器
     private final ActivityResultLauncher<String> pickImageLauncher =
@@ -66,11 +66,11 @@ public class BookshelfFragment extends BaseFragment {
     @Override
     protected void initView(View view) {
         recyclerView = view.findViewById(R.id.rv_story_list);
-        tabCategory = view.findViewById(R.id.tab_category);
         tvStoryCount = view.findViewById(R.id.tv_story_count);
         tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
         etSearch = view.findViewById(R.id.et_search);
         btnSort = view.findViewById(R.id.btn_sort);
+        btnFilter = view.findViewById(R.id.btn_filter);
 
         // 使用网格布局，每行2列
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
@@ -110,23 +110,11 @@ public class BookshelfFragment extends BaseFragment {
             }
         });
 
-        // 分类标签切换
-        tabCategory.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                currentCategoryIndex = tab.getPosition();
-                refreshStories();
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {}
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
-        });
-
         // 排序按钮点击
         btnSort.setOnClickListener(v -> showSortMenu());
+
+        // 筛选按钮点击
+        btnFilter.setOnClickListener(v -> showFilterMenu());
 
         // 创建故事按钮
         Button btnCreateStory = view.findViewById(R.id.btn_create_story);
@@ -136,6 +124,7 @@ public class BookshelfFragment extends BaseFragment {
     @Override
     protected void initData() {
         updateSortButtonText();
+        updateFilterButtonText();
         refreshStories();
     }
 
@@ -209,25 +198,19 @@ public class BookshelfFragment extends BaseFragment {
     }
 
     /**
-     * 根据当前选中的分类获取过滤后的故事列表
+     * 获取过滤后的故事列表
      */
     private List<Story> getFilteredStories() {
         List<Story> allStories = storyDao.getAllStories();
-        List<Story> filteredStories;
+        List<Story> filteredStories = new ArrayList<>(allStories);
 
-        switch (currentCategoryIndex) {
-            case 1: // 创作中
-                filteredStories = filterByCategory(allStories, getString(R.string.bookshelf_category_writing));
-                break;
-            case 2: // 已完成
-                filteredStories = filterByCategory(allStories, getString(R.string.bookshelf_category_completed));
-                break;
-            case 3: // 收藏（独立于创作中/已完成，任何故事都可以收藏）
-                filteredStories = getCollectedStories(allStories);
-                break;
-            default: // 全部
-                filteredStories = new ArrayList<>(allStories);
-                break;
+        // 应用筛选条件
+        if (filterOnlyCollected) {
+            filteredStories = getCollectedStories(filteredStories);
+        }
+        
+        if (filterByStatus != null) {
+            filteredStories = filterByCategory(filteredStories, filterByStatus);
         }
 
         // 应用搜索过滤
@@ -248,7 +231,15 @@ public class BookshelfFragment extends BaseFragment {
             if (TextUtils.isEmpty(storyCategory)) {
                 storyCategory = "创作中";
             }
-            if (category.equals(storyCategory)) {
+            // 兼容“已完成”和“已完结”
+            boolean matched = category.equals(storyCategory);
+            if (!matched && "已完成".equals(category) && "已完结".equals(storyCategory)) {
+                matched = true;
+            }
+            if (!matched && "已完结".equals(category) && "已完成".equals(storyCategory)) {
+                matched = true;
+            }
+            if (matched) {
                 result.add(story);
             }
         }
@@ -386,6 +377,72 @@ public class BookshelfFragment extends BaseFragment {
             "⇅ 字数"
         };
         btnSort.setText(sortLabels[currentSortType]);
+    }
+
+    /**
+     * 显示筛选菜单
+     */
+    private void showFilterMenu() {
+        // 构建筛选项列表
+        List<String> filterOptions = new ArrayList<>();
+        filterOptions.add("仅显示收藏" + (filterOnlyCollected ? " ✓" : ""));
+        filterOptions.add("创作中" + ("创作中".equals(filterByStatus) ? " ✓" : ""));
+        filterOptions.add("已完成" + ("已完成".equals(filterByStatus) ? " ✓" : ""));
+        
+        // 如果有筛选条件，添加重置选项
+        boolean hasFilter = filterOnlyCollected || filterByStatus != null;
+        if (hasFilter) {
+            filterOptions.add("🔄 重置筛选");
+        }
+        
+        new AlertDialog.Builder(requireContext())
+            .setTitle("选择筛选条件")
+            .setItems(filterOptions.toArray(new String[0]), (dialog, which) -> {
+                if (which == 0) {
+                    // 切换“仅显示收藏”
+                    filterOnlyCollected = !filterOnlyCollected;
+                    refreshStories();
+                    updateFilterButtonText();
+                } else if (which == 1) {
+                    // 切换“创作中”
+                    if ("创作中".equals(filterByStatus)) {
+                        filterByStatus = null; // 取消筛选
+                    } else {
+                        filterByStatus = "创作中";
+                    }
+                    refreshStories();
+                    updateFilterButtonText();
+                } else if (which == 2) {
+                    // 切换“已完成”
+                    if ("已完成".equals(filterByStatus)) {
+                        filterByStatus = null; // 取消筛选
+                    } else {
+                        filterByStatus = "已完成";
+                    }
+                    refreshStories();
+                    updateFilterButtonText();
+                } else if (which == 3 && hasFilter) {
+                    // 重置筛选
+                    filterOnlyCollected = false;
+                    filterByStatus = null;
+                    refreshStories();
+                    updateFilterButtonText();
+                }
+                dialog.dismiss();
+            })
+            .show();
+    }
+
+    /**
+     * 更新筛选按钮文本
+     */
+    private void updateFilterButtonText() {
+        boolean hasFilter = filterOnlyCollected || filterByStatus != null;
+        if (hasFilter) {
+            btnFilter.setText("☰ 筛选 ·");
+        } else {
+            btnFilter.setText("☰ 筛选");
+        }
     }
 
     /**

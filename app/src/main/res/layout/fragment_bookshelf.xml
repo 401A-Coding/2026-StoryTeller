@@ -40,56 +40,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 分类标签栏 -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tab_category"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        app:tabMode="fixed"
-        app:tabGravity="fill"
-        app:tabSelectedTextColor="@android:color/white"
-        app:tabTextColor="@color/colorGray"
-        app:tabIndicator="@null"
-        app:tabBackground="@drawable/tab_category_bg"
-        app:tabRippleColor="@null"
-        app:layout_constraintTop_toBottomOf="@id/et_search"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/bookshelf_category_all" />
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/bookshelf_category_writing" />
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/bookshelf_category_completed" />
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/bookshelf_category_collected" />
-
-    </com.google.android.material.tabs.TabLayout>
-
     <!-- 作品数量和排序 -->
     <LinearLayout
         android:id="@+id/layout_sort"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        app:layout_constraintTop_toBottomOf="@id/tab_category"
+        app:layout_constraintTop_toBottomOf="@id/et_search"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -113,6 +72,25 @@
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
             android:text="⇅ 排序"
+            android:textSize="12sp"
+            android:textColor="#2196F3"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:drawableEnd="@drawable/ic_arrow_drop_down"
+            android:drawablePadding="4dp" />
+
+        <!-- 筛选按钮 -->
+        <TextView
+            android:id="@+id/btn_filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="☰ 筛选"
             android:textSize="12sp"
             android:textColor="#2196F3"
             android:background="?attr/selectableItemBackground"
