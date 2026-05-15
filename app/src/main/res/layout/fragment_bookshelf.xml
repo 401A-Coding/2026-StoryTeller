@@ -18,10 +18,8 @@
 
         <TextView
             android:id="@+id/tv_bookshelf_title"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
             android:text="我的小说"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -31,12 +29,19 @@
             android:id="@+id/btn_help"
             android:layout_width="36dp"
             android:layout_height="36dp"
+            android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="使用帮助"
             android:padding="8dp"
             android:src="@android:drawable/ic_menu_help"
             app:tint="#2196F3" />
+
+        <!-- 占位空间，将创建按钮推到右侧 -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btn_create_story"
