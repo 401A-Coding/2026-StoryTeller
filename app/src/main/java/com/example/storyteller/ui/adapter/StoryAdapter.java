@@ -3,9 +3,7 @@ package com.example.storyteller.ui.adapter;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +24,7 @@ import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHolder> {
 
@@ -158,9 +157,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         });
 
         // 三点菜单按钮
-        holder.btnMoreMenu.setOnClickListener(v -> {
-            showMoreMenu(v, story, position);
-        });
+        holder.btnMoreMenu.setOnClickListener(v -> showMoreMenu(v, story));
     }
 
     /**
@@ -222,8 +219,8 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                         }
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+                    } catch (Exception e) {
+                android.util.Log.w("StoryAdapter", "Failed to parse story structure", e);
             }
         }
         
@@ -241,24 +238,29 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             return wordCount + "字";
         } else {
             double wan = wordCount / 10000.0;
-            return String.format("%.1f万字", wan);
+            return String.format(Locale.CHINA, "%.1f万字", wan);
         }
     }
     
     /**
      * 显示更多操作菜单
      */
-    private void showMoreMenu(View anchorView, Story story, int position) {
+    private void showMoreMenu(View anchorView, Story story) {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(context, anchorView);
         popupMenu.getMenu().add("⭐ " + (story.isCollected() ? "取消收藏" : "收藏"));
+        popupMenu.getMenu().add("📍 设为当前小说");
         popupMenu.getMenu().add("📷 上传封面");
         popupMenu.getMenu().add("📝 修改分类");
         popupMenu.getMenu().add("🗑️ 删除故事");
         
         popupMenu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
+            String title = String.valueOf(item.getTitle());
             if (title.contains("收藏")) {
                 toggleFavorite(story);
+                return true;
+            } else if (title.contains("设为当前小说")) {
+                persistSelectedStory(story);
+                Toast.makeText(context, "已设为当前小说：《" + story.getTitle() + "》", Toast.LENGTH_SHORT).show();
                 return true;
             } else if (title.contains("上传封面")) {
                 if (pickCoverImageListener != null) {
@@ -269,7 +271,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 showCategoryChangeDialog(story);
                 return true;
             } else if (title.contains("删除")) {
-                showDeleteConfirmDialog(story, position);
+                showDeleteConfirmDialog(story);
                 return true;
             }
             return false;
@@ -321,7 +323,7 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
     /**
      * 显示删除确认对话框
      */
-    private void showDeleteConfirmDialog(Story story, int position) {
+    private void showDeleteConfirmDialog(Story story) {
         new AlertDialog.Builder(context)
             .setTitle("删除故事")
             .setMessage("确定要删除《" + story.getTitle() + "》吗？")
@@ -335,8 +337,12 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 int result = storyDao.deleteStory(story.getId());
                 if (result > 0) {
                     if (isDeletingSelectedStory) {
-                        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
-                        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
+                        Story fallbackStory = storyDao.getLatestStory();
+                        if (fallbackStory != null) {
+                            persistSelectedStory(fallbackStory);
+                        } else {
+                            clearSelectedStory();
+                        }
                     }
                     Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show();
                     if (deleteListener != null) {
@@ -348,6 +354,19 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             })
             .setNegativeButton("取消", null)
             .show();
+    }
+
+    private void persistSelectedStory(Story story) {
+        if (story == null) {
+            return;
+        }
+        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
+        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, story.getTitle());
+    }
+
+    private void clearSelectedStory() {
+        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_ID, "");
+        PrefsUtils.getInstance(context).putString(PREF_SELECTED_STORY_TITLE, "");
     }
 
 

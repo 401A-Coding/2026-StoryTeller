@@ -2,12 +2,14 @@ package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.PopupMenu;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
@@ -54,7 +56,6 @@ public class CharacterActivity extends BaseActivity {
     private ProgressBar pbLoading;
     private TextView tvStatus;
     private Button btnRegenerate;
-    private Button btnModelSelector;
     private CharacterAdapter adapter;
     private StoryDao storyDao;
     private CharacterDao characterDao;
@@ -79,11 +80,8 @@ public class CharacterActivity extends BaseActivity {
         pbLoading = findViewById(R.id.pb_character_loading);
         tvStatus = findViewById(R.id.tv_character_status);
         btnRegenerate = findViewById(R.id.btn_regenerate_character);
-        btnModelSelector = findViewById(R.id.btn_character_model_selector);
 
         currentModel = PrefsUtils.getInstance(this).getString(PREF_CHARACTER_MODEL, "pro");
-        updateModelButtonText();
-        btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
 
         rvCharacterList.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CharacterAdapter(this, new ArrayList<>());
@@ -92,6 +90,10 @@ public class CharacterActivity extends BaseActivity {
         adapter.setListener(new CharacterAdapter.Listener() {
             @Override
             public void onRegenerateCharacter(@androidx.annotation.NonNull Character character, int position) {
+                if (isCharacterGenerationInProgress()) {
+                    Toast.makeText(CharacterActivity.this, R.string.character_manual_edit_disabled_loading, Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 Story story = resolveSelectedStory();
                 if (story == null) {
                     Toast.makeText(CharacterActivity.this, "还没有可分析的小说", Toast.LENGTH_SHORT).show();
@@ -100,16 +102,27 @@ public class CharacterActivity extends BaseActivity {
 
                 CharacterRegenerateBottomSheetDialogFragment dialog =
                         CharacterRegenerateBottomSheetDialogFragment.newInstance(story.getTitle(), character.getName());
-                dialog.setListener(extraDemand -> regenerateSingleCharacter(story, character, position, extraDemand));
+                dialog.setListener(extraDemand -> promptModelThenRun(() -> regenerateSingleCharacter(story, character, position, extraDemand)));
                 dialog.show(getSupportFragmentManager(), "character_regenerate_one");
             }
-        });
 
-        findViewById(R.id.btn_back_home).setOnClickListener(v -> {
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_HOME);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
+            @Override
+            public void onEditCharacter(@androidx.annotation.NonNull Character character, int position) {
+                if (isCharacterGenerationInProgress()) {
+                    Toast.makeText(CharacterActivity.this, R.string.character_manual_edit_disabled_loading, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                showEditCharacterDialog(character, position);
+            }
+
+            @Override
+            public void onDeleteCharacter(@androidx.annotation.NonNull Character character, int position) {
+                if (isCharacterGenerationInProgress()) {
+                    Toast.makeText(CharacterActivity.this, R.string.character_manual_edit_disabled_loading, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                showDeleteCharacterDialog(character, position);
+            }
         });
 
         btnRegenerate.setOnClickListener(v -> {
@@ -121,7 +134,7 @@ public class CharacterActivity extends BaseActivity {
 
             CharacterRegenerateBottomSheetDialogFragment dialog =
                     CharacterRegenerateBottomSheetDialogFragment.newInstance(story.getTitle());
-            dialog.setListener(extraDemand -> loadCharactersForSelectedStory(true, extraDemand));
+            dialog.setListener(extraDemand -> promptModelThenRun(() -> loadCharactersForSelectedStory(true, extraDemand)));
             dialog.show(getSupportFragmentManager(), "character_regenerate");
         });
     }
@@ -264,6 +277,113 @@ public class CharacterActivity extends BaseActivity {
         });
     }
 
+    private boolean isCharacterGenerationInProgress() {
+        return btnRegenerate != null && !btnRegenerate.isEnabled();
+    }
+
+    private void promptModelThenRun(Runnable action) {
+        if (action == null || isCharacterGenerationInProgress()) {
+            return;
+        }
+        String[] modelLabels = new String[] {
+                getString(R.string.model_flash),
+                getString(R.string.model_pro)
+        };
+        int checkedItem = "pro".equals(currentModel) ? 1 : 0;
+        final int[] selectedItem = {checkedItem};
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.character_model_dialog_title)
+                .setSingleChoiceItems(modelLabels, checkedItem, (dialog, which) -> selectedItem[0] = which)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(btnRegenerate.getText(), (dialog, which) -> {
+                    currentModel = selectedItem[0] == 1 ? "pro" : "flash";
+                    PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
+                    Toast.makeText(this,
+                            selectedItem[0] == 1 ? R.string.character_model_switched_pro : R.string.character_model_switched_flash,
+                            Toast.LENGTH_SHORT).show();
+                    action.run();
+                })
+                .show();
+    }
+
+    private void showEditCharacterDialog(Character character, int position) {
+        Story story = resolveSelectedStory();
+        if (story == null || character == null) {
+            Toast.makeText(this, R.string.character_manual_edit_no_data, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_character, null);
+        EditText etName = dialogView.findViewById(R.id.et_character_edit_name);
+        EditText etSummary = dialogView.findViewById(R.id.et_character_edit_summary);
+        EditText etDetail = dialogView.findViewById(R.id.et_character_edit_detail);
+        etName.setText(character.getName());
+        etSummary.setText(character.getProfile());
+        etDetail.setText(character.getDetail());
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.title_edit_character, character.getName()))
+                .setView(dialogView)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.action_save, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = textOf(etName);
+            String summary = textOf(etSummary);
+            String detail = textOf(etDetail);
+
+            if (TextUtils.isEmpty(name)) {
+                etName.setError(getString(R.string.character_edit_name_required));
+                return;
+            }
+            if (TextUtils.isEmpty(summary)) {
+                etSummary.setError(getString(R.string.character_edit_summary_required));
+                return;
+            }
+            if (TextUtils.isEmpty(detail)) {
+                detail = summary;
+            }
+
+            Character updated = new Character(story.getId(), name, summary, detail, character.getAvatarResId());
+            updated.setId(character.getId());
+            adapter.updateItem(position, updated);
+            characterDao.replaceCharactersForStory(story.getId(), adapter.getDataSnapshot());
+            pbLoading.setVisibility(View.GONE);
+            tvStatus.setVisibility(View.VISIBLE);
+            tvStatus.setText(getString(R.string.character_manual_edit_saved, updated.getName()));
+            Toast.makeText(this, R.string.character_manual_edit_saved_toast, Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
+
+    private void showDeleteCharacterDialog(Character character, int position) {
+        Story story = resolveSelectedStory();
+        if (story == null || character == null) {
+            Toast.makeText(this, R.string.character_manual_edit_no_data, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.character_delete_title)
+                .setMessage(getString(R.string.character_delete_message, character.getName()))
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.action_delete, (dialog, which) -> {
+                    adapter.removeItem(position);
+                    characterDao.replaceCharactersForStory(story.getId(), adapter.getDataSnapshot());
+                    pbLoading.setVisibility(View.GONE);
+                    if (adapter.getItemCount() == 0) {
+                        showEmpty(getString(R.string.character_delete_all_removed));
+                    } else {
+                        tvStatus.setVisibility(View.VISIBLE);
+                        tvStatus.setText(getString(R.string.character_deleted, character.getName()));
+                    }
+                    Toast.makeText(this, R.string.character_deleted_toast, Toast.LENGTH_SHORT).show();
+                })
+                .show();
+    }
+
     private Story resolveSelectedStory() {
         int storyId = -1;
         Intent intent = getIntent();
@@ -352,46 +472,6 @@ public class CharacterActivity extends BaseActivity {
         return builder.toString();
     }
 
-    private void showModelSelectorPopup() {
-        PopupMenu popupMenu = new PopupMenu(this, btnModelSelector);
-        popupMenu.getMenu().add(0, 1, 0, getString(R.string.model_flash));
-        popupMenu.getMenu().add(0, 2, 1, getString(R.string.model_pro));
-
-        if ("flash".equals(currentModel)) {
-            popupMenu.getMenu().getItem(0).setChecked(true);
-        } else {
-            popupMenu.getMenu().getItem(1).setChecked(true);
-        }
-
-        popupMenu.setOnMenuItemClickListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == 1) {
-                currentModel = "flash";
-                PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
-                updateModelButtonText();
-                Toast.makeText(this, R.string.character_model_switched_flash, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == 2) {
-                currentModel = "pro";
-                PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
-                updateModelButtonText();
-                Toast.makeText(this, R.string.character_model_switched_pro, Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            return false;
-        });
-
-        popupMenu.show();
-    }
-
-    private void updateModelButtonText() {
-        if (btnModelSelector == null) {
-            return;
-        }
-        btnModelSelector.setText("flash".equals(currentModel)
-                ? getString(R.string.model_flash)
-                : getString(R.string.model_pro));
-    }
 
     private String getModelDisplayName() {
         return "flash".equals(currentModel) ? getString(R.string.model_flash) : getString(R.string.model_pro);
@@ -720,6 +800,10 @@ public class CharacterActivity extends BaseActivity {
             return text.substring(start, end + 1);
         }
         return text;
+    }
+
+    private String textOf(EditText editText) {
+        return editText.getText() == null ? "" : editText.getText().toString().trim();
     }
 
     private void showLoading() {

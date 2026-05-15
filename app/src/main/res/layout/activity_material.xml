@@ -67,12 +67,31 @@
             android:text="@string/material_crawl_type_label"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btn_import"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/action_import_material" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_import"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/action_import_material" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/btn_create_material"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/action_create_material" />
+
+        </LinearLayout>
 
         <EditText
             android:id="@+id/et_material_search"

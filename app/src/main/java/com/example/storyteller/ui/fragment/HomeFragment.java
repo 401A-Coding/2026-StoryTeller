@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -87,9 +86,7 @@ public class HomeFragment extends BaseFragment {
         view.findViewById(R.id.card_material)
             .setOnClickListener(v -> startActivity(new Intent(requireContext(), MaterialActivity.class)));
 
-        view.findViewById(R.id.btn_switch_novel).setOnClickListener(v -> {
-            showSwitchNovelDialog();
-        });
+        view.findViewById(R.id.btn_switch_novel).setOnClickListener(v -> showSwitchNovelDialog());
 
         // 本地数据存储演示（直接写入测试故事，不走 AI）
         tvCurrentNovel = view.findViewById(R.id.tv_current_novel);
@@ -120,7 +117,13 @@ public class HomeFragment extends BaseFragment {
         }
         String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
         if (selectedId == null || selectedId.isEmpty()) {
-            tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+            Story latestStory = storyDao == null ? null : storyDao.getLatestStory();
+            if (latestStory == null) {
+                tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+                return;
+            }
+            persistSelectedStory(latestStory);
+            tvCurrentNovel.setText(getString(R.string.home_current_novel_format, latestStory.getTitle()));
             return;
         }
         try {
@@ -128,14 +131,42 @@ public class HomeFragment extends BaseFragment {
             Story story = storyDao.getStoryById(storyId);
 
             if (story == null) {
-                tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+                Story latestStory = storyDao == null ? null : storyDao.getLatestStory();
+                if (latestStory == null) {
+                    clearSelectedStory();
+                    tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+                    return;
+                }
+                persistSelectedStory(latestStory);
+                tvCurrentNovel.setText(getString(R.string.home_current_novel_format, latestStory.getTitle()));
                 return;
             }
 
+            persistSelectedStory(story);
             tvCurrentNovel.setText(getString(R.string.home_current_novel_format, story.getTitle()));
         } catch (NumberFormatException e) {
-            tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+            Story latestStory = storyDao == null ? null : storyDao.getLatestStory();
+            if (latestStory == null) {
+                clearSelectedStory();
+                tvCurrentNovel.setText(getString(R.string.home_current_novel_empty));
+                return;
+            }
+            persistSelectedStory(latestStory);
+            tvCurrentNovel.setText(getString(R.string.home_current_novel_format, latestStory.getTitle()));
         }
+    }
+
+    private void persistSelectedStory(Story story) {
+        if (story == null) {
+            return;
+        }
+        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(story.getId()));
+        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, story.getTitle());
+    }
+
+    private void clearSelectedStory() {
+        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+        PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, "");
     }
 
     /**
@@ -293,6 +324,8 @@ public class HomeFragment extends BaseFragment {
             long id = storyDao.insertStory(newStory);
 
             if (id > 0) {
+                newStory.setId((int) id);
+                persistSelectedStory(newStory);
                 Toast.makeText(requireContext(), "创建成功", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 refreshCurrentNovel();

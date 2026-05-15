@@ -2,12 +2,15 @@ package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -64,7 +67,6 @@ public class PlotTreeActivity extends BaseActivity {
     private TextView tvCurrentStoryTitle;
     private TextView tvStatus;
     private ProgressBar pbLoading;
-    private Button btnModelSelector;
     private Button btnDetailSelector;
     private Button btnGenerate;
     private PlotChapterSummaryAdapter adapter;
@@ -72,6 +74,10 @@ public class PlotTreeActivity extends BaseActivity {
     private final Gson gson = new Gson();
     private final GenerationDiagnostics currentDiagnostics = new GenerationDiagnostics();
     private Story currentStory;
+    private PlotOverviewSummary currentOverviewSummary;
+    private List<PlotChapterSummary> currentChapterSummaries = new ArrayList<>();
+    private String currentOverviewSource = OVERVIEW_SOURCE_LOCAL_FALLBACK;
+    private PlotSummarySnapshot currentPlotSnapshot;
 
     private String currentModel = "flash";
     private String currentDetail = "standard";
@@ -91,30 +97,27 @@ public class PlotTreeActivity extends BaseActivity {
         tvCurrentStoryTitle = findViewById(R.id.tv_plot_current_story_title);
         tvStatus = findViewById(R.id.tv_plot_status);
         pbLoading = findViewById(R.id.pb_plot_loading);
-        btnModelSelector = findViewById(R.id.btn_plot_model_selector);
         btnDetailSelector = findViewById(R.id.btn_plot_detail_selector);
         btnGenerate = findViewById(R.id.btn_generate_plot_summary);
 
         RecyclerView rvChapterSummaries = findViewById(R.id.rv_plot_chapter_summaries);
         rvChapterSummaries.setLayoutManager(new LinearLayoutManager(this));
         adapter = new PlotChapterSummaryAdapter(new ArrayList<>());
+        adapter.setListener((summary, position) -> {
+            if (isPlotGenerationInProgress()) {
+                Toast.makeText(this, R.string.plot_manual_edit_disabled_loading, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showEditChapterDialog(summary, position);
+        });
         rvChapterSummaries.setAdapter(adapter);
 
         currentModel = PrefsUtils.getInstance(this).getString(PREF_PLOT_MODEL, "flash");
         currentDetail = PrefsUtils.getInstance(this).getString(PREF_PLOT_DETAIL, "standard");
-        updateModelButtonText();
         updateDetailButtonText();
 
-        btnModelSelector.setOnClickListener(v -> showModelSelectorPopup());
         btnDetailSelector.setOnClickListener(v -> showDetailSelectorPopup());
-        btnGenerate.setOnClickListener(v -> startPlotSummaryGeneration());
-
-        findViewById(R.id.btn_back_home).setOnClickListener(v -> {
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_HOME);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-        });
+        btnGenerate.setOnClickListener(v -> promptModelThenGenerate());
     }
 
     @Override
@@ -149,9 +152,12 @@ public class PlotTreeActivity extends BaseActivity {
 
         int token = ++generationToken;
         btnGenerate.setEnabled(false);
-        btnModelSelector.setEnabled(false);
         btnDetailSelector.setEnabled(false);
         pbLoading.setVisibility(android.view.View.VISIBLE);
+        currentPlotSnapshot = null;
+        currentOverviewSummary = null;
+        currentChapterSummaries = new ArrayList<>();
+        currentOverviewSource = OVERVIEW_SOURCE_LOCAL_FALLBACK;
         adapter.setData(null, new ArrayList<>(), currentDetail);
         if (shouldUseBriefBatchSummary(chapterContexts)) {
             currentDiagnostics.setGenerationPath(PATH_BRIEF_BATCH);
@@ -411,6 +417,9 @@ public class PlotTreeActivity extends BaseActivity {
 
     private void renderOverviewSummary(Story story, PlotOverviewSummary summary, List<PlotChapterSummary> chapterSummaries,
                                        int chapterCount, String overviewSource) {
+        currentOverviewSummary = summary;
+        currentChapterSummaries = chapterSummaries == null ? new ArrayList<>() : new ArrayList<>(chapterSummaries);
+        currentOverviewSource = TextUtils.isEmpty(overviewSource) ? OVERVIEW_SOURCE_LOCAL_FALLBACK : overviewSource;
         adapter.setData(summary, chapterSummaries, currentDetail);
         currentDiagnostics.setOverviewSource(overviewSource);
         persistPlotSummary(story, summary, chapterSummaries, overviewSource);
@@ -433,7 +442,6 @@ public class PlotTreeActivity extends BaseActivity {
             }
             if (!TextUtils.isEmpty(snapshot.getModel())) {
                 currentModel = snapshot.getModel();
-                updateModelButtonText();
             }
             if (!TextUtils.isEmpty(snapshot.getDetailLevel())) {
                 currentDetail = snapshot.getDetailLevel();
@@ -447,6 +455,12 @@ public class PlotTreeActivity extends BaseActivity {
                     btnGenerate.setText(R.string.action_regenerate_plot_summary);
                     return;
                 }
+                currentPlotSnapshot = snapshot;
+                currentOverviewSummary = snapshot.getOverview();
+                currentChapterSummaries = new ArrayList<>(snapshot.getChapterSummaries());
+                currentOverviewSource = TextUtils.isEmpty(snapshot.getOverviewSource())
+                        ? OVERVIEW_SOURCE_LOCAL_FALLBACK
+                        : snapshot.getOverviewSource();
                 adapter.setData(snapshot.getOverview(), snapshot.getChapterSummaries(), currentDetail);
                 tvStatus.setText(buildStatusWithDiagnostics(String.format(Locale.CHINA,
                         "已加载本地剧情梳理结果（%d 章，%s / %s）",
@@ -482,6 +496,131 @@ public class PlotTreeActivity extends BaseActivity {
         String json = gson.toJson(snapshot);
         story.setPlotSummaryJson(json);
         storyDao.updatePlotSummary(story.getId(), json);
+        currentPlotSnapshot = snapshot;
+    }
+
+    private boolean isPlotGenerationInProgress() {
+        return btnGenerate != null && !btnGenerate.isEnabled();
+    }
+
+    private void showEditChapterDialog(PlotChapterSummary chapter, int position) {
+        if (chapter == null || currentStory == null) {
+            Toast.makeText(this, R.string.plot_manual_edit_no_data, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (position < 0 || position >= currentChapterSummaries.size()) {
+            Toast.makeText(this, R.string.plot_manual_edit_no_data, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        android.view.View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_plot_chapter, null);
+        EditText etBrief = dialogView.findViewById(R.id.et_plot_edit_brief_summary);
+        EditText etDetail = dialogView.findViewById(R.id.et_plot_edit_detail_summary);
+        EditText etEvents = dialogView.findViewById(R.id.et_plot_edit_key_events);
+        EditText etCharacters = dialogView.findViewById(R.id.et_plot_edit_characters);
+
+        etBrief.setText(chapter.getBriefSummary());
+        etDetail.setText(chapter.getDetailSummary());
+        etEvents.setText(joinWithNewLine(chapter.getKeyEvents()));
+        etCharacters.setText(joinWithNewLine(chapter.getCharacters()));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.title_edit_plot_chapter, chapter.getChapterLabel()))
+                .setView(dialogView)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.action_save, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String brief = textOf(etBrief);
+            if (TextUtils.isEmpty(brief)) {
+                etBrief.setError(getString(R.string.plot_manual_edit_brief_required));
+                return;
+            }
+
+            PlotChapterSummary updated = copyChapterSummary(currentChapterSummaries.get(position));
+            updated.setBriefSummary(brief);
+            updated.setDetailSummary(textOf(etDetail));
+            updated.setKeyEvents(splitToList(textOf(etEvents)));
+            updated.setCharacters(splitToList(textOf(etCharacters)));
+
+            currentChapterSummaries.set(position, updated);
+            if (currentOverviewSummary == null) {
+                currentOverviewSummary = createFallbackOverview(currentChapterSummaries);
+            }
+            adapter.setData(currentOverviewSummary, new ArrayList<>(currentChapterSummaries), currentDetail);
+            persistManualPlotSummary();
+            tvStatus.setText(getString(R.string.plot_manual_edit_saved, updated.getChapterLabel()));
+            Toast.makeText(this, R.string.plot_manual_edit_saved_toast, Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
+
+    private void persistManualPlotSummary() {
+        if (currentStory == null || currentStory.getId() <= 0) {
+            return;
+        }
+
+        PlotSummarySnapshot snapshot = currentPlotSnapshot == null ? new PlotSummarySnapshot() : currentPlotSnapshot;
+        PlotOverviewSummary overviewToSave = currentOverviewSummary == null
+                ? createFallbackOverview(currentChapterSummaries)
+                : currentOverviewSummary;
+
+        snapshot.setSchemaVersion(3);
+        snapshot.setModel(currentModel);
+        snapshot.setDetailLevel(currentDetail);
+        snapshot.setGeneratedAt(System.currentTimeMillis());
+        if (TextUtils.isEmpty(snapshot.getGenerationPath())) {
+            snapshot.setGenerationPath(PATH_CHAPTER_LOOP);
+        }
+        if (TextUtils.isEmpty(currentOverviewSource)) {
+            currentOverviewSource = firstNonEmpty(snapshot.getOverviewSource(), OVERVIEW_SOURCE_LOCAL_FALLBACK);
+        }
+        snapshot.setOverviewSource(currentOverviewSource);
+
+        String diagnostics = snapshot.getDiagnosticsSummary();
+        if (TextUtils.isEmpty(diagnostics)) {
+            diagnostics = getString(R.string.plot_manual_edit_diagnostics);
+        } else if (!diagnostics.contains(getString(R.string.plot_manual_edit_tag))) {
+            diagnostics = diagnostics + " / " + getString(R.string.plot_manual_edit_tag);
+        }
+        snapshot.setDiagnosticsSummary(diagnostics);
+        snapshot.setOverview(overviewToSave);
+        snapshot.setChapterSummaries(new ArrayList<>(currentChapterSummaries));
+        snapshot.setCharacterContext(buildCharacterReuseContext(currentStory, overviewToSave, currentChapterSummaries));
+
+        String json = gson.toJson(snapshot);
+        currentStory.setPlotSummaryJson(json);
+        storyDao.updatePlotSummary(currentStory.getId(), json);
+        currentPlotSnapshot = snapshot;
+        currentOverviewSummary = overviewToSave;
+    }
+
+    private PlotChapterSummary copyChapterSummary(PlotChapterSummary original) {
+        PlotChapterSummary copy = new PlotChapterSummary();
+        copy.setVolumeIndex(original.getVolumeIndex());
+        copy.setChapterIndex(original.getChapterIndex());
+        copy.setChapterLabel(original.getChapterLabel());
+        copy.setChapterTitle(original.getChapterTitle());
+        copy.setBriefSummary(original.getBriefSummary());
+        copy.setDetailSummary(original.getDetailSummary());
+        copy.setKeyEvents(original.getKeyEvents() == null ? new ArrayList<>() : new ArrayList<>(original.getKeyEvents()));
+        copy.setCharacters(original.getCharacters() == null ? new ArrayList<>() : new ArrayList<>(original.getCharacters()));
+        copy.setConflict(original.getConflict());
+        copy.setStoryFunction(original.getStoryFunction());
+        copy.setSource(original.getSource());
+        return copy;
+    }
+
+    private String joinWithNewLine(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "";
+        }
+        return TextUtils.join("\n", values);
+    }
+
+    private String textOf(EditText editText) {
+        return editText.getText() == null ? "" : editText.getText().toString().trim();
     }
 
     private boolean isLowQualitySnapshot(PlotSummarySnapshot snapshot) {
@@ -540,7 +679,6 @@ public class PlotTreeActivity extends BaseActivity {
     private void finishLoading(String status, boolean clearList) {
         pbLoading.setVisibility(android.view.View.GONE);
         btnGenerate.setEnabled(true);
-        btnModelSelector.setEnabled(true);
         btnDetailSelector.setEnabled(true);
         tvStatus.setText(status);
         if (clearList) {
@@ -552,27 +690,31 @@ public class PlotTreeActivity extends BaseActivity {
         finishLoading(message, true);
     }
 
-    private void showModelSelectorPopup() {
-        PopupMenu popupMenu = new PopupMenu(this, btnModelSelector);
-        popupMenu.getMenu().add(0, 1, 0, getString(R.string.model_flash));
-        popupMenu.getMenu().add(0, 2, 1, getString(R.string.model_pro));
-        popupMenu.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
-                currentModel = "flash";
-                PrefsUtils.getInstance(this).putString(PREF_PLOT_MODEL, currentModel);
-                updateModelButtonText();
-                Toast.makeText(this, R.string.plot_model_switched_flash, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (item.getItemId() == 2) {
-                currentModel = "pro";
-                PrefsUtils.getInstance(this).putString(PREF_PLOT_MODEL, currentModel);
-                updateModelButtonText();
-                Toast.makeText(this, R.string.plot_model_switched_pro, Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            return false;
-        });
-        popupMenu.show();
+    private void promptModelThenGenerate() {
+        if (isPlotGenerationInProgress()) {
+            return;
+        }
+        String[] modelLabels = new String[] {
+                getString(R.string.model_flash),
+                getString(R.string.model_pro)
+        };
+        int checkedItem = "pro".equals(currentModel) ? 1 : 0;
+        final int[] selectedItem = {checkedItem};
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.plot_model_dialog_title)
+                .setSingleChoiceItems(modelLabels, checkedItem, (d, which) -> selectedItem[0] = which)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(btnGenerate.getText(), (d, which) -> {
+                    currentModel = selectedItem[0] == 1 ? "pro" : "flash";
+                    PrefsUtils.getInstance(this).putString(PREF_PLOT_MODEL, currentModel);
+                    Toast.makeText(this,
+                            selectedItem[0] == 1 ? R.string.plot_model_switched_pro : R.string.plot_model_switched_flash,
+                            Toast.LENGTH_SHORT).show();
+                    startPlotSummaryGeneration();
+                })
+                .create();
+        dialog.show();
     }
 
     private void showDetailSelectorPopup() {
@@ -605,9 +747,6 @@ public class PlotTreeActivity extends BaseActivity {
         popupMenu.show();
     }
 
-    private void updateModelButtonText() {
-        btnModelSelector.setText(getModelDisplayName());
-    }
 
     private void updateDetailButtonText() {
         btnDetailSelector.setText(getDetailDisplayName());

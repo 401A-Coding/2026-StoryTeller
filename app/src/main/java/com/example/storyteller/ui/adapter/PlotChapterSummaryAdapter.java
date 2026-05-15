@@ -15,7 +15,9 @@ import com.example.storyteller.model.PlotOverviewSummary;
 import com.google.android.material.chip.Chip;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -25,9 +27,19 @@ public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView
     private PlotOverviewSummary overview;
     private List<PlotChapterSummary> items;
     private String detailLevel = "standard";
+    private Listener listener;
+    private final Set<String> expandedChapterKeys = new HashSet<>();
+
+    public interface Listener {
+        void onEditChapter(@NonNull PlotChapterSummary summary, int position);
+    }
 
     public PlotChapterSummaryAdapter(List<PlotChapterSummary> items) {
         this.items = items == null ? new ArrayList<>() : items;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     public void setData(PlotOverviewSummary overview, List<PlotChapterSummary> items) {
@@ -38,6 +50,7 @@ public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView
         this.overview = overview;
         this.items = items == null ? new ArrayList<>() : items;
         this.detailLevel = TextUtils.isEmpty(detailLevel) ? "standard" : detailLevel;
+        retainExpandedState(this.items);
         notifyDataSetChanged();
     }
 
@@ -77,6 +90,8 @@ public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView
         ChapterViewHolder chapterHolder = (ChapterViewHolder) holder;
         PlotChapterSummary item = items.get(getChapterIndex(position));
         boolean compactMode = "brief".equals(detailLevel);
+        String chapterKey = buildChapterKey(item);
+        boolean expanded = expandedChapterKeys.contains(chapterKey);
         chapterHolder.tvChapterLabel.setText(item.getChapterLabel());
         bindSourceChip(chapterHolder.chipChapterSource, item);
         chapterHolder.tvChapterTitle.setText(item.getChapterTitle());
@@ -92,6 +107,64 @@ public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView
             bindSection(chapterHolder.tvConflict, buildTextSection("核心冲突：", item.getConflict()));
             bindSection(chapterHolder.tvStoryFunction, buildTextSection("章节作用：", item.getStoryFunction()));
         }
+        chapterHolder.layoutDetailContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        chapterHolder.tvExpandToggle.setText(expanded ? R.string.plot_collapse : R.string.plot_expand);
+
+        chapterHolder.btnEditChapter.setOnClickListener(v -> {
+            if (listener == null) {
+                return;
+            }
+            int adapterPosition = chapterHolder.getBindingAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
+            int chapterIndex = getChapterIndex(adapterPosition);
+            if (chapterIndex < 0 || chapterIndex >= items.size()) {
+                return;
+            }
+            listener.onEditChapter(items.get(chapterIndex), chapterIndex);
+        });
+
+        chapterHolder.itemView.setOnClickListener(v -> {
+            int adapterPosition = chapterHolder.getBindingAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
+            int chapterIndex = getChapterIndex(adapterPosition);
+            if (chapterIndex < 0 || chapterIndex >= items.size()) {
+                return;
+            }
+            toggleExpanded(items.get(chapterIndex));
+            notifyItemChanged(adapterPosition);
+        });
+    }
+
+    private void retainExpandedState(List<PlotChapterSummary> summaries) {
+        Set<String> validKeys = new HashSet<>();
+        if (summaries != null) {
+            for (PlotChapterSummary summary : summaries) {
+                validKeys.add(buildChapterKey(summary));
+            }
+        }
+        expandedChapterKeys.retainAll(validKeys);
+    }
+
+    private void toggleExpanded(PlotChapterSummary summary) {
+        String key = buildChapterKey(summary);
+        if (expandedChapterKeys.contains(key)) {
+            expandedChapterKeys.remove(key);
+        } else {
+            expandedChapterKeys.add(key);
+        }
+    }
+
+    private String buildChapterKey(PlotChapterSummary summary) {
+        if (summary == null) {
+            return "";
+        }
+        String label = TextUtils.isEmpty(summary.getChapterLabel()) ? "" : summary.getChapterLabel();
+        String title = TextUtils.isEmpty(summary.getChapterTitle()) ? "" : summary.getChapterTitle();
+        return label + "#" + title;
     }
 
     private void bindOverview(OverviewViewHolder holder, PlotOverviewSummary overview) {
@@ -233,18 +306,24 @@ public class PlotChapterSummaryAdapter extends RecyclerView.Adapter<RecyclerView
         final TextView tvCharacters;
         final TextView tvConflict;
         final TextView tvStoryFunction;
+        final View layoutDetailContainer;
+        final TextView tvExpandToggle;
+        final View btnEditChapter;
 
         ChapterViewHolder(@NonNull View itemView) {
             super(itemView);
             tvChapterLabel = itemView.findViewById(R.id.tv_plot_chapter_label);
             chipChapterSource = itemView.findViewById(R.id.chip_plot_chapter_source);
+            tvExpandToggle = itemView.findViewById(R.id.tv_plot_expand_toggle);
             tvChapterTitle = itemView.findViewById(R.id.tv_plot_chapter_title);
             tvBriefSummary = itemView.findViewById(R.id.tv_plot_brief_summary);
+            layoutDetailContainer = itemView.findViewById(R.id.layout_plot_detail_container);
             tvDetailSummary = itemView.findViewById(R.id.tv_plot_detail_summary);
             tvKeyEvents = itemView.findViewById(R.id.tv_plot_key_events);
             tvCharacters = itemView.findViewById(R.id.tv_plot_characters);
             tvConflict = itemView.findViewById(R.id.tv_plot_conflict);
             tvStoryFunction = itemView.findViewById(R.id.tv_plot_story_function);
+            btnEditChapter = itemView.findViewById(R.id.btn_plot_edit_chapter);
         }
     }
 
