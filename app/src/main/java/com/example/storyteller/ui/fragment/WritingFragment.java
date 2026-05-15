@@ -18,15 +18,22 @@ import androidx.core.widget.NestedScrollView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.db.CharacterDao;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.model.Chapter;
+import com.example.storyteller.model.Character;
+import com.example.storyteller.model.PlotChapterSummary;
+import com.example.storyteller.model.PlotOverviewSummary;
+import com.example.storyteller.model.PlotSummarySnapshot;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.utils.JsonUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 写作Fragment - 卷章编辑器
@@ -35,19 +42,29 @@ import java.util.List;
 public class WritingFragment extends BaseFragment {
 
     private static final String ARG_STORY_ID = "arg_story_id";
+    private static final int MAX_REFERENCE_TEXT_LENGTH = 180;
+    private static final int MAX_CHARACTER_REFERENCE_COUNT = 4;
 
     // UI Components
     private LinearLayout layoutContent;
     private Button btnAddVolume;
     private TextView tvEmptyHint;
+    private View cardWritingReference;
+    private TextView tvWritingReferenceStatus;
+    private TextView tvWritingReferenceOverview;
+    private TextView tvWritingReferenceMainLine;
 
     // Data
     private List<Volume> volumes = new ArrayList<>();
     private Story currentStory;
     private int storyId;
     private StoryRepository storyRepository;
+    private CharacterDao characterDao;
     private int volumeCount = 0;
-    
+    private final List<Character> storyCharacters = new ArrayList<>();
+    private final Map<String, Character> characterIndex = new LinkedHashMap<>();
+    private PlotSummarySnapshot currentPlotSnapshot;
+
     // 标记是否有正在编辑的EditText（用于防止切换Tab时自动保存）
     private EditText currentEditingEditText = null;
 
@@ -69,6 +86,10 @@ public class WritingFragment extends BaseFragment {
         layoutContent = view.findViewById(R.id.layout_content);
         btnAddVolume = view.findViewById(R.id.btn_add_volume);
         tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
+        cardWritingReference = view.findViewById(R.id.card_writing_reference);
+        tvWritingReferenceStatus = view.findViewById(R.id.tv_writing_reference_status);
+        tvWritingReferenceOverview = view.findViewById(R.id.tv_writing_reference_overview);
+        tvWritingReferenceMainLine = view.findViewById(R.id.tv_writing_reference_main_line);
 
         // 添加卷按钮
         btnAddVolume.setOnClickListener(v -> addNewVolume());
@@ -77,6 +98,7 @@ public class WritingFragment extends BaseFragment {
     @Override
     protected void initData() {
         storyRepository = new StoryRepositoryImpl(requireContext());
+        characterDao = new CharacterDao(requireContext());
 
         if (getArguments() != null) {
             storyId = getArguments().getInt(ARG_STORY_ID, -1);
@@ -112,9 +134,15 @@ public class WritingFragment extends BaseFragment {
     private void loadStoryData() {
         currentStory = storyRepository.getStoryById(storyId);
         if (currentStory == null) {
+            storyCharacters.clear();
+            characterIndex.clear();
+            currentPlotSnapshot = null;
+            bindWritingReferenceCard();
             Toast.makeText(requireContext(), "加载作品失败", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        loadWritingReferenceData();
 
         // 解析卷章结构
         String structureJson = currentStory.getStructure();
@@ -158,7 +186,9 @@ public class WritingFragment extends BaseFragment {
         List<View> viewsToRemove = new ArrayList<>();
         for (int i = 0; i < layoutContent.getChildCount(); i++) {
             View child = layoutContent.getChildAt(i);
-            if (child.getId() != R.id.btn_add_volume && child.getId() != R.id.tv_empty_hint) {
+            if (child.getId() != R.id.btn_add_volume
+                    && child.getId() != R.id.tv_empty_hint
+                    && child.getId() != R.id.card_writing_reference) {
                 viewsToRemove.add(child);
             }
         }
@@ -256,6 +286,8 @@ public class WritingFragment extends BaseFragment {
         ImageView btnMoreChapter = chapterView.findViewById(R.id.btn_more_chapter);
         btnMoreChapter.setOnClickListener(v -> showChapterMenu(chapter, volume, chapterView));
 
+        bindChapterReference(chapterView, volume, chapter, chapterIndex);
+
         // 内容编辑器
         EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
         etContent.setHint("开始写作...");
@@ -280,6 +312,291 @@ public class WritingFragment extends BaseFragment {
         });
 
         return chapterView;
+    }
+
+    private void loadWritingReferenceData() {
+        storyCharacters.clear();
+        characterIndex.clear();
+        currentPlotSnapshot = null;
+
+        if (currentStory == null) {
+            bindWritingReferenceCard();
+            return;
+        }
+
+        List<Character> cachedCharacters = characterDao == null
+                ? null
+                : characterDao.getCharactersByStoryId(currentStory.getId());
+        if (cachedCharacters != null) {
+            storyCharacters.addAll(cachedCharacters);
+        }
+
+        for (Character character : storyCharacters) {
+            if (character == null) {
+                continue;
+            }
+            String normalizedName = normalizeName(character.getName());
+            if (!TextUtils.isEmpty(normalizedName) && !characterIndex.containsKey(normalizedName)) {
+                characterIndex.put(normalizedName, character);
+            }
+        }
+
+        if (!TextUtils.isEmpty(currentStory.getPlotSummaryJson())) {
+            try {
+                currentPlotSnapshot = JsonUtils.fromJson(currentStory.getPlotSummaryJson(), PlotSummarySnapshot.class);
+            } catch (Exception ignored) {
+                currentPlotSnapshot = null;
+            }
+        }
+
+        bindWritingReferenceCard();
+    }
+
+    private void bindWritingReferenceCard() {
+        if (cardWritingReference == null || tvWritingReferenceStatus == null) {
+            return;
+        }
+
+        cardWritingReference.setVisibility(View.VISIBLE);
+
+        int characterCount = storyCharacters.size();
+        int plotCount = 0;
+        PlotOverviewSummary overview = null;
+        if (currentPlotSnapshot != null) {
+            if (currentPlotSnapshot.getChapterSummaries() != null) {
+                plotCount = currentPlotSnapshot.getChapterSummaries().size();
+            }
+            overview = currentPlotSnapshot.getOverview();
+        }
+
+        if (characterCount > 0 && plotCount > 0) {
+            tvWritingReferenceStatus.setText(getString(R.string.writing_reference_status_format, characterCount, plotCount));
+        } else if (characterCount > 0) {
+            tvWritingReferenceStatus.setText(getString(R.string.writing_reference_status_character_only, characterCount));
+        } else if (plotCount > 0) {
+            tvWritingReferenceStatus.setText(getString(R.string.writing_reference_status_plot_only, plotCount));
+        } else {
+            tvWritingReferenceStatus.setText(getString(R.string.writing_reference_empty));
+        }
+
+        String overallSummary = overview == null ? "" : safeTrim(overview.getOverallSummary());
+        if (!TextUtils.isEmpty(overallSummary)) {
+            tvWritingReferenceOverview.setVisibility(View.VISIBLE);
+            tvWritingReferenceOverview.setText(getString(
+                    R.string.writing_reference_overview_format,
+                    truncateText(overallSummary, MAX_REFERENCE_TEXT_LENGTH)));
+        } else {
+            tvWritingReferenceOverview.setVisibility(View.GONE);
+            tvWritingReferenceOverview.setText("");
+        }
+
+        List<String> mainLine = overview == null ? null : overview.getMainLine();
+        if (mainLine != null && !mainLine.isEmpty()) {
+            tvWritingReferenceMainLine.setVisibility(View.VISIBLE);
+            tvWritingReferenceMainLine.setText(getString(
+                    R.string.writing_reference_main_line_format,
+                    truncateText(joinNonEmpty(mainLine, "；"), MAX_REFERENCE_TEXT_LENGTH)));
+        } else {
+            tvWritingReferenceMainLine.setVisibility(View.GONE);
+            tvWritingReferenceMainLine.setText("");
+        }
+    }
+
+    private void bindChapterReference(View chapterView, Volume volume, Chapter chapter, int chapterIndex) {
+        View cardReference = chapterView.findViewById(R.id.card_chapter_reference);
+        TextView tvPlot = chapterView.findViewById(R.id.tv_chapter_reference_plot);
+        TextView tvCharacters = chapterView.findViewById(R.id.tv_chapter_reference_characters);
+        if (cardReference == null || tvPlot == null || tvCharacters == null) {
+            return;
+        }
+
+        PlotChapterSummary chapterSummary = findChapterSummary(volume, chapterIndex, chapter == null ? "" : chapter.getTitle());
+        String plotReference = buildChapterPlotReference(chapterSummary);
+        String characterReference = buildChapterCharacterReference(chapterSummary);
+
+        if (TextUtils.isEmpty(plotReference) && TextUtils.isEmpty(characterReference)) {
+            cardReference.setVisibility(View.GONE);
+            tvPlot.setVisibility(View.GONE);
+            tvCharacters.setVisibility(View.GONE);
+            return;
+        }
+
+        cardReference.setVisibility(View.VISIBLE);
+        if (!TextUtils.isEmpty(plotReference)) {
+            tvPlot.setVisibility(View.VISIBLE);
+            tvPlot.setText(getString(R.string.writing_reference_chapter_plot_format, plotReference));
+        } else {
+            tvPlot.setVisibility(View.GONE);
+            tvPlot.setText("");
+        }
+
+        if (!TextUtils.isEmpty(characterReference)) {
+            tvCharacters.setVisibility(View.VISIBLE);
+            tvCharacters.setText(getString(R.string.writing_reference_chapter_characters_format, characterReference));
+        } else {
+            tvCharacters.setVisibility(View.GONE);
+            tvCharacters.setText("");
+        }
+    }
+
+    private PlotChapterSummary findChapterSummary(Volume volume, int chapterIndex, String chapterTitle) {
+        if (currentPlotSnapshot == null || currentPlotSnapshot.getChapterSummaries() == null) {
+            return null;
+        }
+
+        int volumeIndex = resolveVolumeIndex(volume);
+        for (PlotChapterSummary summary : currentPlotSnapshot.getChapterSummaries()) {
+            if (summary == null) {
+                continue;
+            }
+            if (summary.getVolumeIndex() == volumeIndex && summary.getChapterIndex() == chapterIndex) {
+                return summary;
+            }
+        }
+
+        String normalizedTitle = normalizeName(chapterTitle);
+        if (TextUtils.isEmpty(normalizedTitle)) {
+            return null;
+        }
+        for (PlotChapterSummary summary : currentPlotSnapshot.getChapterSummaries()) {
+            if (summary == null) {
+                continue;
+            }
+            if (normalizedTitle.equals(normalizeName(summary.getChapterTitle()))) {
+                return summary;
+            }
+        }
+        return null;
+    }
+
+    private int resolveVolumeIndex(Volume volume) {
+        int index = volumes.indexOf(volume);
+        if (index >= 0) {
+            return index + 1;
+        }
+        if (volume != null && volume.getId() > 0) {
+            return volume.getId();
+        }
+        return 1;
+    }
+
+    private String buildChapterPlotReference(PlotChapterSummary summary) {
+        if (summary == null) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        String brief = safeTrim(summary.getBriefSummary());
+        if (!TextUtils.isEmpty(brief)) {
+            builder.append(brief);
+        }
+
+        String detail = safeTrim(summary.getDetailSummary());
+        if (!TextUtils.isEmpty(detail) && !detail.equals(brief)) {
+            if (builder.length() > 0) {
+                builder.append("\n");
+            }
+            builder.append(truncateText(detail, MAX_REFERENCE_TEXT_LENGTH));
+        }
+
+        if (summary.getKeyEvents() != null && !summary.getKeyEvents().isEmpty()) {
+            if (builder.length() > 0) {
+                builder.append("\n");
+            }
+            builder.append("关键事件：")
+                    .append(truncateText(joinNonEmpty(summary.getKeyEvents(), "；"), MAX_REFERENCE_TEXT_LENGTH));
+        }
+        return builder.toString().trim();
+    }
+
+    private String buildChapterCharacterReference(PlotChapterSummary summary) {
+        if (summary == null || summary.getCharacters() == null || summary.getCharacters().isEmpty()) {
+            return "";
+        }
+
+        List<String> lines = new ArrayList<>();
+        int count = 0;
+        for (String rawName : summary.getCharacters()) {
+            String name = safeTrim(rawName);
+            if (TextUtils.isEmpty(name)) {
+                continue;
+            }
+            Character character = characterIndex.get(normalizeName(name));
+            if (character != null) {
+                String profile = safeTrim(character.getProfile());
+                if (TextUtils.isEmpty(profile)) {
+                    profile = truncateText(safeTrim(character.getDetail()), 60);
+                }
+                if (!TextUtils.isEmpty(profile)) {
+                    lines.add("• " + character.getName() + "：" + profile);
+                } else {
+                    lines.add("• " + character.getName());
+                }
+            } else {
+                lines.add("• " + name);
+            }
+            count++;
+            if (count >= MAX_CHARACTER_REFERENCE_COUNT) {
+                break;
+            }
+        }
+
+        if (lines.isEmpty()) {
+            return "";
+        }
+        if (summary.getCharacters().size() > count) {
+            lines.add("• 其余人物可在人物画像中查看");
+        }
+        return truncateText(joinNonEmpty(lines, "\n"), MAX_REFERENCE_TEXT_LENGTH * 2);
+    }
+
+    private String joinNonEmpty(List<String> values, String delimiter) {
+        if (values == null || values.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String value : values) {
+            String trimmed = safeTrim(value);
+            if (TextUtils.isEmpty(trimmed)) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(delimiter);
+            }
+            builder.append(trimmed);
+        }
+        return builder.toString();
+    }
+
+    private String truncateText(String text, int maxLength) {
+        String trimmed = safeTrim(text);
+        if (TextUtils.isEmpty(trimmed) || trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        return trimmed.substring(0, Math.max(0, maxLength - 1)) + "…";
+    }
+
+    private String safeTrim(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return "";
+        }
+        return text.trim();
+    }
+
+    private String normalizeName(String rawName) {
+        if (TextUtils.isEmpty(rawName)) {
+            return "";
+        }
+        return rawName.trim()
+                .replace("“", "")
+                .replace("”", "")
+                .replace("'", "")
+                .replace("\"", "")
+                .replace("《", "")
+                .replace("》", "")
+                .replace("：", "")
+                .replace(":", "")
+                .trim();
     }
 
     /**

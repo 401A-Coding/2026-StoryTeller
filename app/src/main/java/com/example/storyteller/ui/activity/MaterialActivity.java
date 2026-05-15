@@ -30,7 +30,14 @@ import java.util.List;
 
 public class MaterialActivity extends BaseActivity {
 
+    private static final String[] MANUAL_MATERIAL_TYPES = new String[] {
+            MaterialCandidateExtractor.TYPE_PERSONA,
+            MaterialCandidateExtractor.TYPE_PLOT,
+            MaterialCandidateExtractor.TYPE_THEME
+    };
+
     private Button btnImport;
+    private Button btnCreateMaterial;
     private EditText etSearch;
     private Button btnFilterAll;
     private Button btnFilterPersona;
@@ -54,6 +61,7 @@ public class MaterialActivity extends BaseActivity {
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         btnImport = findViewById(R.id.btn_import);
+        btnCreateMaterial = findViewById(R.id.btn_create_material);
         etSearch = findViewById(R.id.et_material_search);
         btnFilterAll = findViewById(R.id.btn_filter_all);
         btnFilterPersona = findViewById(R.id.btn_filter_persona);
@@ -72,6 +80,7 @@ public class MaterialActivity extends BaseActivity {
         });
 
         btnImport.setOnClickListener(v -> showImportUrlDialog());
+        btnCreateMaterial.setOnClickListener(v -> showCreateMaterialTypeDialog());
 
         // 搜索实时过滤
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -239,5 +248,43 @@ public class MaterialActivity extends BaseActivity {
         } else {
             adapter.setData(materials);
         }
+    }
+
+    private void showCreateMaterialTypeDialog() {
+        final String[] typeLabels = new String[] {
+                getString(R.string.material_type_persona),
+                getString(R.string.material_type_plot),
+                getString(R.string.material_type_theme)
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.material_create_type_title)
+                .setItems(typeLabels, (dialog, which) -> {
+                    if (which < 0 || which >= MANUAL_MATERIAL_TYPES.length) {
+                        Toast.makeText(this, R.string.material_create_type_required, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    openCreateMaterialDetail(MANUAL_MATERIAL_TYPES[which]);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openCreateMaterialDetail(String sourceType) {
+        Intent intent = new Intent(this, MaterialDetailActivity.class);
+        intent.putExtra(MaterialDetailActivity.EXTRA_CREATE_MODE, true);
+        intent.putExtra(MaterialDetailActivity.EXTRA_PRESET_SOURCE_TYPE, sourceType);
+        intent.putExtra(MaterialDetailActivity.EXTRA_PRESET_CATEGORY, mapCategoryForManualCreate(sourceType));
+        startActivity(intent);
+    }
+
+    private String mapCategoryForManualCreate(String sourceType) {
+        if (MaterialCandidateExtractor.TYPE_PLOT.equals(sourceType)) {
+            return MaterialCandidateExtractor.CATEGORY_PLOT;
+        }
+        if (MaterialCandidateExtractor.TYPE_THEME.equals(sourceType)) {
+            return MaterialCandidateExtractor.CATEGORY_THEME;
+        }
+        return MaterialCandidateExtractor.CATEGORY_PERSONA;
     }
 }

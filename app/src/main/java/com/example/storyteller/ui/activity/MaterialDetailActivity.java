@@ -17,10 +17,15 @@ import com.example.storyteller.model.Material;
 public class MaterialDetailActivity extends BaseActivity {
 
     public static final String EXTRA_MATERIAL_ID = "extra_material_id";
+    public static final String EXTRA_CREATE_MODE = "extra_create_mode";
+    public static final String EXTRA_PRESET_CATEGORY = "extra_preset_category";
+    public static final String EXTRA_PRESET_SOURCE_TYPE = "extra_preset_source_type";
 
     private MaterialDao materialDao;
     private Material material;
+    private boolean createMode;
 
+    private TextView tvPageTitle;
     private TextView tvMetaSourceUrl;
     private TextView tvMetaSourceTitle;
     private TextView tvMetaSourceType;
@@ -28,6 +33,7 @@ public class MaterialDetailActivity extends BaseActivity {
     private EditText etTitle;
     private EditText etCategory;
     private EditText etContent;
+    private Button btnDelete;
 
     @Override
     protected int getLayoutId() {
@@ -38,6 +44,7 @@ public class MaterialDetailActivity extends BaseActivity {
     protected void initView() {
         // 刘海屏适配：为根布局设置系统栏内边距
         applySystemWindowInsets(findViewById(android.R.id.content));
+        tvPageTitle = findViewById(R.id.tv_material_detail_title);
         tvMetaSourceUrl = findViewById(R.id.tv_material_detail_source_url);
         tvMetaSourceTitle = findViewById(R.id.tv_material_detail_source_title);
         tvMetaSourceType = findViewById(R.id.tv_material_detail_source_type);
@@ -46,7 +53,7 @@ public class MaterialDetailActivity extends BaseActivity {
         etCategory = findViewById(R.id.et_material_detail_category);
         etContent = findViewById(R.id.et_material_detail_content);
         Button btnSave = findViewById(R.id.btn_material_detail_save);
-        Button btnDelete = findViewById(R.id.btn_material_detail_delete);
+        btnDelete = findViewById(R.id.btn_material_detail_delete);
         Button btnBack = findViewById(R.id.btn_material_detail_back);
 
         btnBack.setOnClickListener(v -> finish());
@@ -57,6 +64,13 @@ public class MaterialDetailActivity extends BaseActivity {
     @Override
     protected void initData() {
         materialDao = new MaterialDao(this);
+        createMode = getIntent().getBooleanExtra(EXTRA_CREATE_MODE, false);
+
+        if (createMode) {
+            initCreateMode();
+            return;
+        }
+
         int materialId = getIntent().getIntExtra(EXTRA_MATERIAL_ID, -1);
         if (materialId <= 0) {
             Toast.makeText(this, getString(R.string.material_detail_not_found), Toast.LENGTH_SHORT).show();
@@ -74,15 +88,40 @@ public class MaterialDetailActivity extends BaseActivity {
         bindMaterial();
     }
 
+    private void initCreateMode() {
+        String presetCategory = getIntent().getStringExtra(EXTRA_PRESET_CATEGORY);
+        String presetSourceType = getIntent().getStringExtra(EXTRA_PRESET_SOURCE_TYPE);
+        String category = TextUtils.isEmpty(presetCategory)
+                ? getString(R.string.material_type_persona)
+                : presetCategory;
+
+        material = new Material(category, "", "", System.currentTimeMillis());
+        material.setSourceType(presetSourceType);
+        material.setSourceTitle(getString(R.string.material_manual_source_label));
+        material.setSourceUrl(getString(R.string.material_manual_source_label));
+        material.setAiScore(0d);
+
+        if (btnDelete != null) {
+            btnDelete.setVisibility(Button.GONE);
+        }
+        bindMaterial();
+    }
+
     private void bindMaterial() {
-        setTitle(material.getTitle());
+        String pageTitle = createMode
+                ? getString(R.string.title_material_create)
+                : material.getTitle();
+        setTitle(pageTitle);
+        if (tvPageTitle != null) {
+            tvPageTitle.setText(pageTitle);
+        }
         etTitle.setText(material.getTitle());
         etCategory.setText(material.getCategory());
         etContent.setText(material.getContent());
 
         tvMetaSourceUrl.setText(formatNullable(material.getSourceUrl()));
         tvMetaSourceTitle.setText(formatNullable(material.getSourceTitle()));
-        tvMetaSourceType.setText(formatNullable(material.getSourceType()));
+        tvMetaSourceType.setText(formatNullable(formatSourceType(material.getSourceType())));
         tvMetaAiScore.setText(String.valueOf(material.getAiScore()));
     }
 
@@ -102,13 +141,25 @@ public class MaterialDetailActivity extends BaseActivity {
         material.setTitle(title);
         material.setCategory(category);
         material.setContent(content);
-        int updated = materialDao.update(material);
-        if (updated > 0) {
-            Toast.makeText(this, getString(R.string.material_detail_saved), Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK, new Intent().putExtra(EXTRA_MATERIAL_ID, material.getId()));
-            finish();
+        if (createMode) {
+            long insertedId = materialDao.insert(material);
+            if (insertedId > 0) {
+                material.setId((int) insertedId);
+                Toast.makeText(this, getString(R.string.material_created_saved), Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK, new Intent().putExtra(EXTRA_MATERIAL_ID, material.getId()));
+                finish();
+            } else {
+                Toast.makeText(this, getString(R.string.material_create_failed), Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, getString(R.string.material_detail_save_failed), Toast.LENGTH_SHORT).show();
+            int updated = materialDao.update(material);
+            if (updated > 0) {
+                Toast.makeText(this, getString(R.string.material_detail_saved), Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK, new Intent().putExtra(EXTRA_MATERIAL_ID, material.getId()));
+                finish();
+            } else {
+                Toast.makeText(this, getString(R.string.material_detail_save_failed), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -145,6 +196,22 @@ public class MaterialDetailActivity extends BaseActivity {
 
     private String formatNullable(String value) {
         return TextUtils.isEmpty(value) ? getString(R.string.material_detail_empty_value) : value;
+    }
+
+    private String formatSourceType(String sourceType) {
+        if (TextUtils.isEmpty(sourceType)) {
+            return "";
+        }
+        if ("persona".equalsIgnoreCase(sourceType)) {
+            return getString(R.string.material_type_persona);
+        }
+        if ("plot".equalsIgnoreCase(sourceType)) {
+            return getString(R.string.material_type_plot);
+        }
+        if ("theme".equalsIgnoreCase(sourceType)) {
+            return getString(R.string.material_type_theme);
+        }
+        return sourceType;
     }
 }
 
