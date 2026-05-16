@@ -107,14 +107,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
      * 切换选中状态
      */
     public void toggleSelection(int position) {
-        android.util.Log.d("StorySettingAdapter", "toggleSelection: position=" + position + ", wasSelected=" + selectedPositions.contains(position));
-        
         if (selectedPositions.contains(position)) {
             selectedPositions.remove(position);
-            android.util.Log.d("StorySettingAdapter", "  removed, now size=" + selectedPositions.size());
         } else {
             selectedPositions.add(position);
-            android.util.Log.d("StorySettingAdapter", "  added, now size=" + selectedPositions.size());
         }
         
         // 只更新当前项，避免触发Checkbox的点击事件
@@ -130,18 +126,14 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
      */
     public List<StorySetting> getSelectedSettings() {
         List<StorySetting> selected = new ArrayList<>();
-        android.util.Log.d("StorySettingAdapter", "getSelectedSettings: isSelectionMode=" + isSelectionMode + ", selectedPositions.size=" + selectedPositions.size());
         
         for (int position : selectedPositions) {
-            android.util.Log.d("StorySettingAdapter", "  position=" + position + ", displaySettings.size=" + displaySettings.size());
             if (position >= 0 && position < displaySettings.size()) {
                 StorySetting setting = displaySettings.get(position);
-                android.util.Log.d("StorySettingAdapter", "  adding: " + setting.getTitle());
                 selected.add(setting);
             }
         }
         
-        android.util.Log.d("StorySettingAdapter", "  total selected: " + selected.size());
         return selected;
     }
     

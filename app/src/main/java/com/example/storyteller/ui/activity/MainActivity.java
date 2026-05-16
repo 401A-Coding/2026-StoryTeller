@@ -1,16 +1,13 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
-import android.util.Log;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
-import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.ui.fragment.HomeFragment;
 import com.example.storyteller.ui.fragment.StoryManagementFragment;
 import com.example.storyteller.ui.fragment.CreationFragment;
 import com.example.storyteller.ui.fragment.SettingsFragment;
 import com.example.storyteller.utils.DatabaseMigrationUtils;
-import com.example.storyteller.utils.TestDataGenerator;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.fragment.app.Fragment;
 
@@ -63,38 +60,8 @@ public class MainActivity extends BaseActivity {
         // 初始化故事字数统计（仅在首次启动或数据库升级后执行）
         DatabaseMigrationUtils.initializeWordCounts(this);
         
-        // TODO: 测试用 - 插入设定测试数据（仅当数据库为空时）
-        insertTestSettingsIfEmpty();
-        
         String targetTab = getIntent() != null ? getIntent().getStringExtra(EXTRA_TARGET_TAB) : null;
         bottomNav.setSelectedItemId(getMenuIdForTab(targetTab));
-    }
-    
-    /**
-     * 如果素材库为空，插入测试数据
-     * 方便UI开发和测试
-     */
-    private void insertTestSettingsIfEmpty() {
-        new Thread(() -> {
-            try {
-                StorySettingDao dao = new StorySettingDao(this);
-                // 检查是否已有数据
-                var existingSettings = dao.getByStoryId(0);  // 查询全局素材库
-                
-                if (existingSettings == null || existingSettings.isEmpty()) {
-                    Log.d("MainActivity", "检测到素材库为空，插入测试数据...");
-                    TestDataGenerator.insertTestSettings(this, 0);  // storyId=0 表示全局素材库
-                    runOnUiThread(() -> {
-                        Log.d("MainActivity", "✅ 测试数据插入成功！共8条设定");
-                    });
-                } else {
-                    Log.d("MainActivity", "素材库已有 " + existingSettings.size() + " 条数据，跳过插入");
-                }
-            } catch (Exception e) {
-                Log.e("MainActivity", "插入测试数据失败: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }).start();
     }
 
     @Override
