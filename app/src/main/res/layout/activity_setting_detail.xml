@@ -346,7 +346,7 @@
                                 android:layout_height="16dp"
                                 android:src="@drawable/ic_arrow_back"
                                 android:rotation="180"
-                                android:tint="#1976D2"
+                                app:tint="#1976D2"
                                 android:layout_marginStart="4dp" />
 
                         </LinearLayout>
