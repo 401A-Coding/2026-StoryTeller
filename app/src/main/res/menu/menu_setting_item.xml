@@ -7,6 +7,9 @@
         android:id="@+id/menu_import_to_story"
         android:title="导入到小说" />
     <item
+        android:id="@+id/menu_export_to_global"
+        android:title="导出到全局素材" />
+    <item
         android:id="@+id/menu_delete"
         android:title="删除" />
 </menu>

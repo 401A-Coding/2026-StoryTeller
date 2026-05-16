@@ -44,6 +44,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     public interface OnImportListener {
         void onImportToStory(StorySetting setting);
     }
+    
+    public interface OnExportListener {
+        void onExportToGlobal(StorySetting setting);
+    }
 
     private List<StorySetting> allSettings;      // 原始数据
     private List<StorySetting> displaySettings;   // 显示数据（可能被过滤）
@@ -55,6 +59,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     private OnSettingDeleteListener deleteListener;
     private OnSelectionModeChangeListener selectionModeListener;
     private OnImportListener importListener;
+    private OnExportListener exportListener;
     
     // 多选模式
     private boolean isSelectionMode = false;
@@ -79,6 +84,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     
     public void setOnImportListener(OnImportListener listener) {
         this.importListener = listener;
+    }
+    
+    public void setOnExportListener(OnExportListener listener) {
+        this.exportListener = listener;
     }
     
     /**
@@ -330,9 +339,13 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         android.widget.PopupMenu popup = new android.widget.PopupMenu(anchorView.getContext(), anchorView);
         popup.getMenuInflater().inflate(R.menu.menu_setting_item, popup.getMenu());
         
-        // 如果是小说专属设定（storyId > 0），隐藏“导入到小说”选项
+        // 如果是小说专属设定（storyId > 0），隐藏“导入到小说”选项，显示“导出到全局素材”
         if (setting.getStoryId() > 0) {
             popup.getMenu().findItem(R.id.menu_import_to_story).setVisible(false);
+            popup.getMenu().findItem(R.id.menu_export_to_global).setVisible(true);
+        } else {
+            // 全局素材库：隐藏“导出到全局素材”
+            popup.getMenu().findItem(R.id.menu_export_to_global).setVisible(false);
         }
         
         popup.setOnMenuItemClickListener(item -> {
@@ -347,6 +360,12 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
                 // 导入到小说
                 if (importListener != null) {
                     importListener.onImportToStory(setting);
+                }
+                return true;
+            } else if (itemId == R.id.menu_export_to_global) {
+                // 导出到全局素材
+                if (exportListener != null) {
+                    exportListener.onExportToGlobal(setting);
                 }
                 return true;
             } else if (itemId == R.id.menu_delete) {

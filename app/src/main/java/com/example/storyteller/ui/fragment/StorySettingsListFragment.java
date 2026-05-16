@@ -148,6 +148,11 @@ public class StorySettingsListFragment extends BaseFragment {
                 showDeleteConfirmDialog(setting, position);
             });
             
+            // 导出回调（单条）
+            adapter.setOnExportListener(setting -> {
+                exportSettingToGlobal(setting);
+            });
+            
             rvSettings.setAdapter(adapter);
         } else {
             adapter.setData(settings);
@@ -189,10 +194,8 @@ public class StorySettingsListFragment extends BaseFragment {
     private void updateEmptyHint() {
         if (adapter == null || adapter.getItemCount() == 0) {
             layoutEmptyHint.setVisibility(View.VISIBLE);
-            btnCreateSetting.setVisibility(View.VISIBLE);
         } else {
             layoutEmptyHint.setVisibility(View.GONE);
-            btnCreateSetting.setVisibility(View.GONE);
         }
     }
 
@@ -205,6 +208,53 @@ public class StorySettingsListFragment extends BaseFragment {
         intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, -1);  // -1 表示新建
         intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
         startActivity(intent);
+    }
+    
+    /**
+     * 导出单个设定到全局素材库
+     */
+    private void exportSettingToGlobal(StorySetting novelSetting) {
+        try {
+            StorySettingDao globalDao = new StorySettingDao(requireContext());
+            
+            // 1. 检查全局素材库是否已存在同名设定
+            List<StorySetting> existing = globalDao.getByStoryId(0);  // storyId=0 表示全局素材库
+            boolean nameExists = false;
+            for (StorySetting s : existing) {
+                if (s.getTitle().equals(novelSetting.getTitle())) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            
+            // 2. 创建副本
+            StorySetting copy = new StorySetting();
+            copy.setStoryId(0);  // 设置为全局素材库
+            copy.setTitle(nameExists ? novelSetting.getTitle() + " (副本)" : novelSetting.getTitle());
+            copy.setCategory(novelSetting.getCategory());
+            copy.setSubCategory(novelSetting.getSubCategory());
+            copy.setSummary(novelSetting.getSummary());
+            copy.setDetail(novelSetting.getDetail());
+            copy.setTags(novelSetting.getTags());
+            copy.setAliases(novelSetting.getAliases());
+            copy.setFavorite(false);  // 不继承收藏状态
+            copy.setSourceMaterialId(0);  // 导出的素材不再记录溯源（独立素材）
+            copy.setCreateTime(System.currentTimeMillis());
+            
+            // 3. 插入数据库
+            long newId = globalDao.insert(copy);
+            
+            if (newId > 0) {
+                android.widget.Toast.makeText(requireContext(), 
+                    "导出成功" + (nameExists ? "（已重命名）" : ""), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                android.widget.Toast.makeText(requireContext(), "导出失败", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.widget.Toast.makeText(requireContext(), "导出失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
     }
     
     /**

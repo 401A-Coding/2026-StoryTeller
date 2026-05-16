@@ -4,18 +4,34 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- 搜索栏 -->
-    <EditText
-        android:id="@+id/et_search"
+    <!-- 搜索栏和新建按钮 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="搜索设定..."
-        android:textSize="14sp"
-        android:padding="12dp"
-        android:layout_margin="8dp"
-        android:background="@drawable/bg_outline_edittext"
-        android:inputType="text"
-        android:maxLines="1" />
+        android:orientation="horizontal"
+        android:layout_margin="8dp">
+
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="搜索设定..."
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:inputType="text"
+            android:maxLines="1" />
+
+        <Button
+            android:id="@+id/btn_create_setting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="+ 新建"
+            android:backgroundTint="#1976D2" />
+
+    </LinearLayout>
 
     <!-- 主分类筛选器 -->
     <HorizontalScrollView
@@ -79,21 +95,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="点击下方按钮添加第一个设定"
+            android:text="点击上方按钮添加第一个设定"
             android:textSize="14sp"
             android:textColor="#CCCCCC" />
 
     </LinearLayout>
-
-    <!-- 创建按钮（空状态时显示） -->
-    <Button
-        android:id="@+id/btn_create_setting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="24dp"
-        android:text="+ 新建设定"
-        android:visibility="gone"
-        android:backgroundTint="#1976D2" />
 
 </LinearLayout>

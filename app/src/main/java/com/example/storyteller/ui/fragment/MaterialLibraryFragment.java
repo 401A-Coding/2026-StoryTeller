@@ -102,11 +102,9 @@ public class MaterialLibraryFragment extends BaseFragment {
         View tvCrawlTypeLabel = view.findViewById(R.id.tv_crawl_type_label);
         if (tvCrawlTypeLabel != null) tvCrawlTypeLabel.setVisibility(View.GONE);
         
-        // 显示创建按钮
+        // 获取创建按钮引用（在 initData 中根据 storyId 决定是否显示）
         btnCreateSetting = view.findViewById(R.id.btn_create_material);
         if (btnCreateSetting != null) {
-            btnCreateSetting.setVisibility(View.VISIBLE);
-            btnCreateSetting.setText("+ 新建设定");
             btnCreateSetting.setOnClickListener(v -> showCreateSettingDialog());
         }
         
@@ -191,6 +189,11 @@ public class MaterialLibraryFragment extends BaseFragment {
             // 导入回调（单条）
             adapter.setOnImportListener(setting -> {
                 showImportDialog(setting);
+            });
+            
+            // 导出回调（单条）
+            adapter.setOnExportListener(setting -> {
+                exportSettingToGlobal(setting);
             });
             
             // 多选模式监听
@@ -332,6 +335,51 @@ public class MaterialLibraryFragment extends BaseFragment {
         } catch (Exception e) {
             e.printStackTrace();
             android.widget.Toast.makeText(getContext(), "导入失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * 导出单个设定到全局素材库
+     */
+    private void exportSettingToGlobal(StorySetting novelSetting) {
+        try {
+            // 1. 检查全局素材库是否已存在同名设定
+            List<StorySetting> existing = settingDao.getByStoryId(0);  // storyId=0 表示全局素材库
+            boolean nameExists = false;
+            for (StorySetting s : existing) {
+                if (s.getTitle().equals(novelSetting.getTitle())) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            
+            // 2. 创建副本
+            StorySetting copy = new StorySetting();
+            copy.setStoryId(0);  // 设置为全局素材库
+            copy.setTitle(nameExists ? novelSetting.getTitle() + " (副本)" : novelSetting.getTitle());
+            copy.setCategory(novelSetting.getCategory());
+            copy.setSubCategory(novelSetting.getSubCategory());
+            copy.setSummary(novelSetting.getSummary());
+            copy.setDetail(novelSetting.getDetail());
+            copy.setTags(novelSetting.getTags());
+            copy.setAliases(novelSetting.getAliases());
+            copy.setFavorite(false);  // 不继承收藏状态
+            copy.setSourceMaterialId(0);  // 导出的素材不再记录溯源（独立素材）
+            copy.setCreateTime(System.currentTimeMillis());
+            
+            // 3. 插入数据库
+            long newId = settingDao.insert(copy);
+            
+            if (newId > 0) {
+                android.widget.Toast.makeText(requireContext(), 
+                    "导出成功" + (nameExists ? "（已重命名）" : ""), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                android.widget.Toast.makeText(requireContext(), "导出失败", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.widget.Toast.makeText(requireContext(), "导出失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
         }
     }
     
