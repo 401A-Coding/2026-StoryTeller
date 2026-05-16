@@ -10,24 +10,29 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
-import com.example.storyteller.model.Material;
+import com.example.storyteller.model.StorySetting;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 素材候选审核适配器（新版）
+ * 用于AI提取素材后的用户审核和选择
+ */
 public class MaterialCandidateReviewAdapter extends RecyclerView.Adapter<MaterialCandidateReviewAdapter.ViewHolder> {
 
-    private final List<Material> materials = new ArrayList<>();
+    private final List<StorySetting> settings = new ArrayList<>();
     private final Set<Integer> selectedPositions = new HashSet<>();
 
-    public void setData(List<Material> list) {
-        materials.clear();
+    public void setData(List<StorySetting> list) {
+        settings.clear();
         selectedPositions.clear();
         if (list != null) {
-            materials.addAll(list);
-            for (int i = 0; i < materials.size(); i++) {
+            settings.addAll(list);
+            // 默认全选
+            for (int i = 0; i < settings.size(); i++) {
                 selectedPositions.add(i);
             }
         }
@@ -37,7 +42,7 @@ public class MaterialCandidateReviewAdapter extends RecyclerView.Adapter<Materia
     public void setAllSelected(boolean selected) {
         selectedPositions.clear();
         if (selected) {
-            for (int i = 0; i < materials.size(); i++) {
+            for (int i = 0; i < settings.size(); i++) {
                 selectedPositions.add(i);
             }
         }
@@ -45,14 +50,14 @@ public class MaterialCandidateReviewAdapter extends RecyclerView.Adapter<Materia
     }
 
     public boolean isAllSelected() {
-        return !materials.isEmpty() && selectedPositions.size() == materials.size();
+        return !settings.isEmpty() && selectedPositions.size() == settings.size();
     }
 
-    public List<Material> getSelectedMaterials() {
-        List<Material> result = new ArrayList<>();
-        for (int i = 0; i < materials.size(); i++) {
+    public List<StorySetting> getSelectedSettings() {
+        List<StorySetting> result = new ArrayList<>();
+        for (int i = 0; i < settings.size(); i++) {
             if (selectedPositions.contains(i)) {
-                result.add(materials.get(i));
+                result.add(settings.get(i));
             }
         }
         return result;
@@ -67,15 +72,22 @@ public class MaterialCandidateReviewAdapter extends RecyclerView.Adapter<Materia
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Material material = materials.get(position);
-        holder.tvTitle.setText(material.getTitle());
-        holder.tvCategory.setText(material.getCategory());
+        StorySetting setting = settings.get(position);
+        holder.tvTitle.setText(setting.getTitle());
+        
+        // 显示分类信息：主分类 + 子分类
+        String categoryText = setting.getCategory();
+        if (setting.getSubCategory() != null && !setting.getSubCategory().isEmpty()) {
+            categoryText += " · " + setting.getSubCategory();
+        }
+        holder.tvCategory.setText(categoryText);
 
-        String content = material.getContent();
-        if (content != null && content.length() > 140) {
-            holder.tvPreview.setText(content.substring(0, 140));
+        // 显示摘要预览
+        String summary = setting.getSummary();
+        if (summary != null && summary.length() > 120) {
+            holder.tvPreview.setText(summary.substring(0, 120) + "...");
         } else {
-            holder.tvPreview.setText(content);
+            holder.tvPreview.setText(summary);
         }
 
         holder.cbSelected.setOnCheckedChangeListener(null);
@@ -93,7 +105,7 @@ public class MaterialCandidateReviewAdapter extends RecyclerView.Adapter<Materia
 
     @Override
     public int getItemCount() {
-        return materials.size();
+        return settings.size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

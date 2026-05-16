@@ -13,38 +13,37 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
-import com.example.storyteller.model.Material;
-import com.example.storyteller.model.NovelSummary;
+import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.adapter.MaterialCandidateReviewAdapter;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import java.util.List;
 
+/**
+ * 素材候选审核对话框（新版）
+ * 用于AI提取素材后让用户选择哪些要保存
+ */
 public class MaterialCandidateReviewDialogFragment extends BottomSheetDialogFragment {
 
     public interface Listener {
-        void onConfirm(@NonNull NovelSummary summary, @NonNull List<Material> selectedMaterials, @Nullable String rawJson);
+        void onConfirm(@NonNull List<StorySetting> selectedSettings);
         void onCancel();
     }
 
     private final MaterialCandidateReviewAdapter adapter = new MaterialCandidateReviewAdapter();
     private Listener listener;
-    private NovelSummary summary;
-    private String rawJson;
     private boolean confirmed;
 
     public static MaterialCandidateReviewDialogFragment newInstance() {
         return new MaterialCandidateReviewDialogFragment();
     }
 
-    public void setListener(@Nullable Listener listener) {
-        this.listener = listener;
+    public void setData(@NonNull List<StorySetting> settings) {
+        adapter.setData(settings);
     }
 
-    public void setData(@NonNull NovelSummary summary, @NonNull List<Material> materials, @Nullable String rawJson) {
-        this.summary = summary;
-        this.rawJson = rawJson;
-        adapter.setData(materials);
+    public void setListener(@Nullable Listener listener) {
+        this.listener = listener;
     }
 
     @Nullable
@@ -92,11 +91,7 @@ public class MaterialCandidateReviewDialogFragment extends BottomSheetDialogFrag
         });
 
         btnConfirm.setOnClickListener(v -> {
-            if (summary == null) {
-                dismiss();
-                return;
-            }
-            List<Material> selected = adapter.getSelectedMaterials();
+            List<StorySetting> selected = adapter.getSelectedSettings();
             if (selected.isEmpty()) {
                 tvEmpty.setText(R.string.material_review_empty);
                 tvEmpty.setVisibility(View.VISIBLE);
@@ -104,7 +99,7 @@ public class MaterialCandidateReviewDialogFragment extends BottomSheetDialogFrag
             }
             confirmed = true;
             if (listener != null) {
-                listener.onConfirm(summary, selected, rawJson);
+                listener.onConfirm(selected);
             }
             dismiss();
         });
@@ -118,4 +113,3 @@ public class MaterialCandidateReviewDialogFragment extends BottomSheetDialogFrag
         }
     }
 }
-

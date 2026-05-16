@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -18,13 +19,20 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StorySettingDao;
+import com.example.storyteller.data.remote.GenericContentExtractor;
+import com.example.storyteller.data.remote.MaterialCandidateExtractor;
+import com.example.storyteller.data.remote.NovelCrawler;
+import com.example.storyteller.model.NovelSummary;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.activity.SettingDetailActivity;
 import com.example.storyteller.ui.adapter.StorySettingAdapter;
+import com.example.storyteller.ui.dialog.MaterialCandidateReviewDialogFragment;
+import com.example.storyteller.utils.MaterialTypeMapper;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,6 +85,9 @@ public class MaterialLibraryFragment extends BaseFragment {
     private StorySettingDao settingDao;
     private StorySettingAdapter adapter;
     private int currentStoryId = 0;  // 所属小说ID（0表示全局素材库）
+    
+    private NovelCrawler novelCrawler;
+    private GenericContentExtractor contentExtractor;
 
     @Override
     protected int getLayoutId() {
@@ -94,7 +105,10 @@ public class MaterialLibraryFragment extends BaseFragment {
         
         // 隐藏不需要的元素
         View btnImport = view.findViewById(R.id.btn_import);
-        if (btnImport != null) btnImport.setVisibility(View.GONE);
+        if (btnImport != null) {
+            btnImport.setVisibility(View.VISIBLE);
+            btnImport.setOnClickListener(v -> showImportUrlDialog());
+        }
         
         View tvCrawlSection = view.findViewById(R.id.tv_crawl_section);
         if (tvCrawlSection != null) tvCrawlSection.setVisibility(View.GONE);
@@ -144,6 +158,8 @@ public class MaterialLibraryFragment extends BaseFragment {
         }
         
         settingDao = new StorySettingDao(requireContext());
+        novelCrawler = new NovelCrawler();
+        contentExtractor = new GenericContentExtractor();
         refreshSettingsList();
     }
 
@@ -687,5 +703,249 @@ public class MaterialLibraryFragment extends BaseFragment {
         
         // 刷新列表
         refreshSettingsList();
+    }
+    
+    /**
+     * 显示导入URL对话框
+     */
+    private void showImportUrlDialog() {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint("请输入素材来源 URL");
+        input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_URI);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("导入素材")
+                .setView(input)
+                .setPositiveButton("下一步", (dialog, which) -> {
+                    String url = input.getText() == null ? "" : input.getText().toString().trim();
+                    if (url.isEmpty()) {
+                        android.widget.Toast.makeText(getContext(), "请输入 URL", android.widget.Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // 显示素材类型多选对话
+                    showTypeSelectionDialog(url);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * 显示素材类型选择对话框
+     */
+    private void showTypeSelectionDialog(String url) {
+        // 使用新版5大分类体系
+        final String[] typeLabels = SettingCategoryConfig.getAllMainCategories();
+        final boolean[] checked = new boolean[typeLabels.length];
+        // 默认全选
+        for (int i = 0; i < checked.length; i++) {
+            checked[i] = true;
+        }
+        
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("选择要导入的素材类型")
+                .setMultiChoiceItems(typeLabels, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+                .setPositiveButton("导入", (dialog, which) -> {
+                    List<String> selected = new ArrayList<>();
+                    for (int i = 0; i < checked.length; i++) {
+                        if (checked[i]) {
+                            // 将中文分类名映射为AI提取类型
+                            String type = mapCategoryToExtractType(typeLabels[i]);
+                            if (type != null) {
+                                selected.add(type);
+                            }
+                        }
+                    }
+                    
+                    if (selected.isEmpty()) {
+                        android.widget.Toast.makeText(getContext(), "请至少选择一种素材类型", android.widget.Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    
+                    startImporting(url, selected);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * 将新版分类名映射为AI提取类型
+     */
+    private String mapCategoryToExtractType(String categoryName) {
+        switch (categoryName) {
+            case "世界观":
+                return MaterialCandidateExtractor.TYPE_WORLDVIEW;
+            case "角色":
+                return MaterialCandidateExtractor.TYPE_CHARACTER;
+            case "剧情":
+                return MaterialCandidateExtractor.TYPE_PLOT;
+            case "风格":
+                return MaterialCandidateExtractor.TYPE_STYLE;
+            case "规则":
+                return MaterialCandidateExtractor.TYPE_RULE;
+            default:
+                // 未知分类默认使用角色
+                return MaterialCandidateExtractor.TYPE_CHARACTER;
+        }
+    }
+
+    /**
+     * 开始导入素材
+     */
+    private void startImporting(String url, List<String> selectedTypes) {
+        // 显示加载状态
+        tvEmptyHint.setVisibility(View.VISIBLE);
+        tvEmptyHint.setText("正在提取内容...");
+
+        // 判断是否为番茄小说链接
+        if (url.contains("fanqienovel.com")) {
+            // 使用番茄小说爬虫
+            crawlFromFanqie(url, selectedTypes);
+        } else {
+            // 使用通用提取器
+            extractFromGenericUrl(url, selectedTypes);
+        }
+    }
+
+    /**
+     * 从番茄小说爬取
+     */
+    private void crawlFromFanqie(String url, List<String> selectedTypes) {
+        novelCrawler.crawlAndExtract(url, requireContext(), selectedTypes, new NovelCrawler.ExtractCallback() {
+            @Override
+            public void onSuccess(NovelSummary summary, List<com.example.storyteller.model.Material> materials, String rawJson) {
+                requireActivity().runOnUiThread(() -> {
+                    saveMaterialsToGlobalLibrary(materials, rawJson);
+                });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    tvEmptyHint.setText("提取失败: " + e.getMessage());
+                    android.widget.Toast.makeText(getContext(), "提取失败: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * 从通用URL提取
+     */
+    private void extractFromGenericUrl(String url, List<String> selectedTypes) {
+        contentExtractor.extract(url, new GenericContentExtractor.ExtractCallback() {
+            @Override
+            public void onSuccess(NovelSummary summary) {
+                requireActivity().runOnUiThread(() -> {
+                    // 对于非番茄小说，直接使用AI提取素材
+                    extractMaterialsFromSummary(summary, selectedTypes);
+                });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    tvEmptyHint.setText("提取失败: " + e.getMessage());
+                    android.widget.Toast.makeText(getContext(), "提取失败: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * 从摘要中使用AI提取素材
+     */
+    private void extractMaterialsFromSummary(NovelSummary summary, List<String> selectedTypes) {
+        tvEmptyHint.setText("正在AI分析...");
+        
+        MaterialCandidateExtractor extractor = new MaterialCandidateExtractor();
+        extractor.extract(summary, requireContext(), selectedTypes, new MaterialCandidateExtractor.Callback() {
+            @Override
+            public void onSuccess(List<com.example.storyteller.model.Material> materials, String rawJson) {
+                requireActivity().runOnUiThread(() -> {
+                    saveMaterialsToGlobalLibrary(materials, rawJson);
+                });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    tvEmptyHint.setText("AI分析失败: " + e.getMessage());
+                    android.widget.Toast.makeText(getContext(), "AI分析失败: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * 保存素材到全局素材库（带审核）
+     */
+    private void saveMaterialsToGlobalLibrary(List<com.example.storyteller.model.Material> materials, String rawJson) {
+        if (materials == null || materials.isEmpty()) {
+            tvEmptyHint.setText("未提取到素材");
+            android.widget.Toast.makeText(getContext(), "未提取到素材", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 转换为新版StorySetting
+        List<StorySetting> settings = new ArrayList<>();
+        for (com.example.storyteller.model.Material oldMaterial : materials) {
+            try {
+                StorySetting setting = MaterialTypeMapper.convertToStorySetting(oldMaterial);
+                setting.setStoryId(0);  // 设置为全局素材库
+                settings.add(setting);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (settings.isEmpty()) {
+            tvEmptyHint.setText("素材转换失败");
+            android.widget.Toast.makeText(getContext(), "素材转换失败", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 显示审核对话框
+        showReviewDialog(settings);
+    }
+
+    /**
+     * 显示素材审核对话框
+     */
+    private void showReviewDialog(List<StorySetting> settings) {
+        MaterialCandidateReviewDialogFragment dialog = MaterialCandidateReviewDialogFragment.newInstance();
+        dialog.setData(settings);
+        dialog.setListener(new MaterialCandidateReviewDialogFragment.Listener() {
+            @Override
+            public void onConfirm(@NonNull List<StorySetting> selectedSettings) {
+                // 用户确认保存选中的素材
+                int successCount = 0;
+                for (StorySetting setting : selectedSettings) {
+                    try {
+                        long id = settingDao.insert(setting);
+                        if (id > 0) {
+                            successCount++;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // 刷新列表
+                refreshSettingsList();
+                
+                // 显示结果
+                tvEmptyHint.setVisibility(View.GONE);
+                android.widget.Toast.makeText(getContext(), 
+                        "成功导入 " + successCount + " 个素材", 
+                        android.widget.Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onCancel() {
+                tvEmptyHint.setText("已取消导入");
+                android.widget.Toast.makeText(getContext(), "已取消导入", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+        dialog.show(getChildFragmentManager(), "material_review");
     }
 }

@@ -14,9 +14,9 @@ import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.activity.CharacterActivity;
-import com.example.storyteller.ui.activity.MaterialActivity;
 import com.example.storyteller.ui.activity.PlotTreeActivity;
 import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
+import com.example.storyteller.ui.fragment.MaterialLibraryFragment;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import java.util.List;
 
@@ -84,7 +84,15 @@ public class HomeFragment extends BaseFragment {
         view.findViewById(R.id.card_plot_tree)
             .setOnClickListener(v -> startActivity(new Intent(requireContext(), PlotTreeActivity.class)));
         view.findViewById(R.id.card_material)
-            .setOnClickListener(v -> startActivity(new Intent(requireContext(), MaterialActivity.class)));
+            .setOnClickListener(v -> {
+                // 直接显示全局素材库Fragment（storyId=0）
+                MaterialLibraryFragment fragment = MaterialLibraryFragment.newInstance(0);
+                requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null)
+                    .commit();
+            });
 
         view.findViewById(R.id.btn_switch_novel).setOnClickListener(v -> showSwitchNovelDialog());
 
