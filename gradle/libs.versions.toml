@@ -13,6 +13,7 @@ recyclerview = "1.4.0"
 viewpager2 = "1.1.0"
 securityCrypto = "1.1.0-alpha06"
 jsoup = "1.18.3"
+glide = "4.16.0"
 
 [libraries]
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -28,6 +29,7 @@ recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version
 viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
 security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.viewpager2)
     implementation(libs.security.crypto)  // 新增：用于加密SharedPreferences
     implementation(libs.jsoup)  // 用于网页爬取
+    implementation(libs.glide)  // 图片加载
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")  // 本地广播管理器
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)

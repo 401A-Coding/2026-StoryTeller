@@ -79,40 +79,11 @@
         android:layout_weight="1">
 
         <!-- 设定面板 -->
-        <ScrollView
+        <FrameLayout
             android:id="@+id/panel_setting"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="visible">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="世界观设定"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="8dp" />
-
-                <EditText
-                    android:id="@+id/et_world_setting"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:hint="描述故事的世界观、背景设定..."
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
-        </ScrollView>
+            android:visibility="visible" />
 
         <!-- 大纲面板 -->
         <ScrollView

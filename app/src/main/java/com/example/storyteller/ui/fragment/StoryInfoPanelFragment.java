@@ -26,6 +26,7 @@ import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.StoryAdapter;
+import com.example.storyteller.ui.fragment.StorySettingsListFragment;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
@@ -44,7 +45,6 @@ public class StoryInfoPanelFragment extends BaseFragment {
     private ImageView btnSelectStory;
     private ImageView btnClosePanel;  // 新增关闭按钮
     private TabLayout tabStoryInfo;
-    private EditText etWorldSetting;
     private EditText etOutline;
     private EditText etDocs;
     private LinearLayout layoutToc;
@@ -101,7 +101,6 @@ public class StoryInfoPanelFragment extends BaseFragment {
         btnSelectStory = view.findViewById(R.id.btn_select_story);
         btnClosePanel = view.findViewById(R.id.btn_close_panel);  // 初始化关闭按钮
         tabStoryInfo = view.findViewById(R.id.tab_story_info);
-        etWorldSetting = view.findViewById(R.id.et_world_setting);
         etOutline = view.findViewById(R.id.et_outline);
         etDocs = view.findViewById(R.id.et_docs);
         layoutToc = view.findViewById(R.id.layout_toc);
@@ -166,10 +165,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
         // 更新标题
         tvStoryTitle.setText(currentStory.getTitle());
 
-        // 设定面板暂时留空（设定不是简介，需要单独的字段存储）
-        etWorldSetting.setText("");
-        
-        // TODO: 后续添加专门的setting字段到Story模型
+        // 设定面板已改为动态加载 Fragment，不再需要 etWorldSetting
 
         // 大纲面板暂时留空（大纲不是正文，需要单独的字段存储）
         etOutline.setText("");
@@ -230,6 +226,8 @@ public class StoryInfoPanelFragment extends BaseFragment {
         switch (position) {
             case 0: // 设定
                 panelSetting.setVisibility(View.VISIBLE);
+                // 动态加载设定列表面板
+                loadSettingsListFragment();
                 break;
             case 1: // 大纲
                 panelOutline.setVisibility(View.VISIBLE);
@@ -240,6 +238,22 @@ public class StoryInfoPanelFragment extends BaseFragment {
             case 3: // 文档
                 panelDocs.setVisibility(View.VISIBLE);
                 break;
+        }
+    }
+    
+    /**
+     * 加载设定列表面板
+     */
+    private void loadSettingsListFragment() {
+        if (storyId <= 0) return;
+        
+        // 检查是否已经添加过
+        if (getChildFragmentManager().findFragmentById(R.id.panel_setting) == null) {
+            StorySettingsListFragment settingsFragment = StorySettingsListFragment.newInstance(storyId);
+            getChildFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_setting, settingsFragment)
+                .commit();
         }
     }
 

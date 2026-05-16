@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="创建新设定"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 分类选择 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="顶层分类 *"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/sp_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:minHeight="48dp" />
+
+        <!-- 子分类选择 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="子分类 *"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/sp_sub_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:minHeight="48dp" />
+
+        <!-- 标题输入 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="标题 *"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_setting_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="例如：天穹大陆、林星辰"
+            android:textSize="16sp"
+            android:inputType="text"
+            android:maxLines="1"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:padding="12dp" />
+
+        <!-- 摘要输入 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="摘要 *（200字内）"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_setting_summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="简要描述这个设定的核心内容"
+            android:textSize="14sp"
+            android:inputType="textMultiLine"
+            android:minLines="2"
+            android:maxLines="4"
+            android:gravity="top|start"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:padding="12dp" />
+
+        <!-- 详细描述输入 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="详细描述（可选）"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_setting_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="详细描述设定的各个方面..."
+            android:textSize="14sp"
+            android:inputType="textMultiLine"
+            android:minLines="5"
+            android:maxLines="10"
+            android:gravity="top|start"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:padding="12dp" />
+
+        <!-- 标签输入 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="标签（可选，用逗号分隔）"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_setting_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="例如：重要,主角,反派"
+            android:textSize="14sp"
+            android:inputType="text"
+            android:maxLines="2"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:padding="12dp" />
+
+        <!-- 别名输入 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="别名（可选，用逗号分隔）"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_setting_aliases"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="例如：小林,星辰大人"
+            android:textSize="14sp"
+            android:inputType="text"
+            android:maxLines="2"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/bg_outline_edittext"
+            android:padding="12dp" />
+
+        <!-- 按钮区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btn_cancel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="取消"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+            <Button
+                android:id="@+id/btn_confirm"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="创建"
+                android:textSize="14sp"
+                android:backgroundTint="#1976D2" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
