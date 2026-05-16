@@ -41,6 +41,7 @@ public class SettingDetailActivity extends AppCompatActivity {
     private TextView tvDetail;
     private TextView tvSpecificAttrs;
     private TextView tvSourceTitle;  // 溯源信息标题
+    private TextView tvSourceUrl;    // 来源URL
     private TextView tvCreateTime;
     private TextView tvUpdateTime;
     
@@ -95,6 +96,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         tvDetail = findViewById(R.id.tv_detail_content);
         tvSpecificAttrs = findViewById(R.id.tv_detail_specific_attrs);
         tvSourceTitle = findViewById(R.id.tv_source_title);  // 溯源信息标题
+        tvSourceUrl = findViewById(R.id.tv_source_url);      // 来源URL
         tvCreateTime = findViewById(R.id.tv_detail_create_time);
         tvUpdateTime = findViewById(R.id.tv_detail_update_time);
         
@@ -273,6 +275,36 @@ public class SettingDetailActivity extends AppCompatActivity {
             }
         } else {
             layoutSourceInfo.setVisibility(View.GONE);
+        }
+        
+        // 来源URL（仅全局素材且有URL时显示）
+        View layoutSourceUrl = findViewById(R.id.layout_source_url);
+        com.google.android.material.card.MaterialCardView cardSourceUrl = 
+            findViewById(R.id.card_source_url);
+        
+        if (storyId == 0 && !TextUtils.isEmpty(currentSetting.getSourceUrl())) {
+            // 全局素材且有来源URL
+            tvSourceUrl.setText(currentSetting.getSourceUrl());
+            layoutSourceUrl.setVisibility(View.VISIBLE);
+            
+            // 设置点击打开链接
+            View.OnClickListener urlClickListener = v -> {
+                try {
+                    android.content.Intent browserIntent = new android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(currentSetting.getSourceUrl())
+                    );
+                    startActivity(browserIntent);
+                } catch (Exception e) {
+                    Toast.makeText(this, "无法打开链接", Toast.LENGTH_SHORT).show();
+                }
+            };
+            
+            layoutSourceUrl.setOnClickListener(urlClickListener);
+            cardSourceUrl.setOnClickListener(urlClickListener);
+        } else {
+            // 小说专属素材或无URL，隐藏
+            layoutSourceUrl.setVisibility(View.GONE);
         }
         
         // 时间
