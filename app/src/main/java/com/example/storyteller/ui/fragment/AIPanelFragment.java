@@ -18,12 +18,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.ChatMessage;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
 import com.example.storyteller.utils.AgentCommandExecutor;
@@ -57,6 +59,7 @@ public class AIPanelFragment extends BaseFragment {
     private ApiClient apiClient;
     private StoryRepository storyRepository;
     private AgentCommandExecutor commandExecutor;
+    private StorySettingDao settingDao;  // 设定DAO
     
     private int storyId;
     private String currentMode = "agent"; // agent 或 ask
@@ -110,6 +113,7 @@ public class AIPanelFragment extends BaseFragment {
         apiClient = ApiClient.getInstance();
         storyRepository = new StoryRepositoryImpl(requireContext());
         commandExecutor = new AgentCommandExecutor(storyRepository);
+        settingDao = new StorySettingDao(requireContext());  // 初始化设定DAO
     }
 
     @Override
@@ -602,11 +606,83 @@ public class AIPanelFragment extends BaseFragment {
                 return "未找到小说";
             }
             
-            // 解析卷章结构
-            List<Volume> volumes = parseVolumesFromStory(story);
+            StringBuilder context = new StringBuilder();
             
-            // 使用 AgentCommandExecutor 的静态方法构建上下文
-            return AgentCommandExecutor.buildStoryContext(story, volumes);
+            // 1. 小说基本信息
+            context.append("【小说信息】\n");
+            context.append("标题：").append(story.getTitle()).append("\n");
+            if (story.getDescription() != null && !story.getDescription().isEmpty()) {
+                context.append("简介：").append(story.getDescription()).append("\n");
+            }
+            context.append("\n");
+            
+            // 2. 卷章结构
+            List<Volume> volumes = parseVolumesFromStory(story);
+            context.append(AgentCommandExecutor.buildStoryContext(story, volumes));
+            context.append("\n");
+            
+            // 3. 小说设定（重要！）
+            List<StorySetting> settings = settingDao.getByStoryId(storyId);
+            if (settings != null && !settings.isEmpty()) {
+                context.append("【小说设定】\n");
+                context.append("共 ").append(settings.size()).append(" 个设定\n\n");
+                
+                for (int i = 0; i < settings.size(); i++) {
+                    StorySetting setting = settings.get(i);
+                    context.append("设定 ").append(i + 1).append("：").append(setting.getTitle()).append("\n");
+                    context.append("分类：").append(setting.getCategory());
+                    if (setting.getSubCategory() != null && !setting.getSubCategory().isEmpty()) {
+                        context.append(" · ").append(setting.getSubCategory());
+                    }
+                    context.append("\n");
+                    
+                    if (setting.getSummary() != null && !setting.getSummary().isEmpty()) {
+                        context.append("摘要：").append(setting.getSummary()).append("\n");
+                    }
+                    
+                    if (setting.getDetail() != null && !setting.getDetail().isEmpty()) {
+                        context.append("详情：").append(setting.getDetail()).append("\n");
+                    }
+                    
+                    // 标签
+                    if (setting.getTags() != null && !setting.getTags().isEmpty()) {
+                        try {
+                            com.google.gson.Gson gson = new com.google.gson.Gson();
+                            java.util.List<String> tagsList = gson.fromJson(
+                                setting.getTags(),
+                                new com.google.gson.reflect.TypeToken<java.util.List<String>>(){}.getType()
+                            );
+                            if (tagsList != null && !tagsList.isEmpty()) {
+                                context.append("标签：").append(String.join(", ", tagsList)).append("\n");
+                            }
+                        } catch (Exception e) {
+                            // 忽略解析错误
+                        }
+                    }
+                    
+                    // 别名
+                    if (setting.getAliases() != null && !setting.getAliases().isEmpty()) {
+                        try {
+                            com.google.gson.Gson gson = new com.google.gson.Gson();
+                            java.util.List<String> aliasesList = gson.fromJson(
+                                setting.getAliases(),
+                                new com.google.gson.reflect.TypeToken<java.util.List<String>>(){}.getType()
+                            );
+                            if (aliasesList != null && !aliasesList.isEmpty()) {
+                                context.append("别名：").append(String.join(", ", aliasesList)).append("\n");
+                            }
+                        } catch (Exception e) {
+                            // 忽略解析错误
+                        }
+                    }
+                    
+                    context.append("\n");
+                }
+            } else {
+                context.append("【小说设定】\n暂无设定\n\n");
+            }
+            
+            return context.toString();
             
         } catch (Exception e) {
             return "获取小说信息失败: " + e.getMessage();
