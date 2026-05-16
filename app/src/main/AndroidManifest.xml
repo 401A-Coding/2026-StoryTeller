@@ -35,9 +35,6 @@
             android:name=".ui.activity.PlotTreeActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
-            android:name=".ui.activity.MaterialDetailActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
-        <activity
             android:name=".ui.activity.SettingDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
