@@ -1,6 +1,5 @@
 package com.example.storyteller.ui.fragment;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -11,7 +10,6 @@ import androidx.appcompat.app.AlertDialog;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
-import com.example.storyteller.ui.activity.SettingsActivity;
 
 /**
  * 更多功能Fragment
@@ -102,8 +100,8 @@ public class MoreFragment extends BaseFragment {
      * 打开设置
      */
     private void openSettings() {
-        Intent intent = new Intent(requireContext(), SettingsActivity.class);
-        startActivity(intent);
+        // TODO: 切换到MainActivity的设置Tab
+        Toast.makeText(requireContext(), "请切换到底部导航的“设置”Tab", Toast.LENGTH_SHORT).show();
     }
 
     /**

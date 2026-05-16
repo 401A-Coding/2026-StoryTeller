@@ -15,26 +15,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <Button
-        android:id="@+id/btn_back_home"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/action_back_home"
-        app:layout_constraintTop_toBottomOf="@id/tv_settings_title"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
     <TextView
         android:id="@+id/tv_api_key_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/api_key"
         android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@id/btn_back_home"
+        app:layout_constraintTop_toBottomOf="@id/tv_settings_title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="24dp" />
+        android:layout_marginTop="32dp" />
 
     <EditText
         android:id="@+id/et_api_key"

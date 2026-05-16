@@ -1,0 +1,691 @@
+package com.example.storyteller.ui.fragment;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.storyteller.R;
+import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.db.StorySettingDao;
+import com.example.storyteller.model.StorySetting;
+import com.example.storyteller.ui.activity.SettingDetailActivity;
+import com.example.storyteller.ui.adapter.StorySettingAdapter;
+import com.example.storyteller.utils.SettingCategoryConfig;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
+import java.util.List;
+
+/**
+ * 素材库Fragment（简化版 - Phase 1）
+ * 
+ * 当前功能：
+ * - 显示小说专属设定列表
+ * - 按5大分类筛选（世界观/角色/剧情/风格/规则）
+ * - 搜索功能
+ * - 点击查看详情
+ * 
+ * 后续扩展：
+ * - 全局素材库模式
+ * - 导入功能
+ * - 创建/编辑/删除设定
+ */
+public class MaterialLibraryFragment extends BaseFragment {
+
+    private static final String ARG_STORY_ID = "story_id";
+
+    // 使用统一配置类
+    private static final String[] CATEGORIES = SettingCategoryConfig.getAllMainCategories();
+
+    /**
+     * 创建实例
+     * @param storyId 小说ID（0表示全局素材库）
+     */
+    public static MaterialLibraryFragment newInstance(int storyId) {
+        MaterialLibraryFragment fragment = new MaterialLibraryFragment();
+        Bundle args = new Bundle();
+        args.putInt(ARG_STORY_ID, storyId);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    private EditText etSearch;
+    private RecyclerView rvSettings;
+    private TextView tvEmptyHint;
+    private Button btnCreateSetting;  // 创建按钮
+    private ChipGroup chipGroupMainCategory;  // 主分类筛选器
+    private ChipGroup chipGroupSubCategory;  // 子分类筛选器
+    private View layoutSubCategory;  // 子分类容器（用于控制显示/隐藏）
+    private CheckBox cbMultiSelect;  // 多选按钮
+    private View layoutBatchActions;  // 批量操作栏
+    private TextView tvSelectedCount;  // 已选择数量
+    private Button btnSelectAll;  // 全选按钮
+    private Button btnBatchImport;  // 批量导入
+    private Button btnBatchDelete;  // 批量删除
+    
+    private StorySettingDao settingDao;
+    private StorySettingAdapter adapter;
+    private int currentStoryId = 0;  // 所属小说ID（0表示全局素材库）
+
+    @Override
+    protected int getLayoutId() {
+        return R.layout.fragment_material_library;
+    }
+
+    @Override
+    protected void initView(View view) {
+        etSearch = view.findViewById(R.id.et_material_search);
+        rvSettings = view.findViewById(R.id.rv_material);
+        tvEmptyHint = view.findViewById(R.id.tv_crawl_status);
+        chipGroupMainCategory = view.findViewById(R.id.chip_group_main_category);
+        chipGroupSubCategory = view.findViewById(R.id.chip_group_sub_category);
+        layoutSubCategory = view.findViewById(R.id.layout_sub_category);
+        
+        // 隐藏不需要的元素
+        View btnImport = view.findViewById(R.id.btn_import);
+        if (btnImport != null) btnImport.setVisibility(View.GONE);
+        
+        View tvCrawlSection = view.findViewById(R.id.tv_crawl_section);
+        if (tvCrawlSection != null) tvCrawlSection.setVisibility(View.GONE);
+        
+        View tvCrawlTypeLabel = view.findViewById(R.id.tv_crawl_type_label);
+        if (tvCrawlTypeLabel != null) tvCrawlTypeLabel.setVisibility(View.GONE);
+        
+        // 获取创建按钮引用（在 initData 中根据 storyId 决定是否显示）
+        btnCreateSetting = view.findViewById(R.id.btn_create_material);
+        if (btnCreateSetting != null) {
+            btnCreateSetting.setOnClickListener(v -> showCreateSettingDialog());
+        }
+        
+        // 设置RecyclerView
+        rvSettings.setLayoutManager(new LinearLayoutManager(requireContext()));
+        
+        // 搜索功能
+        etSearch.setHint("搜索设定...");
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (adapter != null) {
+                    adapter.search(s.toString());
+                    updateEmptyHint();
+                }
+            }
+        });
+        
+        // 分类筛选
+        setupCategoryFilter();
+        
+        // 多选功能
+        setupMultiSelect(view);
+    }
+
+    @Override
+    protected void initData() {
+        // 从参数获取小说ID
+        if (getArguments() != null) {
+            currentStoryId = getArguments().getInt(ARG_STORY_ID, 0);
+        }
+        
+        settingDao = new StorySettingDao(requireContext());
+        refreshSettingsList();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // 从详情页返回时刷新列表（支持新建和编辑）
+        if (settingDao != null) {
+            refreshSettingsList();
+        }
+    }
+
+    /**
+     * 刷新设定列表
+     */
+    private void refreshSettingsList() {
+        List<StorySetting> settings;
+        
+        if (currentStoryId > 0) {
+            // 查询某小说的专属设定
+            settings = settingDao.getByStoryId(currentStoryId);
+        } else {
+            // 查询全局素材库（story_id = 0）
+            settings = settingDao.getByStoryId(0);
+        }
+        
+        if (adapter == null) {
+            adapter = new StorySettingAdapter(settings);
+            
+            // 点击卡片跳转到详情
+            adapter.setOnSettingClickListener(setting -> {
+                Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
+                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, setting.getId());
+                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
+                startActivity(intent);
+            });
+            
+            // 删除按钮回调
+            adapter.setOnSettingDeleteListener((setting, position) -> {
+                showDeleteConfirmDialog(setting, position);
+            });
+            
+            // 导入回调（单条）
+            adapter.setOnImportListener(setting -> {
+                showImportDialog(setting);
+            });
+            
+            // 导出回调（单条）
+            adapter.setOnExportListener(setting -> {
+                exportSettingToGlobal(setting);
+            });
+            
+            // 多选模式监听
+            adapter.setOnSelectionModeChangeListener((isInSelectionMode, selectedCount) -> {
+                updateSelectedCount(selectedCount);
+            });
+            
+            rvSettings.setAdapter(adapter);
+        } else {
+            adapter.setData(settings);
+        }
+        
+        updateEmptyHint();
+    }
+    
+    /**
+     * 显示删除确认对话框
+     */
+    private void showDeleteConfirmDialog(StorySetting setting, int position) {
+        String title = currentStoryId == 0 ? "全局素材" : "小说设定";
+        new AlertDialog.Builder(requireContext())
+            .setTitle("删除" + title)
+            .setMessage("确定要删除「" + setting.getTitle() + "」吗？\n此操作不可恢复。")
+            .setPositiveButton("删除", (dialog, which) -> {
+                deleteSetting(setting, position);
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+    
+    /**
+     * 删除设定
+     */
+    private void deleteSetting(StorySetting setting, int position) {
+        int result = settingDao.delete(setting.getId());
+        if (result > 0) {
+            android.widget.Toast.makeText(requireContext(), "已删除", android.widget.Toast.LENGTH_SHORT).show();
+            refreshSettingsList();  // 刷新列表
+        } else {
+            android.widget.Toast.makeText(requireContext(), "删除失败", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * 更新空状态提示
+     */
+    private void updateEmptyHint() {
+        if (adapter == null || adapter.getItemCount() == 0) {
+            tvEmptyHint.setVisibility(View.VISIBLE);
+            tvEmptyHint.setText(R.string.setting_empty_hint);
+        } else {
+            tvEmptyHint.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * 显示创建设定对话框
+     */
+    private void showCreateSettingDialog() {
+        // 直接跳转到 SettingDetailActivity，传入 storyId，settingId = -1 表示新建
+        Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
+        intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, -1);  // -1 表示新建
+        intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
+        startActivity(intent);
+    }
+    
+    /**
+     * 显示导入对话框（单条）
+     */
+    private void showImportDialog(StorySetting globalSetting) {
+        // 获取用户的所有小说
+        com.example.storyteller.data.local.db.StoryDao storyDao = new com.example.storyteller.data.local.db.StoryDao(requireContext());
+        List<com.example.storyteller.model.Story> stories = storyDao.getAllStories();
+        
+        if (stories == null || stories.isEmpty()) {
+            android.widget.Toast.makeText(getContext(), "请先创建一部小说", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (stories.size() == 1) {
+            // 只有一部小说，直接导入
+            importSettingToStory(globalSetting, stories.get(0).getId());
+        } else {
+            // 多部小说，弹出选择对话框
+            String[] storyNames = new String[stories.size()];
+            for (int i = 0; i < stories.size(); i++) {
+                storyNames[i] = stories.get(i).getTitle();
+            }
+            
+            new AlertDialog.Builder(requireContext())
+                .setTitle("选择目标小说")
+                .setItems(storyNames, (dialog, which) -> {
+                    int targetStoryId = stories.get(which).getId();
+                    importSettingToStory(globalSetting, targetStoryId);
+                })
+                .show();
+        }
+    }
+    
+    /**
+     * 导入单个设定到小说
+     */
+    private void importSettingToStory(StorySetting globalSetting, int targetStoryId) {
+        try {
+            // 1. 检查是否已存在同名设定
+            List<StorySetting> existing = settingDao.getByStoryId(targetStoryId);
+            boolean nameExists = false;
+            for (StorySetting s : existing) {
+                if (s.getTitle().equals(globalSetting.getTitle())) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            
+            // 2. 创建副本
+            StorySetting copy = new StorySetting();
+            copy.setStoryId(targetStoryId);
+            copy.setTitle(nameExists ? globalSetting.getTitle() + " (副本)" : globalSetting.getTitle());
+            copy.setCategory(globalSetting.getCategory());
+            copy.setSubCategory(globalSetting.getSubCategory());
+            copy.setSummary(globalSetting.getSummary());
+            copy.setDetail(globalSetting.getDetail());
+            copy.setTags(globalSetting.getTags());
+            copy.setAliases(globalSetting.getAliases());
+            copy.setFavorite(false);  // 不继承收藏状态
+            copy.setSourceMaterialId(globalSetting.getId());  // 记录来源
+            copy.setCreateTime(System.currentTimeMillis());
+            
+            // 3. 插入数据库
+            long newId = settingDao.insert(copy);
+            
+            if (newId > 0) {
+                android.widget.Toast.makeText(getContext(), 
+                    "导入成功" + (nameExists ? "（已重命名）" : ""), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                android.widget.Toast.makeText(getContext(), "导入失败", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.widget.Toast.makeText(getContext(), "导入失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * 导出单个设定到全局素材库
+     */
+    private void exportSettingToGlobal(StorySetting novelSetting) {
+        try {
+            // 1. 检查全局素材库是否已存在同名设定
+            List<StorySetting> existing = settingDao.getByStoryId(0);  // storyId=0 表示全局素材库
+            boolean nameExists = false;
+            for (StorySetting s : existing) {
+                if (s.getTitle().equals(novelSetting.getTitle())) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            
+            // 2. 创建副本
+            StorySetting copy = new StorySetting();
+            copy.setStoryId(0);  // 设置为全局素材库
+            copy.setTitle(nameExists ? novelSetting.getTitle() + " (副本)" : novelSetting.getTitle());
+            copy.setCategory(novelSetting.getCategory());
+            copy.setSubCategory(novelSetting.getSubCategory());
+            copy.setSummary(novelSetting.getSummary());
+            copy.setDetail(novelSetting.getDetail());
+            copy.setTags(novelSetting.getTags());
+            copy.setAliases(novelSetting.getAliases());
+            copy.setFavorite(false);  // 不继承收藏状态
+            copy.setSourceMaterialId(0);  // 导出的素材不再记录溯源（独立素材）
+            copy.setCreateTime(System.currentTimeMillis());
+            
+            // 3. 插入数据库
+            long newId = settingDao.insert(copy);
+            
+            if (newId > 0) {
+                android.widget.Toast.makeText(requireContext(), 
+                    "导出成功" + (nameExists ? "（已重命名）" : ""), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                android.widget.Toast.makeText(requireContext(), "导出失败", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.widget.Toast.makeText(requireContext(), "导出失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * 设置分类筛选器
+     */
+    private void setupCategoryFilter() {
+        // 添加主分类
+        addMainCategoryChip("全部", true);
+        
+        String[] categories = SettingCategoryConfig.getAllMainCategories();
+        for (String category : categories) {
+            addMainCategoryChip(category, false);
+        }
+    }
+    
+    /**
+     * 添加主分类Chip
+     */
+    private void addMainCategoryChip(String category, boolean isDefault) {
+        Chip chip = new Chip(requireContext());
+        chip.setText(category);
+        chip.setCheckable(true);
+        chip.setChecked(isDefault);
+        chip.setCloseIconVisible(false);
+        
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // 取消其他主分类Chip的选中状态
+                for (int i = 0; i < chipGroupMainCategory.getChildCount(); i++) {
+                    View child = chipGroupMainCategory.getChildAt(i);
+                    if (child instanceof Chip && child != chip) {
+                        ((Chip) child).setChecked(false);
+                    }
+                }
+                
+                // 应用筛选
+                if (adapter != null) {
+                    if ("全部".equals(category)) {
+                        adapter.filterByCategory(null);
+                        adapter.filterBySubCategory(null);
+                        layoutSubCategory.setVisibility(View.GONE);  // 隐藏子分类
+                    } else {
+                        adapter.filterByCategory(category);
+                        adapter.filterBySubCategory(null);
+                        showSubCategories(category);  // 显示对应的子分类
+                    }
+                    updateEmptyHint();
+                }
+            }
+        });
+        
+        chipGroupMainCategory.addView(chip);
+    }
+    
+    /**
+     * 显示子分类
+     */
+    private void showSubCategories(String mainCategory) {
+        // 清空子分类
+        chipGroupSubCategory.removeAllViews();
+        
+        // 添加“全部”选项
+        addSubCategoryChip(mainCategory, "全部", true);
+        
+        // 添加所有子分类
+        String[] subCategories = SettingCategoryConfig.getSubCategories(mainCategory);
+        for (String subCategory : subCategories) {
+            addSubCategoryChip(mainCategory, subCategory, false);
+        }
+        
+        // 显示子分类容器
+        layoutSubCategory.setVisibility(View.VISIBLE);
+    }
+    
+    /**
+     * 添加子分类Chip
+     */
+    private void addSubCategoryChip(String mainCategory, String subCategory, boolean isDefault) {
+        Chip chip = new Chip(requireContext());
+        chip.setText(subCategory);
+        chip.setCheckable(true);
+        chip.setChecked(isDefault);
+        chip.setCloseIconVisible(false);
+        
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // 取消其他子分类Chip的选中状态
+                for (int i = 0; i < chipGroupSubCategory.getChildCount(); i++) {
+                    View child = chipGroupSubCategory.getChildAt(i);
+                    if (child instanceof Chip && child != chip) {
+                        ((Chip) child).setChecked(false);
+                    }
+                }
+                
+                // 应用筛选
+                if (adapter != null) {
+                    if ("全部".equals(subCategory)) {
+                        adapter.filterByCategory(mainCategory);
+                        adapter.filterBySubCategory(null);
+                    } else {
+                        adapter.filterByCategory(mainCategory);
+                        adapter.filterBySubCategory(subCategory);
+                    }
+                    updateEmptyHint();
+                }
+            }
+        });
+        
+        chipGroupSubCategory.addView(chip);
+    }
+    
+    /**
+     * 设置多选功能
+     */
+    private void setupMultiSelect(View view) {
+        cbMultiSelect = view.findViewById(R.id.cb_multi_select);
+        layoutBatchActions = view.findViewById(R.id.layout_batch_actions);
+        tvSelectedCount = view.findViewById(R.id.tv_selected_count);
+        btnSelectAll = view.findViewById(R.id.btn_select_all);
+        btnBatchImport = view.findViewById(R.id.btn_batch_import);
+        btnBatchDelete = view.findViewById(R.id.btn_batch_delete);
+        
+        // 多选按钮点击
+        cbMultiSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (adapter != null) {
+                adapter.setSelectionMode(isChecked);
+                
+                if (isChecked) {
+                    // 进入多选模式，显示批量操作栏
+                    layoutBatchActions.setVisibility(View.VISIBLE);
+                    updateSelectedCount(0);
+                } else {
+                    // 退出多选模式，隐藏批量操作栏
+                    layoutBatchActions.setVisibility(View.GONE);
+                }
+            }
+        });
+        
+        // 全选按钮
+        btnSelectAll.setOnClickListener(v -> {
+            if (adapter != null) {
+                adapter.selectAll();
+                updateSelectedCount(adapter.getSelectedSettings().size());
+            }
+        });
+        
+        // 批量导入
+        btnBatchImport.setOnClickListener(v -> {
+            List<StorySetting> selected = adapter.getSelectedSettings();
+            if (selected.isEmpty()) {
+                android.widget.Toast.makeText(getContext(), "请先选择要导入的素材", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showBatchImportDialog(selected);
+        });
+        
+        // 批量删除
+        btnBatchDelete.setOnClickListener(v -> {
+            List<StorySetting> selected = adapter.getSelectedSettings();
+            if (selected.isEmpty()) {
+                android.widget.Toast.makeText(getContext(), "请先选择要删除的素材", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showBatchDeleteDialog(selected);
+        });
+    }
+    
+    /**
+     * 更新已选择数量显示
+     */
+    private void updateSelectedCount(int count) {
+        if (tvSelectedCount != null) {
+            tvSelectedCount.setText("已选择 " + count + " 项");
+        }
+    }
+    
+    /**
+     * 显示批量导入对话框
+     */
+    private void showBatchImportDialog(List<StorySetting> selectedSettings) {
+        // 获取用户的所有小说
+        com.example.storyteller.data.local.db.StoryDao storyDao = new com.example.storyteller.data.local.db.StoryDao(requireContext());
+        List<com.example.storyteller.model.Story> stories = storyDao.getAllStories();
+        
+        if (stories == null || stories.isEmpty()) {
+            android.widget.Toast.makeText(getContext(), "请先创建一部小说", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (stories.size() == 1) {
+            // 只有一部小说，直接导入
+            batchImportToStory(selectedSettings, stories.get(0).getId());
+        } else {
+            // 多部小说，弹出选择对话框
+            String[] storyNames = new String[stories.size()];
+            for (int i = 0; i < stories.size(); i++) {
+                storyNames[i] = stories.get(i).getTitle();
+            }
+            
+            new AlertDialog.Builder(requireContext())
+                .setTitle("选择目标小说")
+                .setItems(storyNames, (dialog, which) -> {
+                    int targetStoryId = stories.get(which).getId();
+                    batchImportToStory(selectedSettings, targetStoryId);
+                })
+                .show();
+        }
+    }
+    
+    /**
+     * 批量导入设定到小说
+     */
+    private void batchImportToStory(List<StorySetting> selectedSettings, int targetStoryId) {
+        int successCount = 0;
+        int renamedCount = 0;
+        
+        // 获取目标小说的现有设定（用于检查重名）
+        List<StorySetting> existing = settingDao.getByStoryId(targetStoryId);
+        java.util.Set<String> existingTitles = new java.util.HashSet<>();
+        for (StorySetting s : existing) {
+            existingTitles.add(s.getTitle());
+        }
+        
+        for (StorySetting globalSetting : selectedSettings) {
+            try {
+                // 检查是否重名
+                boolean nameExists = existingTitles.contains(globalSetting.getTitle());
+                if (nameExists) {
+                    renamedCount++;
+                }
+                
+                // 创建副本
+                StorySetting copy = new StorySetting();
+                copy.setStoryId(targetStoryId);
+                copy.setTitle(nameExists ? globalSetting.getTitle() + " (副本)" : globalSetting.getTitle());
+                copy.setCategory(globalSetting.getCategory());
+                copy.setSubCategory(globalSetting.getSubCategory());
+                copy.setSummary(globalSetting.getSummary());
+                copy.setDetail(globalSetting.getDetail());
+                copy.setTags(globalSetting.getTags());
+                copy.setAliases(globalSetting.getAliases());
+                copy.setFavorite(false);
+                copy.setSourceMaterialId(globalSetting.getId());
+                copy.setCreateTime(System.currentTimeMillis());
+                
+                // 插入数据库
+                long newId = settingDao.insert(copy);
+                if (newId > 0) {
+                    successCount++;
+                    // 添加到已存在集合，避免后续重复检测
+                    existingTitles.add(copy.getTitle());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        
+        // 退出多选模式
+        cbMultiSelect.setChecked(false);
+        
+        // 刷新列表
+        refreshSettingsList();
+        
+        // 显示结果
+        String message = "已导入 " + successCount + " 个素材";
+        if (renamedCount > 0) {
+            message += "（其中 " + renamedCount + " 个已重命名）";
+        }
+        android.widget.Toast.makeText(getContext(), message, android.widget.Toast.LENGTH_LONG).show();
+    }
+    
+    /**
+     * 显示批量删除对话框
+     */
+    private void showBatchDeleteDialog(List<StorySetting> selectedSettings) {
+        new AlertDialog.Builder(requireContext())
+            .setTitle("批量删除")
+            .setMessage("确定要删除选中的 " + selectedSettings.size() + " 个素材吗？\n此操作不可恢复。")
+            .setPositiveButton("删除", (dialog, which) -> {
+                batchDeleteSettings(selectedSettings);
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+    
+    /**
+     * 批量删除
+     */
+    private void batchDeleteSettings(List<StorySetting> settings) {
+        int successCount = 0;
+        for (StorySetting setting : settings) {
+            int result = settingDao.delete(setting.getId());
+            if (result > 0) {
+                successCount++;
+            }
+        }
+        
+        android.widget.Toast.makeText(getContext(), 
+            "已删除 " + successCount + " 个素材", 
+            android.widget.Toast.LENGTH_SHORT).show();
+        
+        // 退出多选模式
+        cbMultiSelect.setChecked(false);
+        
+        // 刷新列表
+        refreshSettingsList();
+    }
+}

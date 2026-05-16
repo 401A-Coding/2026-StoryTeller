@@ -41,7 +41,10 @@
             android:name=".ui.activity.MaterialDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity
-            android:name=".ui.activity.SettingsActivity"
+            android:name=".ui.activity.SettingDetailActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.NovelDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
     </application>
 

@@ -13,13 +13,16 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * 小说爬虫工具类
- * 用于爬取番茄小说等网站的关键信息（大纲、总结、人物画像），不存储完整正文
- * 适配番茄小说 SPA 页面结构
+ * 番茄小说爬虫工具类
+ * 用于爬取番茄小说网站的关键信息（大纲、总结、人物画像），不存储完整正文
+ * 
+ * 重构说明：
+ * - 统一使用DOM提取，移除文本正则匹配降级方案
+ * - 使用FanqieSelectors常量管理CSS选择器
+ * - 简化主流程，提高可读性
+ * - 规范化错误处理，统一返回null或空列表
  */
 public class NovelCrawler {
 
@@ -49,66 +52,27 @@ public class NovelCrawler {
             try {
                 Log.d(TAG, "开始爬取: " + url);
 
-                // 1. 爬取详情页
-                Document doc = Jsoup.connect(url)
-                        .timeout(TIMEOUT)
-                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-                        .get();
+                // 1. 爬取页面
+                Document doc = fetchDocument(url);
+                
+                // 2. 提取基本信息
+                NovelSummary summary = extractBasicInfo(doc, url);
+                
+                // 3. 提取卷信息（新增）
+                List<String> volumes = extractVolumes(doc);
+                summary.setVolumes(volumes);
+                
+                // 4. 生成衍生内容（大纲、总结、人物画像）
+                enrichSummary(summary);
 
-                NovelSummary summary = new NovelSummary();
-                summary.setSourceUrl(url);
-
-                // 获取页面纯文本
-                String pageText = doc.body().text();
-
-                // 2. 提取标题 - 页面文本的第一个书名号内容或第一个粗体文字
-                String title = extractTitle(pageText, doc);
-                summary.setTitle(title != null ? title.trim() : "未知标题");
-
-                // 3. 提取作者 - 在标题后面找作者名
-                String author = extractAuthor(pageText, doc);
-                summary.setAuthor(author != null ? author.trim() : "未知作者");
-
-                // 4. 提取简介 - "作品简介"后面的内容
-                String description = extractDescription(pageText);
-                summary.setDescription(description != null ? description.trim() : "无简介");
-
-                // 5. 提取目录列表
-                List<String> chapterTitles = extractChapterTitles(pageText);
-                summary.setCharacters(new ArrayList<>());
-
-                // 6. 生成大纲（从目录中提取前10章标题作为大纲脉络）
-                StringBuilder outlineBuilder = new StringBuilder();
-                if (!chapterTitles.isEmpty()) {
-                    outlineBuilder.append("【章节脉络】\n");
-                    int maxChapters = Math.min(chapterTitles.size(), 30);
-                    for (int i = 0; i < maxChapters; i++) {
-                        outlineBuilder.append("第").append(i + 1).append("章：").append(chapterTitles.get(i)).append("\n");
-                    }
-                    if (chapterTitles.size() > 30) {
-                        outlineBuilder.append("...共").append(chapterTitles.size()).append("章\n");
-                    }
-                }
-                summary.setOutline(outlineBuilder.toString());
-
-                // 7. 从简介中提取人物
-                if (description != null) {
-                    extractCharactersFromText(description, summary.getCharacters());
-                }
-
-                // 8. 生成总结
-                summary.setSummary(generateSummary(summary));
-
-                // 9. 生成人物画像
-                summary.setCharacterProfiles(generateCharacterProfiles(summary.getCharacters()));
-
-                Log.d(TAG, "爬取完成: " + summary.getTitle());
+                Log.d(TAG, "爬取完成: " + summary.getTitle() + 
+                      ", 章节数: " + (summary.getChapterTitles() != null ? summary.getChapterTitles().size() : 0) +
+                      ", 字数: " + summary.getTotalWords() +
+                      ", 卷数: " + (volumes != null ? volumes.size() : 0));
                 callback.onSuccess(summary, 0);
 
             } catch (IOException e) {
-                Log.e(TAG, "爬取失败: " + e.getMessage());
+                Log.e(TAG, "爬取失败: " + e.getMessage(), e);
                 callback.onFailure(e);
             }
         }).start();
@@ -198,134 +162,262 @@ public class NovelCrawler {
         }
     }
 
+    // ==================== 核心方法 ====================
+
+    /**
+     * 获取HTML文档
+     */
+    private Document fetchDocument(String url) throws IOException {
+        return Jsoup.connect(url)
+                .timeout(TIMEOUT)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                .get();
+    }
+
+    /**
+     * 提取基本信息（标题、作者、简介、标签、字数、章节等）
+     */
+    private NovelSummary extractBasicInfo(Document doc, String url) {
+        NovelSummary summary = new NovelSummary();
+        summary.setSourceUrl(url);
+
+        // 按顺序提取各项信息
+        summary.setTitle(extractTitle(doc));
+        summary.setAuthor(extractAuthor(doc));
+        summary.setDescription(extractDescription(doc));
+        summary.setTags(extractTags(doc));
+        summary.setTotalWords(extractWordCount(doc));
+        summary.setChapterTitles(extractChapterTitles(doc));
+        summary.setCoverUrl(extractCoverUrl(doc));
+        summary.setCharacters(new ArrayList<>());
+
+        return summary;
+    }
+
+    /**
+     * 丰富摘要内容（生成大纲、总结、人物画像）
+     */
+    private void enrichSummary(NovelSummary summary) {
+        // 1. 从章节列表生成大纲
+        generateOutline(summary);
+        
+        // 2. 从简介中提取人物
+        extractCharactersFromText(summary.getDescription(), summary.getCharacters());
+        
+        // 3. 生成总结
+        summary.setSummary(generateSummary(summary));
+        
+        // 4. 生成人物画像
+        summary.setCharacterProfiles(generateCharacterProfiles(summary.getCharacters()));
+    }
+
     // ==================== 提取方法 ====================
 
     /**
      * 提取标题
      */
-    private String extractTitle(String pageText, Document doc) {
-        // 方法1: 从页面文本中找第一个《》书名号内容
-        Pattern pattern = Pattern.compile("《([^》]+)》");
-        Matcher matcher = pattern.matcher(pageText);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-
-        // 方法2: 从页面标题中提取（title标签）
-        String docTitle = doc.title();
-        if (docTitle != null) {
-            // 番茄小说标题格式: "小说名完整版在线免费阅读_小说名小说_番茄小说官网"
-            int idx = docTitle.indexOf("完整版");
-            if (idx > 0) {
-                return docTitle.substring(0, idx).trim();
+    private String extractTitle(Document doc) {
+        try {
+            String title = doc.selectFirst(FanqieSelectors.TITLE).text().trim();
+            if (!title.isEmpty()) {
+                Log.d(TAG, "提取标题: " + title);
+                return title;
             }
-            // 或者取第一个下划线之前的内容
-            idx = docTitle.indexOf("_");
-            if (idx > 0) {
-                return docTitle.substring(0, idx).trim();
-            }
+        } catch (Exception e) {
+            Log.w(TAG, "提取标题失败: " + e.getMessage());
         }
-
-        return null;
+        return "未知标题";
     }
 
     /**
      * 提取作者
      */
-    private String extractAuthor(String pageText, Document doc) {
-        // 方法1: 在标题后面找作者（番茄小说页面中作者名通常在标题后面）
-        // 匹配模式: "标题 作者名" 或 "标题 作者名 状态"
-        String[] lines = pageText.split("\\s+");
-        for (int i = 0; i < lines.length; i++) {
-            if (lines[i].contains("作者") || lines[i].contains("著")) {
-                return lines[i].replace("作者", "").replace("著", "").trim();
+    private String extractAuthor(Document doc) {
+        try {
+            String author = doc.selectFirst(FanqieSelectors.AUTHOR_NAME).text().trim();
+            if (!author.isEmpty()) {
+                Log.d(TAG, "提取作者: " + author);
+                return author;
             }
+        } catch (Exception e) {
+            Log.w(TAG, "提取作者失败: " + e.getMessage());
         }
-
-        // 方法2: 从页面文本中找"作者名"模式（2-4个中文字符跟在小说标题后面）
-        Pattern pattern = Pattern.compile("[\\u4e00-\\u9fa5]{2,4}(?=\\s+(?:作品|分类|状态|连载|完结))");
-        Matcher matcher = pattern.matcher(pageText);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-
-        return null;
+        return "未知作者";
     }
 
     /**
      * 提取简介
      */
-    private String extractDescription(String pageText) {
-        // 方法1: 找"作品简介"后面的内容
-        Pattern pattern = Pattern.compile("作品简介[：:\\s]*([^。]+。[^。]*。[^。]*。)");
-        Matcher matcher = pattern.matcher(pageText);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-
-        // 方法2: 找"简介"后面的内容
-        pattern = Pattern.compile("简介[：:\\s]*([^。]+。[^。]*。[^。]*。)");
-        matcher = pattern.matcher(pageText);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-
-        // 方法3: 取"作品简介"到"目录"之间的内容
-        int start = pageText.indexOf("作品简介");
-        int end = pageText.indexOf("目录");
-        if (start > 0 && end > start) {
-            String desc = pageText.substring(start + 4, end).trim();
-            if (desc.length() > 10) {
-                return desc;
+    private String extractDescription(Document doc) {
+        try {
+            String description = doc.selectFirst(FanqieSelectors.ABSTRACT_PARAGRAPH).text().trim();
+            if (!description.isEmpty() && description.length() > 10) {
+                Log.d(TAG, "提取简介，长度: " + description.length());
+                return description;
             }
+        } catch (Exception e) {
+            Log.w(TAG, "提取简介失败: " + e.getMessage());
         }
-
-        return null;
+        return "无简介";
     }
 
     /**
-     * 提取章节标题列表
+     * 提取标签/分类
      */
-    private List<String> extractChapterTitles(String pageText) {
-        List<String> titles = new ArrayList<>();
-
-        // 番茄小说页面中章节格式: "第1章 标题" 或 "第1章标题"
-        Pattern pattern = Pattern.compile("第\\d+章[\\s]*[\\u4e00-\\u9fa5][^\\d]{2,30}?");
-        Matcher matcher = pattern.matcher(pageText);
-
-        // 先找到"目录"或"第1章"开始的位置
-        int startIdx = pageText.indexOf("目录");
-        if (startIdx < 0) {
-            startIdx = pageText.indexOf("第1章");
-        }
-        if (startIdx < 0) {
-            startIdx = 0;
-        }
-
-        String searchText = pageText.substring(startIdx);
-        matcher = pattern.matcher(searchText);
-
-        while (matcher.find()) {
-            String title = matcher.group().trim();
-            if (!titles.contains(title)) {
-                titles.add(title);
+    private List<String> extractTags(Document doc) {
+        List<String> tags = new ArrayList<>();
+        
+        try {
+            doc.select(FanqieSelectors.TAG_ITEM).forEach(element -> {
+                String tag = element.text().trim();
+                if (!tag.isEmpty()) {
+                    tags.add(tag);
+                }
+            });
+            
+            if (!tags.isEmpty()) {
+                Log.d(TAG, "提取标签: " + String.join(", ", tags));
             }
-            if (titles.size() >= 100) break; // 最多取100章
+        } catch (Exception e) {
+            Log.w(TAG, "提取标签失败: " + e.getMessage());
+        }
+        
+        return tags;
+    }
+
+    /**
+     * 提取字数
+     */
+    private int extractWordCount(Document doc) {
+        try {
+            // 提取数值部分
+            String numberText = doc.selectFirst(FanqieSelectors.WORD_COUNT_NUMBER).text().trim();
+            double wordNum = Double.parseDouble(numberText);
+            
+            // 提取单位部分
+            String unitText = doc.selectFirst(FanqieSelectors.WORD_COUNT_UNIT).text().trim();
+            
+            // 如果是"万字"，需要乘以10000
+            if (unitText.contains("万")) {
+                int totalWords = (int) (wordNum * 10000);
+                Log.d(TAG, "提取字数: " + totalWords + " (" + wordNum + "万字)");
+                return totalWords;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "提取字数失败: " + e.getMessage());
+        }
+        
+        return 0;
+    }
+
+    /**
+     * 提取章节标题列表（支持多卷结构）
+     */
+    private List<String> extractChapterTitles(Document doc) {
+        List<String> titles = new ArrayList<>();
+        
+        try {
+            // 从所有章节链接中提取标题（包括所有卷）
+            doc.select(FanqieSelectors.CHAPTER_ITEM).forEach(element -> {
+                String title = element.text().trim();
+                if (!title.isEmpty() && !titles.contains(title)) {
+                    titles.add(title);
+                }
+            });
+            
+            if (!titles.isEmpty()) {
+                Log.d(TAG, "提取章节数: " + titles.size());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "提取章节失败: " + e.getMessage());
+        }
+        
+        return titles;
+    }
+
+    /**
+     * 提取卷信息（新增方法，用于获取多卷结构）
+     * @return 卷信息列表，每个元素格式："卷名|章节数"
+     */
+    public List<String> extractVolumes(Document doc) {
+        List<String> volumes = new ArrayList<>();
+        
+        try {
+            // 选择所有卷元素
+            doc.select(FanqieSelectors.VOLUME_ITEM).forEach(element -> {
+                String volumeText = element.text().trim();
+                if (!volumeText.isEmpty()) {
+                    volumes.add(volumeText);
+                }
+            });
+            
+            if (!volumes.isEmpty()) {
+                Log.d(TAG, "提取卷数: " + volumes.size());
+                for (String vol : volumes) {
+                    Log.d(TAG, "  - " + vol);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "提取卷信息失败: " + e.getMessage());
+        }
+        
+        return volumes;
+    }
+
+    /**
+     * 提取封面图片URL（暂时返回null，后续优化）
+     */
+    private String extractCoverUrl(Document doc) {
+        // 番茄小说有防爬取机制，封面提取暂不实现
+        return null;
+    }
+
+    // ==================== 生成方法 ====================
+
+    /**
+     * 从章节列表生成大纲
+     */
+    private void generateOutline(NovelSummary summary) {
+        List<String> chapterTitles = summary.getChapterTitles();
+        if (chapterTitles == null || chapterTitles.isEmpty()) {
+            summary.setOutline("暂无章节信息");
+            return;
         }
 
-        return titles;
+        StringBuilder outlineBuilder = new StringBuilder();
+        outlineBuilder.append("【章节脉络】\n");
+        
+        // 最多显示前30章
+        int maxChapters = Math.min(chapterTitles.size(), 30);
+        for (int i = 0; i < maxChapters; i++) {
+            outlineBuilder.append("第").append(i + 1).append("章：")
+                         .append(chapterTitles.get(i)).append("\n");
+        }
+        
+        if (chapterTitles.size() > 30) {
+            outlineBuilder.append("...共").append(chapterTitles.size()).append("章\n");
+        }
+        
+        summary.setOutline(outlineBuilder.toString());
     }
 
     /**
      * 从文本中提取人物名称
      */
     private void extractCharactersFromText(String text, List<String> characters) {
-        if (text == null || characters == null) return;
+        if (text == null || characters == null || text.isEmpty()) {
+            return;
+        }
 
+        // 简单的人物提取：查找2-4个中文字符后跟"说/道/问"等动词的模式
         String[] lines = text.split("[。！？\n]");
         for (String line : lines) {
-            Pattern pattern = Pattern.compile("([\\u4e00-\\u9fa5]{2,4})(?:说|道|问|答|喊|叫|骂|笑|叹)");
-            Matcher matcher = pattern.matcher(line);
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "([\\u4e00-\\u9fa5]{2,4})(?:说|道|问|答|喊|叫|骂|笑|叹)"
+            );
+            java.util.regex.Matcher matcher = pattern.matcher(line);
             while (matcher.find()) {
                 String name = matcher.group(1);
                 if (!characters.contains(name) && !isCommonWord(name)) {
@@ -339,12 +431,16 @@ public class NovelCrawler {
      * 判断是否为常见词（非人名）
      */
     private boolean isCommonWord(String word) {
-        String[] commonWords = {"我们", "他们", "你们", "大家", "自己", "别人", "什么", "怎么", "这样", "那样",
-                "这个", "那个", "这些", "那些", "这里", "那里", "没有", "可以", "知道", "觉得",
-                "突然", "开始", "已经", "还是", "就是", "只是", "但是", "而且", "因为", "所以",
-                "一个", "两个", "那个", "不是", "就是", "如果", "虽然", "然后", "最后", "终于"};
+        String[] commonWords = {"我们", "他们", "你们", "大家", "自己", "别人", "什么", "怎么", 
+                               "这样", "那样", "这个", "那个", "这些", "那些", "这里", "那里", 
+                               "没有", "可以", "知道", "觉得", "突然", "开始", "已经", "还是", 
+                               "就是", "只是", "但是", "而且", "因为", "所以", "一个", "两个", 
+                               "不是", "如果", "虽然", "然后", "最后", "终于"};
+        
         for (String common : commonWords) {
-            if (common.equals(word)) return true;
+            if (common.equals(word)) {
+                return true;
+            }
         }
         return false;
     }
@@ -355,6 +451,7 @@ public class NovelCrawler {
     private String generateSummary(NovelSummary summary) {
         StringBuilder sb = new StringBuilder();
         sb.append("小说《").append(summary.getTitle()).append("》");
+        
         if (summary.getAuthor() != null && !summary.getAuthor().equals("未知作者")) {
             sb.append("（作者：").append(summary.getAuthor()).append("）");
         }
@@ -369,9 +466,10 @@ public class NovelCrawler {
         }
 
         if (summary.getOutline() != null) {
-            sb.append("【情节概要】").append(summary.getOutline().length() > 500
-                    ? summary.getOutline().substring(0, 500) + "..."
-                    : summary.getOutline());
+            String outline = summary.getOutline();
+            sb.append("【情节概要】").append(outline.length() > 500 
+                ? outline.substring(0, 500) + "..." 
+                : outline);
         }
 
         return sb.toString();
@@ -387,13 +485,14 @@ public class NovelCrawler {
 
         StringBuilder sb = new StringBuilder();
         sb.append("识别到以下主要人物，可用于后续生成人物画像：\n\n");
+        
         for (int i = 0; i < characters.size(); i++) {
             sb.append(i + 1).append(". ").append(characters.get(i)).append("\n");
             sb.append("   - 性格特征：（待分析）\n");
             sb.append("   - 角色定位：（待分析）\n");
             sb.append("   - 人物关系：（待分析）\n\n");
         }
+        
         return sb.toString();
     }
 }
-
