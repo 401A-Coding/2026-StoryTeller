@@ -4,9 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.example.storyteller.data.local.db.StorySettingDao;
-import com.example.storyteller.model.Material;
 import com.example.storyteller.model.StorySetting;
-import com.example.storyteller.utils.MaterialTypeMapper;
 import com.example.storyteller.model.NovelSummary;
 
 import org.jsoup.Jsoup;
@@ -38,7 +36,7 @@ public class NovelCrawler {
     }
 
     public interface ExtractCallback {
-        void onSuccess(NovelSummary summary, List<Material> materials, String rawJson);
+        void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson);
         void onFailure(Exception e);
     }
 
@@ -81,32 +79,19 @@ public class NovelCrawler {
     }
 
     /**
-     * 爬取小说并直接存入素材库（新版 - 使用StorySetting）
+     * 爬取小说并直接存入素材库（新版 - AI直接返回StorySetting）
      */
     public void crawlAndSave(String url, Context context, CrawlCallback callback) {
         crawlAndExtract(url, context, null, new ExtractCallback() {
             @Override
-            public void onSuccess(NovelSummary summary, List<Material> materials, String rawJson) {
+            public void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson) {
                 StorySettingDao settingDao = new StorySettingDao(context);
-                List<StorySetting> allSettings = new ArrayList<>();
                 
-                // 将AI提取的Material转换为StorySetting
-                if (materials != null) {
-                    for (Material material : materials) {
-                        try {
-                            StorySetting setting = MaterialTypeMapper.convertToStorySetting(material);
-                            // 设置为全局素材库（storyId = 0）
-                            setting.setStoryId(0);
-                            allSettings.add(setting);
-                        } catch (Exception e) {
-                            Log.e(TAG, "转换素材失败: " + material.getTitle(), e);
-                        }
-                    }
-                }
-
                 // 批量插入数据库
                 int successCount = 0;
-                for (StorySetting setting : allSettings) {
+                for (StorySetting setting : settings) {
+                    // 设置为全局素材库（storyId = 0）
+                    setting.setStoryId(0);
                     long id = settingDao.insert(setting);
                     if (id > 0) {
                         successCount++;
@@ -114,7 +99,7 @@ public class NovelCrawler {
                 }
                 
                 if (successCount > 0) {
-                    Log.d(TAG, "素材已批量存入数据库，成功: " + successCount + "/" + allSettings.size() + " 条");
+                    Log.d(TAG, "素材已批量存入数据库，成功: " + successCount + "/" + settings.size() + " 条");
                 } else {
                     Log.w(TAG, "素材批量存入数据库失败");
                 }
@@ -135,8 +120,8 @@ public class NovelCrawler {
                 MaterialCandidateExtractor extractor = new MaterialCandidateExtractor();
                 extractor.extract(summary, context, requestedTypes, new MaterialCandidateExtractor.Callback() {
                     @Override
-                    public void onSuccess(List<Material> materials, String rawJson) {
-                        callback.onSuccess(summary, materials, rawJson);
+                    public void onSuccess(List<StorySetting> settings, String rawJson) {
+                        callback.onSuccess(summary, settings, rawJson);
                     }
 
                     @Override
@@ -144,6 +129,7 @@ public class NovelCrawler {
                         callback.onFailure(e);
                     }
                 });
+
             }
 
             @Override

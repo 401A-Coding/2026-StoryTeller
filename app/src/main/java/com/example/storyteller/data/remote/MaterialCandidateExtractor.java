@@ -3,7 +3,7 @@ package com.example.storyteller.data.remote;
 import android.content.Context;
 import android.text.TextUtils;
 
-import com.example.storyteller.model.Material;
+import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.NovelSummary;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -49,7 +49,7 @@ public class MaterialCandidateExtractor {
     private final Gson gson = new Gson();
 
     public interface Callback {
-        void onSuccess(List<Material> materials, String rawJson);
+        void onSuccess(List<StorySetting> settings, String rawJson);
         void onFailure(Exception e);
     }
 
@@ -66,18 +66,18 @@ public class MaterialCandidateExtractor {
             public void onSuccess(String responseText) {
                 try {
                     ExtractionResult result = parseResponse(summary, responseText, normalizedTypes);
-                    List<Material> materials = result.materials.isEmpty()
-                            ? buildFallbackMaterials(summary, normalizedTypes)
-                            : result.materials;
-                    callback.onSuccess(materials, result.rawJson);
+                    List<StorySetting> settings = result.settings.isEmpty()
+                            ? buildFallbackSettings(summary, normalizedTypes)
+                            : result.settings;
+                    callback.onSuccess(settings, result.rawJson);
                 } catch (Exception e) {
-                    callback.onSuccess(buildFallbackMaterials(summary, normalizedTypes), responseText);
+                    callback.onSuccess(buildFallbackSettings(summary, normalizedTypes), responseText);
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                callback.onSuccess(buildFallbackMaterials(summary, normalizedTypes), "{}");
+                callback.onSuccess(buildFallbackSettings(summary, normalizedTypes), "{}");
             }
         });
     }
@@ -91,7 +91,7 @@ public class MaterialCandidateExtractor {
         return "你是小说素材抽取助手。请基于下面的内容，提炼出适合写作复用的素材候选，严格只输出 JSON，不要 Markdown，不要解释。\n"
                 + "必须只抽取以下类型：" + requestedTypeText + "。\n"
                 + "输出格式：\n"
-                + "{\"materials\":[{\"type\":\"worldview|character|plot|style|rule\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
+                + "{\"settings\":[{\"category\":\"世界观|角色|剧情|风格|规则\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
                 + "要求：\n"
                 + "1. 只输出所选类型对应的素材，不要输出其他类型。\n"
                 + "2. title 要简短明确，适合素材库展示（20字以内）。\n"
@@ -100,12 +100,12 @@ public class MaterialCandidateExtractor {
                 + "5. detail 要说明适用场景、核心特点或使用价值（200字以内）。\n"
                 + "6. tags 提供3-5个关键词标签。\n"
                 + "7. confidence 取 0 到 1 之间的小数，表示素材质量评分。\n"
-                + "8. type 字段与 subCategory 的对应关系：\n"
-                + "   - worldview (世界观): 地理环境/历史背景/种族文化/社会制度/科技水平\n"
-                + "   - character (角色): 主要角色/次要角色/反派角色/群体角色\n"
-                + "   - plot (剧情): 主线任务/支线任务/悬念伏笔/关键事件\n"
-                + "   - style (风格): 叙事风格/语言风格/节奏控制/情感基调\n"
-                + "   - rule (规则): 魔法规则/战斗系统/经济体系/时间规则\n"
+                + "8. category 与 subCategory 的对应关系：\n"
+                + "   - 世界观: 地理环境/历史背景/种族文化/社会制度/科技水平\n"
+                + "   - 角色: 主要角色/次要角色/反派角色/群体角色\n"
+                + "   - 剧情: 主线任务/支线任务/悬念伏笔/关键事件\n"
+                + "   - 风格: 叙事风格/语言风格/节奏控制/情感基调\n"
+                + "   - 规则: 魔法规则/战斗系统/经济体系/时间规则\n"
                 + "\n内容信息：\n"
                 + "标题：" + safe(summary.getTitle()) + "\n"
                 + "作者：" + safe(summary.getAuthor()) + "\n"
@@ -119,18 +119,18 @@ public class MaterialCandidateExtractor {
     private ExtractionResult parseResponse(NovelSummary summary, String responseText, List<String> requestedTypes) {
         String jsonText = extractJson(responseText);
         JsonObject root = gson.fromJson(jsonText, JsonObject.class);
-        if (root == null || !root.has("materials") || !root.get("materials").isJsonArray()) {
+        if (root == null || !root.has("settings") || !root.get("settings").isJsonArray()) {
             return new ExtractionResult(new ArrayList<>(), jsonText);
         }
 
-        JsonArray array = root.getAsJsonArray("materials");
-        List<Material> materials = new ArrayList<>();
+        JsonArray array = root.getAsJsonArray("settings");
+        List<StorySetting> settings = new ArrayList<>();
         for (JsonElement element : array) {
             if (!element.isJsonObject()) {
                 continue;
             }
             JsonObject obj = element.getAsJsonObject();
-            String type = safeGetString(obj, "type", TYPE_CHARACTER);
+            String category = safeGetString(obj, "category", "角色");
             String subCategory = safeGetString(obj, "subCategory", null);
             String title = safeGetString(obj, "title", "未命名素材");
             String summaryText = safeGetString(obj, "summary", title);
@@ -138,75 +138,105 @@ public class MaterialCandidateExtractor {
             double confidence = safeGetDouble(obj, "confidence", 0.5d);
             List<String> tags = readTags(obj);
 
-            if (!requestedTypes.contains(type)) {
+            // 验证category是否有效
+            if (!isValidCategory(category)) {
                 continue;
             }
 
-            String category = mapCategory(type);
-            // 如果AI没有返回subCategory，根据type设置默认值
+            // 如果AI没有返回subCategory，根据category设置默认值
             if (subCategory == null || subCategory.isEmpty()) {
-                subCategory = getDefaultSubCategory(type);
+                subCategory = getDefaultSubCategory(category);
             }
-            String content = buildContentWithSubCategory(category, subCategory, summaryText, detail, tags);
-            Material material = new Material(category, title, content, System.currentTimeMillis(),
-                    summary.getSourceUrl(), summary.getTitle(), type, confidence, obj.toString());
-            materials.add(material);
+
+            // 创建StorySetting对象
+            StorySetting setting = new StorySetting(0, category, subCategory, title);
+            setting.setSummary(summaryText);
+            setting.setDetail(detail);
+            
+            // 设置tags为JSON数组字符串
+            if (tags != null && !tags.isEmpty()) {
+                setting.setTags(gson.toJson(tags));
+            }
+            
+            // 设置来源信息
+            setting.setSourceUrl(summary.getSourceUrl());
+            setting.setSourceTitle(summary.getTitle());
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(confidence);
+            setting.setRawJson(obj.toString());
+            
+            settings.add(setting);
         }
-        return new ExtractionResult(materials, jsonText);
+        return new ExtractionResult(settings, jsonText);
     }
 
-    private List<Material> buildFallbackMaterials(NovelSummary summary, List<String> requestedTypes) {
-        List<Material> materials = new ArrayList<>();
+    private List<StorySetting> buildFallbackSettings(NovelSummary summary, List<String> requestedTypes) {
+        List<StorySetting> settings = new ArrayList<>();
         String title = safe(summary.getTitle());
         String sourceUrl = summary.getSourceUrl();
         long now = System.currentTimeMillis();
 
-        if (requestedTypes.contains(TYPE_WORLDVIEW)) {
-            materials.add(new Material(CATEGORY_WORLDVIEW, title + " · 世界观",
-                    buildContent(CATEGORY_WORLDVIEW,
-                            firstNonEmpty(summary.getDescription(), "包含丰富的世界观设定"),
-                            firstNonEmpty(summary.getDescription(), "可用于构建类似的世界观背景"),
-                            toTags("世界观", "背景", "设定")),
-                    now, sourceUrl, title, TYPE_WORLDVIEW, 0.2d, null));
+        if (requestedTypes.contains(CATEGORY_WORLDVIEW)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_WORLDVIEW, "地理环境", title + " · 世界观");
+            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含丰富的世界观设定"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), "可用于构建类似的世界观背景"));
+            setting.setTags(gson.toJson(toTags("世界观", "背景", "设定")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
         }
 
-        if (requestedTypes.contains(TYPE_CHARACTER)) {
-            materials.add(new Material(CATEGORY_CHARACTER, title + " · 角色群像",
-                    buildContent(CATEGORY_CHARACTER,
-                            firstNonEmpty(summary.getCharacterProfiles(), "适合继续分析的人物群像"),
-                            firstNonEmpty(summary.getCharacterProfiles(), safe(summary.getDescription())),
-                            toTags("人物", "角色", "关系")),
-                    now, sourceUrl, title, TYPE_CHARACTER, 0.2d, null));
+        if (requestedTypes.contains(CATEGORY_CHARACTER)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_CHARACTER, "主要角色", title + " · 角色群像");
+            setting.setSummary(firstNonEmpty(summary.getCharacterProfiles(), "适合继续分析的人物群像"));
+            setting.setDetail(firstNonEmpty(summary.getCharacterProfiles(), safe(summary.getDescription())));
+            setting.setTags(gson.toJson(toTags("人物", "角色", "关系")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
         }
 
-        if (requestedTypes.contains(TYPE_PLOT)) {
-            materials.add(new Material(CATEGORY_PLOT, title + " · 情节脉络",
-                    buildContent(CATEGORY_PLOT,
-                            firstNonEmpty(summary.getOutline(), "可用于提炼经典情节模板"),
-                            firstNonEmpty(summary.getOutline(), safe(summary.getSummary())),
-                            toTags("情节", "冲突", "转折")),
-                    now, sourceUrl, title, TYPE_PLOT, 0.2d, null));
+        if (requestedTypes.contains(CATEGORY_PLOT)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_PLOT, "关键事件", title + " · 情节脉络");
+            setting.setSummary(firstNonEmpty(summary.getOutline(), "可用于提炼经典情节模板"));
+            setting.setDetail(firstNonEmpty(summary.getOutline(), safe(summary.getSummary())));
+            setting.setTags(gson.toJson(toTags("情节", "冲突", "转折")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
         }
 
-        if (requestedTypes.contains(TYPE_STYLE)) {
-            materials.add(new Material(CATEGORY_STYLE, title + " · 风格特色",
-                    buildContent(CATEGORY_STYLE,
-                            firstNonEmpty(summary.getSummary(), "具有独特的叙事风格"),
-                            firstNonEmpty(summary.getDescription(), safe(summary.getSummary())),
-                            toTags("风格", "叙事", "特色")),
-                    now, sourceUrl, title, TYPE_STYLE, 0.2d, null));
+        if (requestedTypes.contains(CATEGORY_STYLE)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_STYLE, "叙事风格", title + " · 风格特色");
+            setting.setSummary(firstNonEmpty(summary.getSummary(), "具有独特的叙事风格"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), safe(summary.getSummary())));
+            setting.setTags(gson.toJson(toTags("风格", "叙事", "特色")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
         }
 
-        if (requestedTypes.contains(TYPE_RULE)) {
-            materials.add(new Material(CATEGORY_RULE, title + " · 规则体系",
-                    buildContent(CATEGORY_RULE,
-                            firstNonEmpty(summary.getSummary(), "包含特定的规则或体系"),
-                            firstNonEmpty(summary.getDescription(), "可参考其规则设计"),
-                            toTags("规则", "体系", "设定")),
-                    now, sourceUrl, title, TYPE_RULE, 0.2d, null));
+        if (requestedTypes.contains(CATEGORY_RULE)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_RULE, "魔法规则", title + " · 规则体系");
+            setting.setSummary(firstNonEmpty(summary.getSummary(), "包含特定的规则或体系"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), "可参考其规则设计"));
+            setting.setTags(gson.toJson(toTags("规则", "体系", "设定")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
         }
         
-        return materials;
+        return settings;
     }
 
     private String buildContent(String category, String summary, String detail, List<String> tags) {
@@ -232,17 +262,25 @@ public class MaterialCandidateExtractor {
         return builder.toString();
     }
 
-    private String getDefaultSubCategory(String type) {
-        // 为每种类型提供默认的子分类
-        if (TYPE_WORLDVIEW.equalsIgnoreCase(type)) {
+    private boolean isValidCategory(String category) {
+        return CATEGORY_WORLDVIEW.equals(category)
+                || CATEGORY_CHARACTER.equals(category)
+                || CATEGORY_PLOT.equals(category)
+                || CATEGORY_STYLE.equals(category)
+                || CATEGORY_RULE.equals(category);
+    }
+
+    private String getDefaultSubCategory(String category) {
+        // 为每种分类提供默认的子分类
+        if (CATEGORY_WORLDVIEW.equals(category)) {
             return "地理环境";
-        } else if (TYPE_CHARACTER.equalsIgnoreCase(type)) {
+        } else if (CATEGORY_CHARACTER.equals(category)) {
             return "主要角色";
-        } else if (TYPE_PLOT.equalsIgnoreCase(type)) {
+        } else if (CATEGORY_PLOT.equals(category)) {
             return "关键事件";
-        } else if (TYPE_STYLE.equalsIgnoreCase(type)) {
+        } else if (CATEGORY_STYLE.equals(category)) {
             return "叙事风格";
-        } else if (TYPE_RULE.equalsIgnoreCase(type)) {
+        } else if (CATEGORY_RULE.equals(category)) {
             return "魔法规则";
         }
         return "其他";
@@ -385,11 +423,11 @@ public class MaterialCandidateExtractor {
     }
 
     private static class ExtractionResult {
-        final List<Material> materials;
+        final List<StorySetting> settings;
         final String rawJson;
 
-        ExtractionResult(List<Material> materials, String rawJson) {
-            this.materials = materials;
+        ExtractionResult(List<StorySetting> settings, String rawJson) {
+            this.settings = settings;
             this.rawJson = rawJson;
         }
     }

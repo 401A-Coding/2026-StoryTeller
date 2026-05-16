@@ -9,7 +9,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -27,7 +26,6 @@ import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.activity.SettingDetailActivity;
 import com.example.storyteller.ui.adapter.StorySettingAdapter;
 import com.example.storyteller.ui.dialog.MaterialCandidateReviewDialogFragment;
-import com.example.storyteller.utils.MaterialTypeMapper;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -812,9 +810,9 @@ public class MaterialLibraryFragment extends BaseFragment {
     private void crawlFromFanqie(String url, List<String> selectedTypes) {
         novelCrawler.crawlAndExtract(url, requireContext(), selectedTypes, new NovelCrawler.ExtractCallback() {
             @Override
-            public void onSuccess(NovelSummary summary, List<com.example.storyteller.model.Material> materials, String rawJson) {
+            public void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson) {
                 requireActivity().runOnUiThread(() -> {
-                    saveMaterialsToGlobalLibrary(materials, rawJson);
+                    saveSettingsToGlobalLibrary(settings, rawJson);
                 });
             }
 
@@ -837,7 +835,7 @@ public class MaterialLibraryFragment extends BaseFragment {
             public void onSuccess(NovelSummary summary) {
                 requireActivity().runOnUiThread(() -> {
                     // 对于非番茄小说，直接使用AI提取素材
-                    extractMaterialsFromSummary(summary, selectedTypes);
+                    extractSettingsFromSummary(summary, selectedTypes);
                 });
             }
 
@@ -854,15 +852,15 @@ public class MaterialLibraryFragment extends BaseFragment {
     /**
      * 从摘要中使用AI提取素材
      */
-    private void extractMaterialsFromSummary(NovelSummary summary, List<String> selectedTypes) {
+    private void extractSettingsFromSummary(NovelSummary summary, List<String> selectedTypes) {
         tvEmptyHint.setText("正在AI分析...");
         
         MaterialCandidateExtractor extractor = new MaterialCandidateExtractor();
         extractor.extract(summary, requireContext(), selectedTypes, new MaterialCandidateExtractor.Callback() {
             @Override
-            public void onSuccess(List<com.example.storyteller.model.Material> materials, String rawJson) {
+            public void onSuccess(List<StorySetting> settings, String rawJson) {
                 requireActivity().runOnUiThread(() -> {
-                    saveMaterialsToGlobalLibrary(materials, rawJson);
+                    saveSettingsToGlobalLibrary(settings, rawJson);
                 });
             }
 
@@ -877,30 +875,12 @@ public class MaterialLibraryFragment extends BaseFragment {
     }
 
     /**
-     * 保存素材到全局素材库（带审核）
+     * 保存素材到全局素材库（带审核）- AI直接返回StorySetting
      */
-    private void saveMaterialsToGlobalLibrary(List<com.example.storyteller.model.Material> materials, String rawJson) {
-        if (materials == null || materials.isEmpty()) {
+    private void saveSettingsToGlobalLibrary(List<StorySetting> settings, String rawJson) {
+        if (settings == null || settings.isEmpty()) {
             tvEmptyHint.setText("未提取到素材");
             android.widget.Toast.makeText(getContext(), "未提取到素材", android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // 转换为新版StorySetting
-        List<StorySetting> settings = new ArrayList<>();
-        for (com.example.storyteller.model.Material oldMaterial : materials) {
-            try {
-                StorySetting setting = MaterialTypeMapper.convertToStorySetting(oldMaterial);
-                setting.setStoryId(0);  // 设置为全局素材库
-                settings.add(setting);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (settings.isEmpty()) {
-            tvEmptyHint.setText("素材转换失败");
-            android.widget.Toast.makeText(getContext(), "素材转换失败", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
 

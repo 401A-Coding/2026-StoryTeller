@@ -70,39 +70,48 @@ public class NovelSummary {
     public void setVolumes(List<String> volumes) { this.volumes = volumes; }
 
     /**
-     * 将 NovelSummary 转换为 Material 对象，存入素材库
-     * category 固定为 "novel_summary"
+     * 将 NovelSummary 转换为 StorySetting 对象，存入素材库
+     * 作为小说的整体设定素材
      */
-    public Material toMaterial() {
-        StringBuilder contentBuilder = new StringBuilder();
-        contentBuilder.append("【作者】").append(author != null ? author : "未知").append("\n\n");
-        contentBuilder.append("【简介】").append(description != null ? description : "无").append("\n\n");
+    public StorySetting toStorySetting() {
+        // 构建详细内容
+        StringBuilder detailBuilder = new StringBuilder();
+        detailBuilder.append("【作者】").append(author != null ? author : "未知").append("\n\n");
+        detailBuilder.append("【简介】").append(description != null ? description : "无").append("\n\n");
         
         // 添加卷信息
         if (volumes != null && !volumes.isEmpty()) {
-            contentBuilder.append("【卷信息】\n");
+            detailBuilder.append("【卷信息】\n");
             for (String volume : volumes) {
-                contentBuilder.append("  - ").append(volume).append("\n");
+                detailBuilder.append("  - ").append(volume).append("\n");
             }
-            contentBuilder.append("\n");
+            detailBuilder.append("\n");
         }
         
-        contentBuilder.append("【大纲】").append(outline != null ? outline : "无").append("\n\n");
-        contentBuilder.append("【总结】").append(summary != null ? summary : "无").append("\n\n");
-        contentBuilder.append("【人物画像】").append(characterProfiles != null ? characterProfiles : "无").append("\n\n");
-        contentBuilder.append("【来源】").append(sourceUrl != null ? sourceUrl : "无");
+        detailBuilder.append("【大纲】").append(outline != null ? outline : "无").append("\n\n");
+        detailBuilder.append("【总结】").append(summary != null ? summary : "无").append("\n\n");
+        detailBuilder.append("【人物画像】").append(characterProfiles != null ? characterProfiles : "无").append("\n\n");
+        detailBuilder.append("【来源】").append(sourceUrl != null ? sourceUrl : "无");
 
-        Material material = new Material(
-                "novel_summary",
-                title != null ? title : "未知小说",
-                contentBuilder.toString(),
-                createTime
-        );
-        material.setSourceUrl(sourceUrl);
-        material.setSourceTitle(title);
-        material.setSourceType("novel_summary");
-        material.setAiScore(0d);
-        material.setRawJson(null);
-        return material;
+        // 创建StorySetting对象
+        StorySetting setting = new StorySetting(0, "世界观", "地理环境", title != null ? title : "未知小说");
+        setting.setSummary(description != null && !description.isEmpty() ? description : "小说整体设定");
+        setting.setDetail(detailBuilder.toString());
+        
+        // 设置标签
+        if (tags != null && !tags.isEmpty()) {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            setting.setTags(gson.toJson(tags));
+        }
+        
+        // 设置来源信息
+        setting.setSourceUrl(sourceUrl);
+        setting.setSourceTitle(title);
+        setting.setSourceType("novel_summary");
+        setting.setAiConfidence(1.0);  // 这是直接从小说提取的，置信度高
+        setting.setCreateTime(createTime);
+        setting.setUpdateTime(createTime);
+        
+        return setting;
     }
 }
