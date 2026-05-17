@@ -623,7 +623,7 @@ public class SettingDetailActivity extends AppCompatActivity {
     private void setupSubCategorySpinner() {
         // 从主分类Spinner获取当前选中的分类
         String selectedCategory = spEditCategory.getSelectedItem() != null ? 
-            spEditCategory.getSelectedItem().toString() : "世界观";
+            spEditCategory.getSelectedItem().toString() : "世界";
         
         // 根据主分类加载对应的子分类列表
         String[] subCategories = getSubCategoriesByCategory(selectedCategory);

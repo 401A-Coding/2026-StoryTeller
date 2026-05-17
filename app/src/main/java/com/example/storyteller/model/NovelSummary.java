@@ -94,7 +94,7 @@ public class NovelSummary {
         detailBuilder.append("【来源】").append(sourceUrl != null ? sourceUrl : "无");
 
         // 创建StorySetting对象
-        StorySetting setting = new StorySetting(0, "世界观", "地理环境", title != null ? title : "未知小说");
+        StorySetting setting = new StorySetting(0, "世界", "地理环境", title != null ? title : "未知小说");
         setting.setSummary(description != null && !description.isEmpty() ? description : "小说整体设定");
         setting.setDetail(detailBuilder.toString());
         
