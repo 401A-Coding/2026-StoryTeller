@@ -35,13 +35,13 @@ import java.util.List;
 
 /**
  * 素材库Fragment（简化版 - Phase 1）
- * 
+ * <p>
  * 当前功能：
  * - 显示小说专属设定列表
- * - 按5大分类筛选（世界观/角色/剧情/风格/规则）
+ * - 按6大分类筛选
  * - 搜索功能
  * - 点击查看详情
- * 
+ * <p>
  * 后续扩展：
  * - 全局素材库模式
  * - 导入功能
@@ -56,6 +56,7 @@ public class MaterialLibraryFragment extends BaseFragment {
 
     /**
      * 创建实例
+     *
      * @param storyId 小说ID（0表示全局素材库）
      */
     public static MaterialLibraryFragment newInstance(int storyId) {
@@ -79,11 +80,11 @@ public class MaterialLibraryFragment extends BaseFragment {
     private Button btnSelectAll;  // 全选按钮
     private Button btnBatchImport;  // 批量导入
     private Button btnBatchDelete;  // 批量删除
-    
+
     private StorySettingDao settingDao;
     private StorySettingAdapter adapter;
     private int currentStoryId = 0;  // 所属小说ID（0表示全局素材库）
-    
+
     private NovelCrawler novelCrawler;
     private GenericContentExtractor contentExtractor;
 
@@ -100,37 +101,39 @@ public class MaterialLibraryFragment extends BaseFragment {
         chipGroupMainCategory = view.findViewById(R.id.chip_group_main_category);
         chipGroupSubCategory = view.findViewById(R.id.chip_group_sub_category);
         layoutSubCategory = view.findViewById(R.id.layout_sub_category);
-        
+
         // 隐藏不需要的元素
         View btnImport = view.findViewById(R.id.btn_import);
         if (btnImport != null) {
             btnImport.setVisibility(View.VISIBLE);
             btnImport.setOnClickListener(v -> showImportUrlDialog());
         }
-        
+
         View tvCrawlSection = view.findViewById(R.id.tv_crawl_section);
         if (tvCrawlSection != null) tvCrawlSection.setVisibility(View.GONE);
-        
+
         View tvCrawlTypeLabel = view.findViewById(R.id.tv_crawl_type_label);
         if (tvCrawlTypeLabel != null) tvCrawlTypeLabel.setVisibility(View.GONE);
-        
+
         // 获取创建按钮引用（在 initData 中根据 storyId 决定是否显示）
         btnCreateSetting = view.findViewById(R.id.btn_create_material);
         if (btnCreateSetting != null) {
             btnCreateSetting.setOnClickListener(v -> showCreateSettingDialog());
         }
-        
+
         // 设置RecyclerView
         rvSettings.setLayoutManager(new LinearLayoutManager(requireContext()));
-        
+
         // 搜索功能
         etSearch.setHint("搜索设定...");
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -140,10 +143,10 @@ public class MaterialLibraryFragment extends BaseFragment {
                 }
             }
         });
-        
+
         // 分类筛选
         setupCategoryFilter();
-        
+
         // 多选功能
         setupMultiSelect(view);
     }
@@ -154,7 +157,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         if (getArguments() != null) {
             currentStoryId = getArguments().getInt(ARG_STORY_ID, 0);
         }
-        
+
         settingDao = new StorySettingDao(requireContext());
         novelCrawler = new NovelCrawler();
         contentExtractor = new GenericContentExtractor();
@@ -175,7 +178,7 @@ public class MaterialLibraryFragment extends BaseFragment {
      */
     private void refreshSettingsList() {
         List<StorySetting> settings;
-        
+
         if (currentStoryId > 0) {
             // 查询某小说的专属设定
             settings = settingDao.getByStoryId(currentStoryId);
@@ -183,10 +186,10 @@ public class MaterialLibraryFragment extends BaseFragment {
             // 查询全局素材库（story_id = 0）
             settings = settingDao.getByStoryId(0);
         }
-        
+
         if (adapter == null) {
             adapter = new StorySettingAdapter(settings);
-            
+
             // 点击卡片跳转到详情
             adapter.setOnSettingClickListener(setting -> {
                 Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
@@ -194,50 +197,50 @@ public class MaterialLibraryFragment extends BaseFragment {
                 intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
                 startActivity(intent);
             });
-            
+
             // 删除按钮回调
             adapter.setOnSettingDeleteListener((setting, position) -> {
                 showDeleteConfirmDialog(setting, position);
             });
-            
+
             // 导入回调（单条）
             adapter.setOnImportListener(setting -> {
                 showImportDialog(setting);
             });
-            
+
             // 导出回调（单条）
             adapter.setOnExportListener(setting -> {
                 exportSettingToGlobal(setting);
             });
-            
+
             // 多选模式监听
             adapter.setOnSelectionModeChangeListener((isInSelectionMode, selectedCount) -> {
                 updateSelectedCount(selectedCount);
             });
-            
+
             rvSettings.setAdapter(adapter);
         } else {
             adapter.setData(settings);
         }
-        
+
         updateEmptyHint();
     }
-    
+
     /**
      * 显示删除确认对话框
      */
     private void showDeleteConfirmDialog(StorySetting setting, int position) {
         String title = currentStoryId == 0 ? "全局素材" : "小说设定";
         new AlertDialog.Builder(requireContext())
-            .setTitle("删除" + title)
-            .setMessage("确定要删除「" + setting.getTitle() + "」吗？\n此操作不可恢复。")
-            .setPositiveButton("删除", (dialog, which) -> {
-                deleteSetting(setting, position);
-            })
-            .setNegativeButton("取消", null)
-            .show();
+                .setTitle("删除" + title)
+                .setMessage("确定要删除「" + setting.getTitle() + "」吗？\n此操作不可恢复。")
+                .setPositiveButton("删除", (dialog, which) -> {
+                    deleteSetting(setting, position);
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
-    
+
     /**
      * 删除设定
      */
@@ -273,7 +276,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
         startActivity(intent);
     }
-    
+
     /**
      * 显示导入对话框（单条）
      */
@@ -281,12 +284,12 @@ public class MaterialLibraryFragment extends BaseFragment {
         // 获取用户的所有小说
         com.example.storyteller.data.local.db.StoryDao storyDao = new com.example.storyteller.data.local.db.StoryDao(requireContext());
         List<com.example.storyteller.model.Story> stories = storyDao.getAllStories();
-        
+
         if (stories == null || stories.isEmpty()) {
             android.widget.Toast.makeText(getContext(), "请先创建一部小说", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         if (stories.size() == 1) {
             // 只有一部小说，直接导入
             importSettingToStory(globalSetting, stories.get(0).getId());
@@ -296,17 +299,17 @@ public class MaterialLibraryFragment extends BaseFragment {
             for (int i = 0; i < stories.size(); i++) {
                 storyNames[i] = stories.get(i).getTitle();
             }
-            
+
             new AlertDialog.Builder(requireContext())
-                .setTitle("选择目标小说")
-                .setItems(storyNames, (dialog, which) -> {
-                    int targetStoryId = stories.get(which).getId();
-                    importSettingToStory(globalSetting, targetStoryId);
-                })
-                .show();
+                    .setTitle("选择目标小说")
+                    .setItems(storyNames, (dialog, which) -> {
+                        int targetStoryId = stories.get(which).getId();
+                        importSettingToStory(globalSetting, targetStoryId);
+                    })
+                    .show();
         }
     }
-    
+
     /**
      * 导入单个设定到小说
      */
@@ -321,7 +324,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                     break;
                 }
             }
-            
+
             // 2. 创建副本
             StorySetting copy = new StorySetting();
             copy.setStoryId(targetStoryId);
@@ -335,14 +338,14 @@ public class MaterialLibraryFragment extends BaseFragment {
             copy.setFavorite(false);  // 不继承收藏状态
             copy.setSourceMaterialId(globalSetting.getId());  // 记录来源
             copy.setCreateTime(System.currentTimeMillis());
-            
+
             // 3. 插入数据库
             long newId = settingDao.insert(copy);
-            
+
             if (newId > 0) {
-                android.widget.Toast.makeText(getContext(), 
-                    "导入成功" + (nameExists ? "（已重命名）" : ""), 
-                    android.widget.Toast.LENGTH_SHORT).show();
+                android.widget.Toast.makeText(getContext(),
+                        "导入成功" + (nameExists ? "（已重命名）" : ""),
+                        android.widget.Toast.LENGTH_SHORT).show();
             } else {
                 android.widget.Toast.makeText(getContext(), "导入失败", android.widget.Toast.LENGTH_SHORT).show();
             }
@@ -351,7 +354,7 @@ public class MaterialLibraryFragment extends BaseFragment {
             android.widget.Toast.makeText(getContext(), "导入失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
         }
     }
-    
+
     /**
      * 导出单个设定到全局素材库
      */
@@ -366,7 +369,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                     break;
                 }
             }
-            
+
             // 2. 创建副本
             StorySetting copy = new StorySetting();
             copy.setStoryId(0);  // 设置为全局素材库
@@ -380,14 +383,14 @@ public class MaterialLibraryFragment extends BaseFragment {
             copy.setFavorite(false);  // 不继承收藏状态
             copy.setSourceMaterialId(0);  // 导出的素材不再记录溯源（独立素材）
             copy.setCreateTime(System.currentTimeMillis());
-            
+
             // 3. 插入数据库
             long newId = settingDao.insert(copy);
-            
+
             if (newId > 0) {
-                android.widget.Toast.makeText(requireContext(), 
-                    "导出成功" + (nameExists ? "（已重命名）" : ""), 
-                    android.widget.Toast.LENGTH_SHORT).show();
+                android.widget.Toast.makeText(requireContext(),
+                        "导出成功" + (nameExists ? "（已重命名）" : ""),
+                        android.widget.Toast.LENGTH_SHORT).show();
             } else {
                 android.widget.Toast.makeText(requireContext(), "导出失败", android.widget.Toast.LENGTH_SHORT).show();
             }
@@ -396,20 +399,20 @@ public class MaterialLibraryFragment extends BaseFragment {
             android.widget.Toast.makeText(requireContext(), "导出失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
         }
     }
-    
+
     /**
      * 设置分类筛选器
      */
     private void setupCategoryFilter() {
         // 添加主分类
         addMainCategoryChip("全部", true);
-        
+
         String[] categories = SettingCategoryConfig.getAllMainCategories();
         for (String category : categories) {
             addMainCategoryChip(category, false);
         }
     }
-    
+
     /**
      * 添加主分类Chip
      */
@@ -419,7 +422,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         chip.setCheckable(true);
         chip.setChecked(isDefault);
         chip.setCloseIconVisible(false);
-        
+
         chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 // 取消其他主分类Chip的选中状态
@@ -429,7 +432,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                         ((Chip) child).setChecked(false);
                     }
                 }
-                
+
                 // 应用筛选
                 if (adapter != null) {
                     if ("全部".equals(category)) {
@@ -445,30 +448,30 @@ public class MaterialLibraryFragment extends BaseFragment {
                 }
             }
         });
-        
+
         chipGroupMainCategory.addView(chip);
     }
-    
+
     /**
      * 显示子分类
      */
     private void showSubCategories(String mainCategory) {
         // 清空子分类
         chipGroupSubCategory.removeAllViews();
-        
+
         // 添加“全部”选项
         addSubCategoryChip(mainCategory, "全部", true);
-        
+
         // 添加所有子分类
         String[] subCategories = SettingCategoryConfig.getSubCategories(mainCategory);
         for (String subCategory : subCategories) {
             addSubCategoryChip(mainCategory, subCategory, false);
         }
-        
+
         // 显示子分类容器
         layoutSubCategory.setVisibility(View.VISIBLE);
     }
-    
+
     /**
      * 添加子分类Chip
      */
@@ -478,7 +481,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         chip.setCheckable(true);
         chip.setChecked(isDefault);
         chip.setCloseIconVisible(false);
-        
+
         chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 // 取消其他子分类Chip的选中状态
@@ -488,7 +491,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                         ((Chip) child).setChecked(false);
                     }
                 }
-                
+
                 // 应用筛选
                 if (adapter != null) {
                     if ("全部".equals(subCategory)) {
@@ -502,10 +505,10 @@ public class MaterialLibraryFragment extends BaseFragment {
                 }
             }
         });
-        
+
         chipGroupSubCategory.addView(chip);
     }
-    
+
     /**
      * 设置多选功能
      */
@@ -516,12 +519,12 @@ public class MaterialLibraryFragment extends BaseFragment {
         btnSelectAll = view.findViewById(R.id.btn_select_all);
         btnBatchImport = view.findViewById(R.id.btn_batch_import);
         btnBatchDelete = view.findViewById(R.id.btn_batch_delete);
-        
+
         // 多选按钮点击
         cbMultiSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (adapter != null) {
                 adapter.setSelectionMode(isChecked);
-                
+
                 if (isChecked) {
                     // 进入多选模式，显示批量操作栏
                     layoutBatchActions.setVisibility(View.VISIBLE);
@@ -532,7 +535,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                 }
             }
         });
-        
+
         // 全选按钮
         btnSelectAll.setOnClickListener(v -> {
             if (adapter != null) {
@@ -540,7 +543,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                 updateSelectedCount(adapter.getSelectedSettings().size());
             }
         });
-        
+
         // 批量导入
         btnBatchImport.setOnClickListener(v -> {
             List<StorySetting> selected = adapter.getSelectedSettings();
@@ -550,7 +553,7 @@ public class MaterialLibraryFragment extends BaseFragment {
             }
             showBatchImportDialog(selected);
         });
-        
+
         // 批量删除
         btnBatchDelete.setOnClickListener(v -> {
             List<StorySetting> selected = adapter.getSelectedSettings();
@@ -561,7 +564,7 @@ public class MaterialLibraryFragment extends BaseFragment {
             showBatchDeleteDialog(selected);
         });
     }
-    
+
     /**
      * 更新已选择数量显示
      */
@@ -570,7 +573,7 @@ public class MaterialLibraryFragment extends BaseFragment {
             tvSelectedCount.setText("已选择 " + count + " 项");
         }
     }
-    
+
     /**
      * 显示批量导入对话框
      */
@@ -578,12 +581,12 @@ public class MaterialLibraryFragment extends BaseFragment {
         // 获取用户的所有小说
         com.example.storyteller.data.local.db.StoryDao storyDao = new com.example.storyteller.data.local.db.StoryDao(requireContext());
         List<com.example.storyteller.model.Story> stories = storyDao.getAllStories();
-        
+
         if (stories == null || stories.isEmpty()) {
             android.widget.Toast.makeText(getContext(), "请先创建一部小说", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         if (stories.size() == 1) {
             // 只有一部小说，直接导入
             batchImportToStory(selectedSettings, stories.get(0).getId());
@@ -593,31 +596,31 @@ public class MaterialLibraryFragment extends BaseFragment {
             for (int i = 0; i < stories.size(); i++) {
                 storyNames[i] = stories.get(i).getTitle();
             }
-            
+
             new AlertDialog.Builder(requireContext())
-                .setTitle("选择目标小说")
-                .setItems(storyNames, (dialog, which) -> {
-                    int targetStoryId = stories.get(which).getId();
-                    batchImportToStory(selectedSettings, targetStoryId);
-                })
-                .show();
+                    .setTitle("选择目标小说")
+                    .setItems(storyNames, (dialog, which) -> {
+                        int targetStoryId = stories.get(which).getId();
+                        batchImportToStory(selectedSettings, targetStoryId);
+                    })
+                    .show();
         }
     }
-    
+
     /**
      * 批量导入设定到小说
      */
     private void batchImportToStory(List<StorySetting> selectedSettings, int targetStoryId) {
         int successCount = 0;
         int renamedCount = 0;
-        
+
         // 获取目标小说的现有设定（用于检查重名）
         List<StorySetting> existing = settingDao.getByStoryId(targetStoryId);
         java.util.Set<String> existingTitles = new java.util.HashSet<>();
         for (StorySetting s : existing) {
             existingTitles.add(s.getTitle());
         }
-        
+
         for (StorySetting globalSetting : selectedSettings) {
             try {
                 // 检查是否重名
@@ -625,7 +628,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                 if (nameExists) {
                     renamedCount++;
                 }
-                
+
                 // 创建副本
                 StorySetting copy = new StorySetting();
                 copy.setStoryId(targetStoryId);
@@ -639,7 +642,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                 copy.setFavorite(false);
                 copy.setSourceMaterialId(globalSetting.getId());
                 copy.setCreateTime(System.currentTimeMillis());
-                
+
                 // 插入数据库
                 long newId = settingDao.insert(copy);
                 if (newId > 0) {
@@ -651,13 +654,13 @@ public class MaterialLibraryFragment extends BaseFragment {
                 e.printStackTrace();
             }
         }
-        
+
         // 退出多选模式
         cbMultiSelect.setChecked(false);
-        
+
         // 刷新列表
         refreshSettingsList();
-        
+
         // 显示结果
         String message = "已导入 " + successCount + " 个素材";
         if (renamedCount > 0) {
@@ -665,21 +668,21 @@ public class MaterialLibraryFragment extends BaseFragment {
         }
         android.widget.Toast.makeText(getContext(), message, android.widget.Toast.LENGTH_LONG).show();
     }
-    
+
     /**
      * 显示批量删除对话框
      */
     private void showBatchDeleteDialog(List<StorySetting> selectedSettings) {
         new AlertDialog.Builder(requireContext())
-            .setTitle("批量删除")
-            .setMessage("确定要删除选中的 " + selectedSettings.size() + " 个素材吗？\n此操作不可恢复。")
-            .setPositiveButton("删除", (dialog, which) -> {
-                batchDeleteSettings(selectedSettings);
-            })
-            .setNegativeButton("取消", null)
-            .show();
+                .setTitle("批量删除")
+                .setMessage("确定要删除选中的 " + selectedSettings.size() + " 个素材吗？\n此操作不可恢复。")
+                .setPositiveButton("删除", (dialog, which) -> {
+                    batchDeleteSettings(selectedSettings);
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
-    
+
     /**
      * 批量删除
      */
@@ -691,18 +694,18 @@ public class MaterialLibraryFragment extends BaseFragment {
                 successCount++;
             }
         }
-        
-        android.widget.Toast.makeText(getContext(), 
-            "已删除 " + successCount + " 个素材", 
-            android.widget.Toast.LENGTH_SHORT).show();
-        
+
+        android.widget.Toast.makeText(getContext(),
+                "已删除 " + successCount + " 个素材",
+                android.widget.Toast.LENGTH_SHORT).show();
+
         // 退出多选模式
         cbMultiSelect.setChecked(false);
-        
+
         // 刷新列表
         refreshSettingsList();
     }
-    
+
     /**
      * 显示导入URL对话框
      */
@@ -738,7 +741,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         for (int i = 0; i < checked.length; i++) {
             checked[i] = true;
         }
-        
+
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("选择要导入的素材类型")
                 .setMultiChoiceItems(typeLabels, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
@@ -753,12 +756,12 @@ public class MaterialLibraryFragment extends BaseFragment {
                             }
                         }
                     }
-                    
+
                     if (selected.isEmpty()) {
                         android.widget.Toast.makeText(getContext(), "请至少选择一种素材类型", android.widget.Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    
+
                     startImporting(url, selected);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -770,16 +773,18 @@ public class MaterialLibraryFragment extends BaseFragment {
      */
     private String mapCategoryToExtractType(String categoryName) {
         switch (categoryName) {
-            case "世界观":
-                return MaterialCandidateExtractor.TYPE_WORLDVIEW;
+            case "世界":
+                return MaterialCandidateExtractor.TYPE_WORLD;
             case "角色":
                 return MaterialCandidateExtractor.TYPE_CHARACTER;
+            case "地点":
+                return MaterialCandidateExtractor.TYPE_LOCATION;
             case "剧情":
                 return MaterialCandidateExtractor.TYPE_PLOT;
-            case "风格":
-                return MaterialCandidateExtractor.TYPE_STYLE;
-            case "规则":
-                return MaterialCandidateExtractor.TYPE_RULE;
+            case "规则体系":
+                return MaterialCandidateExtractor.TYPE_SYSTEM;
+            case "创作控制":
+                return MaterialCandidateExtractor.TYPE_CREATIVE_CONTROL;
             default:
                 // 未知分类默认使用角色
                 return MaterialCandidateExtractor.TYPE_CHARACTER;
@@ -854,7 +859,7 @@ public class MaterialLibraryFragment extends BaseFragment {
      */
     private void extractSettingsFromSummary(NovelSummary summary, List<String> selectedTypes) {
         tvEmptyHint.setText("正在AI分析...");
-        
+
         MaterialCandidateExtractor extractor = new MaterialCandidateExtractor();
         extractor.extract(summary, requireContext(), selectedTypes, new MaterialCandidateExtractor.Callback() {
             @Override
@@ -912,11 +917,11 @@ public class MaterialLibraryFragment extends BaseFragment {
 
                 // 刷新列表
                 refreshSettingsList();
-                
+
                 // 显示结果
                 tvEmptyHint.setVisibility(View.GONE);
-                android.widget.Toast.makeText(getContext(), 
-                        "成功导入 " + successCount + " 个素材", 
+                android.widget.Toast.makeText(getContext(),
+                        "成功导入 " + successCount + " 个素材",
                         android.widget.Toast.LENGTH_LONG).show();
             }
 

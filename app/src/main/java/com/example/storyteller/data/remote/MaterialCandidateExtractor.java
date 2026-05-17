@@ -11,39 +11,53 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * 素材提取器 - 新版分类体系
- * 支持5大分类：世界观、角色、剧情、风格、规则
+ * 支持6大分类：世界、角色、地点、剧情、规则体系、创作控制
  */
 public class MaterialCandidateExtractor {
 
-    // 新版5大分类类型标识
-    public static final String TYPE_WORLDVIEW = "worldview";   // 世界观
+    // 新版7大分类类型标识
+    public static final String TYPE_WORLD = "world";           // 世界
     public static final String TYPE_CHARACTER = "character";   // 角色
+    public static final String TYPE_LOCATION = "location";     // 地点
     public static final String TYPE_PLOT = "plot";             // 剧情
-    public static final String TYPE_STYLE = "style";           // 风格
-    public static final String TYPE_RULE = "rule";             // 规则
-    
+    public static final String TYPE_SYSTEM = "system";         // 规则体系
+    public static final String TYPE_CREATIVE_CONTROL = "creative_control"; // 创作控制
+    public static final String TYPE_META = "meta";             // 元信息（可选，用于内部追踪）
+
     // 旧版类型别名（保持向后兼容，已废弃）
     @Deprecated
     public static final String TYPE_PERSONA = TYPE_CHARACTER;
     @Deprecated
-    public static final String TYPE_THEME = TYPE_STYLE;
+    public static final String TYPE_THEME = TYPE_CREATIVE_CONTROL;
+    @Deprecated
+    public static final String TYPE_STYLE = TYPE_CREATIVE_CONTROL;
+    @Deprecated
+    public static final String TYPE_RULE = TYPE_SYSTEM;
     
     // 对应的中文分类名（用于显示）
-    public static final String CATEGORY_WORLDVIEW = "世界观";
+    public static final String CATEGORY_WORLD = "世界";
     public static final String CATEGORY_CHARACTER = "角色";
+    public static final String CATEGORY_LOCATION = "地点";
     public static final String CATEGORY_PLOT = "剧情";
-    public static final String CATEGORY_STYLE = "风格";
-    public static final String CATEGORY_RULE = "规则";
-    
+    public static final String CATEGORY_SYSTEM = "规则体系";
+    public static final String CATEGORY_CREATIVE_CONTROL = "创作控制";
+
     // 旧版分类名别名（保持向后兼容，已废弃）
+    @Deprecated
+    public static final String CATEGORY_WORLDVIEW = CATEGORY_WORLD;  // "世界观" -> "世界"
     @Deprecated
     public static final String CATEGORY_PERSONA = CATEGORY_CHARACTER;
     @Deprecated
-    public static final String CATEGORY_THEME = CATEGORY_STYLE;
+    public static final String CATEGORY_RULE = CATEGORY_SYSTEM;
+    @Deprecated
+    public static final String CATEGORY_STYLE = CATEGORY_CREATIVE_CONTROL;
+    @Deprecated
+    public static final String CATEGORY_THEME = CATEGORY_CREATIVE_CONTROL;
 
     private final ApiClient apiClient = ApiClient.getInstance();
     private final Gson gson = new Gson();
@@ -91,7 +105,7 @@ public class MaterialCandidateExtractor {
         return "你是小说素材抽取助手。请基于下面的内容，提炼出适合写作复用的素材候选，严格只输出 JSON，不要 Markdown，不要解释。\n"
                 + "必须只抽取以下类型：" + requestedTypeText + "。\n"
                 + "输出格式：\n"
-                + "{\"settings\":[{\"category\":\"世界观|角色|剧情|风格|规则\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
+                + "{\"settings\":[{\"category\":\"世界|角色|地点|剧情|规则体系|创作控制\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
                 + "要求：\n"
                 + "1. 只输出所选类型对应的素材，不要输出其他类型。\n"
                 + "2. title 要简短明确，适合素材库展示（20字以内）。\n"
@@ -101,11 +115,12 @@ public class MaterialCandidateExtractor {
                 + "6. tags 提供3-5个关键词标签。\n"
                 + "7. confidence 取 0 到 1 之间的小数，表示素材质量评分。\n"
                 + "8. category 与 subCategory 的对应关系：\n"
-                + "   - 世界观: 地理环境/历史背景/种族文化/社会制度/科技水平\n"
-                + "   - 角色: 主要角色/次要角色/反派角色/群体角色\n"
-                + "   - 剧情: 主线任务/支线任务/悬念伏笔/关键事件\n"
-                + "   - 风格: 叙事风格/语言风格/节奏控制/情感基调\n"
-                + "   - 规则: 魔法规则/战斗系统/经济体系/时间规则\n"
+                + "   - 世界: 地理环境/时代背景/历史背景/文明种族/社会文化/政治势力/科技发展/物品资源\n"
+                + "   - 角色: 主要角色/次要角色/反派角色/组织阵营\n"
+                + "   - 地点: 国家地区/城市/村庄/自然景观/关键场景/建筑设施/特殊空间\n"
+                + "   - 剧情: 主线剧情/支线剧情/关键事件/悬念伏笔/章节规划/矛盾冲突/时间线\n"
+                + "   - 规则体系: 力量体系/魔法或超能力/战斗系统/经济体系/时间规则/限制条件\n"
+                + "   - 创作控制: 主题内核/语言风格/情感基调/叙事视角/节奏控制\n"
                 + "\n内容信息：\n"
                 + "标题：" + safe(summary.getTitle()) + "\n"
                 + "作者：" + safe(summary.getAuthor()) + "\n"
@@ -176,11 +191,11 @@ public class MaterialCandidateExtractor {
         String sourceUrl = summary.getSourceUrl();
         long now = System.currentTimeMillis();
 
-        if (requestedTypes.contains(CATEGORY_WORLDVIEW)) {
-            StorySetting setting = new StorySetting(0, CATEGORY_WORLDVIEW, "地理环境", title + " · 世界观");
-            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含丰富的世界观设定"));
-            setting.setDetail(firstNonEmpty(summary.getDescription(), "可用于构建类似的世界观背景"));
-            setting.setTags(gson.toJson(toTags("世界观", "背景", "设定")));
+        if (requestedTypes.contains(CATEGORY_WORLD)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_WORLD, "地理环境", title + " · 世界设定");
+            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含丰富的世界设定"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), "可用于构建类似的世界背景"));
+            setting.setTags(gson.toJson(toTags("世界", "背景", "设定")));
             setting.setSourceUrl(sourceUrl);
             setting.setSourceTitle(title);
             setting.setSourceType("ai_generated");
@@ -200,6 +215,18 @@ public class MaterialCandidateExtractor {
             settings.add(setting);
         }
 
+        if (requestedTypes.contains(CATEGORY_LOCATION)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_LOCATION, "关键场景", title + " · 地点设定");
+            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含重要的地点或场景设定"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), "可用于构建类似的地点或场景"));
+            setting.setTags(gson.toJson(toTags("地点", "环境", "场景")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
+        }
+
         if (requestedTypes.contains(CATEGORY_PLOT)) {
             StorySetting setting = new StorySetting(0, CATEGORY_PLOT, "关键事件", title + " · 情节脉络");
             setting.setSummary(firstNonEmpty(summary.getOutline(), "可用于提炼经典情节模板"));
@@ -212,21 +239,9 @@ public class MaterialCandidateExtractor {
             settings.add(setting);
         }
 
-        if (requestedTypes.contains(CATEGORY_STYLE)) {
-            StorySetting setting = new StorySetting(0, CATEGORY_STYLE, "叙事风格", title + " · 风格特色");
-            setting.setSummary(firstNonEmpty(summary.getSummary(), "具有独特的叙事风格"));
-            setting.setDetail(firstNonEmpty(summary.getDescription(), safe(summary.getSummary())));
-            setting.setTags(gson.toJson(toTags("风格", "叙事", "特色")));
-            setting.setSourceUrl(sourceUrl);
-            setting.setSourceTitle(title);
-            setting.setSourceType("ai_generated");
-            setting.setAiConfidence(0.2d);
-            settings.add(setting);
-        }
-
-        if (requestedTypes.contains(CATEGORY_RULE)) {
-            StorySetting setting = new StorySetting(0, CATEGORY_RULE, "魔法规则", title + " · 规则体系");
-            setting.setSummary(firstNonEmpty(summary.getSummary(), "包含特定的规则或体系"));
+        if (requestedTypes.contains(CATEGORY_SYSTEM)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_SYSTEM, "力量体系", title + " · 规则设定");
+            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含特定的规则或体系"));
             setting.setDetail(firstNonEmpty(summary.getDescription(), "可参考其规则设计"));
             setting.setTags(gson.toJson(toTags("规则", "体系", "设定")));
             setting.setSourceUrl(sourceUrl);
@@ -235,7 +250,19 @@ public class MaterialCandidateExtractor {
             setting.setAiConfidence(0.2d);
             settings.add(setting);
         }
-        
+
+        if (requestedTypes.contains(CATEGORY_CREATIVE_CONTROL)) {
+            StorySetting setting = new StorySetting(0, CATEGORY_CREATIVE_CONTROL, "主题内核", title + " · 创作控制");
+            setting.setSummary(firstNonEmpty(summary.getDescription(), "包含独特的主题或风格控制"));
+            setting.setDetail(firstNonEmpty(summary.getDescription(), "可用于构建类似的主题表达"));
+            setting.setTags(gson.toJson(toTags("创作控制", "主题", "风格")));
+            setting.setSourceUrl(sourceUrl);
+            setting.setSourceTitle(title);
+            setting.setSourceType("ai_generated");
+            setting.setAiConfidence(0.2d);
+            settings.add(setting);
+        }
+
         return settings;
     }
 
@@ -263,44 +290,50 @@ public class MaterialCandidateExtractor {
     }
 
     private boolean isValidCategory(String category) {
-        return CATEGORY_WORLDVIEW.equals(category)
+        return CATEGORY_WORLD.equals(category)
                 || CATEGORY_CHARACTER.equals(category)
+                || CATEGORY_LOCATION.equals(category)
                 || CATEGORY_PLOT.equals(category)
-                || CATEGORY_STYLE.equals(category)
-                || CATEGORY_RULE.equals(category);
+                || CATEGORY_SYSTEM.equals(category)
+                || CATEGORY_CREATIVE_CONTROL.equals(category);
     }
 
     private String getDefaultSubCategory(String category) {
         // 为每种分类提供默认的子分类
-        if (CATEGORY_WORLDVIEW.equals(category)) {
+        if (CATEGORY_WORLD.equals(category)) {
             return "地理环境";
         } else if (CATEGORY_CHARACTER.equals(category)) {
             return "主要角色";
+        } else if (CATEGORY_LOCATION.equals(category)) {
+            return "国家地区";
         } else if (CATEGORY_PLOT.equals(category)) {
             return "关键事件";
-        } else if (CATEGORY_STYLE.equals(category)) {
-            return "叙事风格";
-        } else if (CATEGORY_RULE.equals(category)) {
-            return "魔法规则";
+        } else if (CATEGORY_SYSTEM.equals(category)) {
+            return "力量体系";
+        } else if (CATEGORY_CREATIVE_CONTROL.equals(category)) {
+            return "主题内核";
         }
         return "其他";
     }
 
     private String mapCategory(String type) {
-        if (TYPE_WORLDVIEW.equalsIgnoreCase(type)) {
-            return CATEGORY_WORLDVIEW;
+        if (TYPE_WORLD.equalsIgnoreCase(type)) {
+            return CATEGORY_WORLD;
         }
         if (TYPE_CHARACTER.equalsIgnoreCase(type)) {
             return CATEGORY_CHARACTER;
         }
+        if (TYPE_LOCATION.equalsIgnoreCase(type)) {
+            return CATEGORY_LOCATION;
+        }
         if (TYPE_PLOT.equalsIgnoreCase(type)) {
             return CATEGORY_PLOT;
         }
-        if (TYPE_STYLE.equalsIgnoreCase(type)) {
-            return CATEGORY_STYLE;
+        if (TYPE_SYSTEM.equalsIgnoreCase(type)) {
+            return CATEGORY_SYSTEM;
         }
-        if (TYPE_RULE.equalsIgnoreCase(type)) {
-            return CATEGORY_RULE;
+        if (TYPE_CREATIVE_CONTROL.equalsIgnoreCase(type)) {
+            return CATEGORY_CREATIVE_CONTROL;
         }
         // 默认返回角色
         return CATEGORY_CHARACTER;
@@ -363,16 +396,18 @@ public class MaterialCandidateExtractor {
     private String buildRequestedTypeText(List<String> requestedTypes) {
         List<String> labels = new ArrayList<>();
         for (String type : requestedTypes) {
-            if (TYPE_WORLDVIEW.equals(type)) {
-                labels.add("世界观");
+            if (TYPE_WORLD.equals(type)) {
+                labels.add("世界");
             } else if (TYPE_CHARACTER.equals(type)) {
                 labels.add("角色");
+            } else if (TYPE_LOCATION.equals(type)) {
+                labels.add("地点");
             } else if (TYPE_PLOT.equals(type)) {
                 labels.add("剧情");
-            } else if (TYPE_STYLE.equals(type)) {
-                labels.add("风格");
-            } else if (TYPE_RULE.equals(type)) {
-                labels.add("规则");
+            } else if (TYPE_SYSTEM.equals(type)) {
+                labels.add("规则体系");
+            } else if (TYPE_CREATIVE_CONTROL.equals(type)) {
+                labels.add("创作控制");
             }
         }
         return String.join("、", labels);
@@ -382,27 +417,29 @@ public class MaterialCandidateExtractor {
         List<String> types = new ArrayList<>();
         if (requestedTypes == null || requestedTypes.isEmpty()) {
             // 默认全部类型
-            types.add(TYPE_WORLDVIEW);
+            types.add(TYPE_WORLD);
             types.add(TYPE_CHARACTER);
+            types.add(TYPE_LOCATION);
             types.add(TYPE_PLOT);
-            types.add(TYPE_STYLE);
-            types.add(TYPE_RULE);
+            types.add(TYPE_SYSTEM);
+            types.add(TYPE_CREATIVE_CONTROL);
             return types;
         }
         for (String type : requestedTypes) {
-            if (TYPE_WORLDVIEW.equals(type) || TYPE_CHARACTER.equals(type) || 
-                TYPE_PLOT.equals(type) || TYPE_STYLE.equals(type) || TYPE_RULE.equals(type)) {
+            if (TYPE_WORLD.equals(type) || TYPE_CHARACTER.equals(type) || TYPE_LOCATION.equals(type) ||
+                TYPE_PLOT.equals(type) || TYPE_SYSTEM.equals(type) || TYPE_CREATIVE_CONTROL.equals(type)) {
                 if (!types.contains(type)) {
                     types.add(type);
                 }
             }
         }
         if (types.isEmpty()) {
-            types.add(TYPE_WORLDVIEW);
+            types.add(TYPE_WORLD);
             types.add(TYPE_CHARACTER);
+            types.add(TYPE_LOCATION);
             types.add(TYPE_PLOT);
-            types.add(TYPE_STYLE);
-            types.add(TYPE_RULE);
+            types.add(TYPE_SYSTEM);
+            types.add(TYPE_CREATIVE_CONTROL);
         }
         return types;
     }
@@ -415,11 +452,7 @@ public class MaterialCandidateExtractor {
     }
 
     private List<String> toTags(String... values) {
-        List<String> tags = new ArrayList<>();
-        for (String value : values) {
-            tags.add(value);
-        }
-        return tags;
+        return new ArrayList<>(Arrays.asList(values));
     }
 
     private static class ExtractionResult {
