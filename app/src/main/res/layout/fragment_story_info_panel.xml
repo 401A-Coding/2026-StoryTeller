@@ -132,40 +132,11 @@
         </LinearLayout>
 
         <!-- 文档面板 -->
-        <ScrollView
+        <FrameLayout
             android:id="@+id/panel_docs"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="写作笔记"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="8dp" />
-
-                <EditText
-                    android:id="@+id/et_docs"
-                    android:layout_width="match_parent"
-                    android:layout_height="400dp"
-                    android:hint="记录写作过程中的想法、灵感、参考资料..."
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
-        </ScrollView>
+            android:visibility="gone" />
 
     </FrameLayout>
 

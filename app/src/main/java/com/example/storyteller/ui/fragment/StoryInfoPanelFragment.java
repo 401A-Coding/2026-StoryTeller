@@ -234,6 +234,8 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 break;
             case 3: // 文档
                 panelDocs.setVisibility(View.VISIBLE);
+                // 动态加载文档列表面板
+                loadDocumentsFragment();
                 break;
         }
     }
@@ -274,6 +276,23 @@ public class StoryInfoPanelFragment extends BaseFragment {
      */
     public void refreshOutlineData() {
         loadOutlineFragment();
+    }
+    
+    /**
+     * 加载文档列表面板
+     */
+    private void loadDocumentsFragment() {
+        if (storyId <= 0) return;
+        
+        // 检查是否已经添加过
+        if (getChildFragmentManager().findFragmentById(R.id.panel_docs) == null) {
+            com.example.storyteller.ui.fragment.DocumentsFragment documentsFragment = 
+                com.example.storyteller.ui.fragment.DocumentsFragment.newInstance(storyId);
+            getChildFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_docs, documentsFragment)
+                .commit();
+        }
     }
 
     /**
