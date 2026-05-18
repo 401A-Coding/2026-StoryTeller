@@ -32,6 +32,16 @@ public class StoryRepositoryImpl implements StoryRepository {
     }
     
     @Override
+    public int updateStoryOutline(int storyId, String structure) {
+        return storyDao.updateStoryOutline(storyId, structure);
+    }
+    
+    @Override
+    public int updateStoryGlobalOutline(int storyId, String globalOutline) {
+        return storyDao.updateStoryGlobalOutline(storyId, globalOutline);
+    }
+    
+    @Override
     public List<Story> getAllStories() {
         return storyDao.getAllStories();
     }

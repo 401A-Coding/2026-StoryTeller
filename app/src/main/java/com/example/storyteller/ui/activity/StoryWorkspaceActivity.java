@@ -388,6 +388,8 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
                 refreshWritingFragment();
                 // 同时刷新目录视图
                 refreshTocView();
+                // 同时刷新大纲视图
+                refreshOutlineView();
             });
             getSupportFragmentManager()
                 .beginTransaction()
@@ -447,6 +449,16 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             storyInfoPanelFragment.refreshTocView();
         } else {
             android.util.Log.e("StoryWorkspace", "storyInfoPanelFragment 为 null");
+        }
+    }
+    
+    /**
+     * 刷新大纲视图（公开方法，供WritingFragment调用）
+     */
+    public void refreshOutlineView() {
+        android.util.Log.d("StoryWorkspace", "refreshOutlineView: 刷新大纲视图");
+        if (storyInfoPanelFragment != null) {
+            storyInfoPanelFragment.refreshOutlineData();
         }
     }
     

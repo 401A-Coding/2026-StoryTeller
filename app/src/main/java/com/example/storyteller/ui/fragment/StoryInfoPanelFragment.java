@@ -45,8 +45,6 @@ public class StoryInfoPanelFragment extends BaseFragment {
     private ImageView btnSelectStory;
     private ImageView btnClosePanel;  // 新增关闭按钮
     private TabLayout tabStoryInfo;
-    private EditText etOutline;
-    private EditText etDocs;
     private LinearLayout layoutToc;
     private HorizontalScrollView horizontalPageIndicator;  // 页码指示器滚动容器
     private LinearLayout layoutPageIndicator;  // 页码指示器容器
@@ -101,8 +99,6 @@ public class StoryInfoPanelFragment extends BaseFragment {
         btnSelectStory = view.findViewById(R.id.btn_select_story);
         btnClosePanel = view.findViewById(R.id.btn_close_panel);  // 初始化关闭按钮
         tabStoryInfo = view.findViewById(R.id.tab_story_info);
-        etOutline = view.findViewById(R.id.et_outline);
-        etDocs = view.findViewById(R.id.et_docs);
         layoutToc = view.findViewById(R.id.layout_toc);
         horizontalPageIndicator = view.findViewById(R.id.horizontal_page_indicator);
         layoutPageIndicator = view.findViewById(R.id.layout_page_indicator);
@@ -165,12 +161,9 @@ public class StoryInfoPanelFragment extends BaseFragment {
         // 更新标题
         tvStoryTitle.setText(currentStory.getTitle());
 
-        // 设定面板已改为动态加载 Fragment，不再需要 etWorldSetting
+        // 设定面板已改为动态加载 Fragment
 
-        // 大纲面板暂时留空（大纲不是正文，需要单独的字段存储）
-        etOutline.setText("");
-        
-        // TODO: 后续添加专门的outline字段到Story模型
+        // 大纲面板已改为动态加载 OutlineFragment
 
         // 文档面板暂时为空
         // TODO: 后续可以添加专门的docs字段到Story模型
@@ -231,9 +224,13 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 break;
             case 1: // 大纲
                 panelOutline.setVisibility(View.VISIBLE);
+                // 动态加载大纲面板（每次都刷新）
+                refreshOutlineData();
                 break;
             case 2: // 目录
                 panelToc.setVisibility(View.VISIBLE);
+                // 刷新目录视图
+                refreshTocView();
                 break;
             case 3: // 文档
                 panelDocs.setVisibility(View.VISIBLE);
@@ -255,6 +252,28 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 .replace(R.id.panel_setting, settingsFragment)
                 .commit();
         }
+    }
+    
+    /**
+     * 加载大纲面板
+     */
+    private void loadOutlineFragment() {
+        if (storyId <= 0) return;
+        
+        // 每次都重新创建OutlineFragment，确保数据最新
+        com.example.storyteller.ui.fragment.OutlineFragment outlineFragment = 
+            com.example.storyteller.ui.fragment.OutlineFragment.newInstance(storyId);
+        getChildFragmentManager()
+            .beginTransaction()
+            .replace(R.id.panel_outline, outlineFragment)
+            .commit();
+    }
+    
+    /**
+     * 刷新大纲数据（公开方法）
+     */
+    public void refreshOutlineData() {
+        loadOutlineFragment();
     }
 
     /**

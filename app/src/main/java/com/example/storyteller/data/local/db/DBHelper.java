@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 11;  // 升级到版本11，添加设定相关表
+    private static final int DB_VERSION = 13;  // 升级到版本13，添加global_outline字段
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -25,6 +25,8 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_COVER_PATH = "cover_path";  // 封面图片路径
     public static final String COL_STORY_WORD_COUNT = "word_count";  // 总字数
     public static final String COL_STORY_SERIES_NAME = "series_name";  // 系列名称
+    public static final String COL_STORY_OUTLINE_DATA = "outline_data";  // 大纲数据JSON（与structure分离存储）
+    public static final String COL_STORY_GLOBAL_OUTLINE = "global_outline";  // 全局大纲（Markdown格式文本）
 
     // 素材表字段
     public static final String TABLE_MATERIAL = "material";
@@ -153,7 +155,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2', "
                 + COL_STORY_COVER_PATH + " TEXT, "
                 + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0, "
-                + COL_STORY_SERIES_NAME + " TEXT"
+                + COL_STORY_SERIES_NAME + " TEXT, "
+                + COL_STORY_OUTLINE_DATA + " TEXT"
                 + ")";
 
         String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
@@ -261,6 +264,22 @@ public class DBHelper extends SQLiteOpenHelper {
             // 版本11：添加设定相关表
             createGlobalMaterialTable(db);
             createStorySettingTable(db);
+        }
+        if (oldVersion < 12) {
+            // 版本12：添加outline_data字段，用于分离存储大纲数据
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_OUTLINE_DATA + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+        }
+        if (oldVersion < 13) {
+            // 版本13：添加global_outline字段，用于存储全局大纲（Markdown格式）
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_GLOBAL_OUTLINE + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
         }
     }
 

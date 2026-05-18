@@ -29,6 +29,10 @@ public class Story {
     private int wordCount;
     // 系列名称（可为空）
     private String seriesName;
+    // 大纲数据JSON（与structure分离存储）
+    private String outlineData;
+    // 全局大纲（Markdown格式文本）
+    private String globalOutline;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -153,6 +157,8 @@ public class Story {
         this.coverPath = coverPath;
         this.wordCount = wordCount;
         this.seriesName = seriesName;
+        this.outlineData = null;
+        this.globalOutline = null;
     }
 
     /**
@@ -201,4 +207,8 @@ public class Story {
     public void setWordCount(int wordCount) { this.wordCount = wordCount; }
     public String getSeriesName() { return seriesName; }
     public void setSeriesName(String seriesName) { this.seriesName = seriesName; }
+    public String getOutlineData() { return outlineData; }
+    public void setOutlineData(String outlineData) { this.outlineData = outlineData; }
+    public String getGlobalOutline() { return globalOutline; }
+    public void setGlobalOutline(String globalOutline) { this.globalOutline = globalOutline; }
 }

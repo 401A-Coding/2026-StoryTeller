@@ -11,9 +11,17 @@ public class Volume {
     private int id;
     private String title;
     private List<Chapter> chapters;
+    
+    // 大纲相关字段
+    private String summary;              // 卷摘要
+    private int targetWordCount;         // 目标字数
+    private int targetChapterCount;      // 目标章节数
 
     public Volume() {
         this.chapters = new ArrayList<>();
+        this.summary = "";
+        this.targetWordCount = 0;
+        this.targetChapterCount = 0;
     }
 
     public Volume(String title) {
@@ -67,4 +75,14 @@ public class Volume {
         }
         return null;
     }
+    
+    // 大纲字段 Getter & Setter
+    public String getSummary() { return summary; }
+    public void setSummary(String summary) { this.summary = summary; }
+    
+    public int getTargetWordCount() { return targetWordCount; }
+    public void setTargetWordCount(int targetWordCount) { this.targetWordCount = targetWordCount; }
+    
+    public int getTargetChapterCount() { return targetChapterCount; }
+    public void setTargetChapterCount(int targetChapterCount) { this.targetChapterCount = targetChapterCount; }
 }

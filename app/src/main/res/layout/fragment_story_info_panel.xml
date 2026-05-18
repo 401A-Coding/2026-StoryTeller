@@ -86,40 +86,11 @@
             android:visibility="visible" />
 
         <!-- 大纲面板 -->
-        <ScrollView
+        <FrameLayout
             android:id="@+id/panel_outline"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="故事大纲"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="8dp" />
-
-                <EditText
-                    android:id="@+id/et_outline"
-                    android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:hint="描述故事的整体大纲和主线剧情..."
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
-        </ScrollView>
+            android:visibility="gone" />
 
         <!-- 目录面板 -->
         <LinearLayout

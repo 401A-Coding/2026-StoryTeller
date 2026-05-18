@@ -6,6 +6,8 @@ import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -908,6 +910,7 @@ public class AgentCommandExecutor {
 
     /**
      * 构建当前小说的上下文信息（用于发送给 AI）
+     * 包含：基本信息、全局大纲、卷章结构、最近内容
      */
     public static String buildStoryContext(Story story, List<Volume> volumes) {
         StringBuilder context = new StringBuilder();
@@ -921,20 +924,55 @@ public class AgentCommandExecutor {
                 context.append("小说简介：").append(story.getDescription()).append("\n");
             }
             
+            // 添加全局大纲（如果有）
+            if (!TextUtils.isEmpty(story.getGlobalOutline())) {
+                context.append("\n全局大纲：\n").append(story.getGlobalOutline()).append("\n");
+            }
+            
             context.append("\n");
         }
 
         if (volumes != null && !volumes.isEmpty()) {
-            context.append("卷章结构（注意：volume_id 和 chapter_id 从1开始）：\n");
+            context.append("卷章结构与大纲（注意：volume_id 和 chapter_id 从1开始）：\n");
             for (int i = 0; i < volumes.size(); i++) {
                 Volume volume = volumes.get(i);
                 int volumeId = i + 1;
                 context.append("- 第").append(volumeId).append("卷：").append(volume.getTitle()).append("\n");
                 
+                // 添加卷大纲信息
+                if (!TextUtils.isEmpty(volume.getSummary())) {
+                    context.append("  [卷摘要：").append(volume.getSummary()).append("]\n");
+                }
+                if (volume.getTargetWordCount() > 0) {
+                    context.append("  [目标字数：").append(volume.getTargetWordCount()).append("]\n");
+                }
+                if (volume.getTargetChapterCount() > 0) {
+                    context.append("  [目标章节数：").append(volume.getTargetChapterCount()).append("]\n");
+                }
+                
                 for (int j = 0; j < volume.getChapters().size(); j++) {
                     Chapter chapter = volume.getChapters().get(j);
                     int chapterId = j + 1;
                     context.append("  - 第").append(chapterId).append("章：").append(chapter.getTitle());
+                    
+                    // 添加章节大纲信息
+                    List<String> chapterInfo = new ArrayList<>();
+                    if (!TextUtils.isEmpty(chapter.getChapterRole())) {
+                        chapterInfo.add("作用：" + chapter.getChapterRole());
+                    }
+                    if (!TextUtils.isEmpty(chapter.getChapterSummary())) {
+                        chapterInfo.add("摘要：" + chapter.getChapterSummary());
+                    }
+                    if (chapter.getSuspenseLevel() > 0) {
+                        chapterInfo.add("悬念：" + chapter.getSuspenseLevel() + "/10");
+                    }
+                    if (chapter.getTwistLevel() > 0) {
+                        chapterInfo.add("转折：" + chapter.getTwistLevel() + "/5");
+                    }
+                    
+                    if (!chapterInfo.isEmpty()) {
+                        context.append(" [" + String.join(", ", chapterInfo) + "]");
+                    }
                     
                     // 添加章节内容预览（前100字符）
                     if (!TextUtils.isEmpty(chapter.getContent())) {
@@ -942,7 +980,7 @@ public class AgentCommandExecutor {
                         if (preview.length() > 100) {
                             preview = preview.substring(0, 100) + "...";
                         }
-                        context.append(" [内容预览：").append(preview).append("]");
+                        context.append("\n    [内容预览：").append(preview).append("]");
                     }
                     context.append("\n");
                 }
