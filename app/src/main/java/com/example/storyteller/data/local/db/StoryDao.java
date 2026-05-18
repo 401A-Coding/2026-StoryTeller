@@ -98,6 +98,40 @@ public class StoryDao {
         );
     }
 
+    /**
+     * 只更新大纲数据（outline_data），不覆盖其他字段
+     */
+    public int updateStoryOutline(int storyId, String outlineData) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_OUTLINE_DATA, outlineData);
+        values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    /**
+     * 只更新全局大纲（global_outline），不覆盖其他字段
+     */
+    public int updateStoryGlobalOutline(int storyId, String globalOutline) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_GLOBAL_OUTLINE, globalOutline);
+        values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
     public int updatePlotSummary(int storyId, String plotSummaryJson) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -416,7 +450,22 @@ public class StoryDao {
             // 如果系列名字段不存在，使用null
             seriesName = null;
         }
+        
+        String outlineData = null;
+        int outlineDataIndex = cursor.getColumnIndex(DBHelper.COL_STORY_OUTLINE_DATA);
+        if (outlineDataIndex >= 0 && !cursor.isNull(outlineDataIndex)) {
+            outlineData = cursor.getString(outlineDataIndex);
+        }
+        
+        String globalOutline = null;
+        int globalOutlineIndex = cursor.getColumnIndex(DBHelper.COL_STORY_GLOBAL_OUTLINE);
+        if (globalOutlineIndex >= 0 && !cursor.isNull(globalOutlineIndex)) {
+            globalOutline = cursor.getString(globalOutlineIndex);
+        }
 
-        return new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName);
+        Story story = new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName);
+        story.setOutlineData(outlineData);
+        story.setGlobalOutline(globalOutline);
+        return story;
     }
 }

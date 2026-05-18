@@ -25,6 +25,16 @@ public interface StoryRepository {
     int updateStoryWriting(int storyId, String structure, int wordCount, String content);
     
     /**
+     * 只更新大纲数据（outline_data）
+     */
+    int updateStoryOutline(int storyId, String outlineData);
+    
+    /**
+     * 只更新全局大纲（global_outline）
+     */
+    int updateStoryGlobalOutline(int storyId, String globalOutline);
+    
+    /**
      * 获取所有故事
      */
     List<Story> getAllStories();

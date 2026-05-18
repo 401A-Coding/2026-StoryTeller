@@ -691,6 +691,7 @@ public class AIPanelFragment extends BaseFragment {
     
     /**
      * 从 Story 的 structure JSON 中解析 Volume 列表
+     * 包含完整的大纲字段
      */
     private List<Volume> parseVolumesFromStory(Story story) {
         List<Volume> volumes = new ArrayList<>();
@@ -712,6 +713,17 @@ public class AIPanelFragment extends BaseFragment {
                 Volume volume = new Volume();
                 volume.setTitle(volumeObj.has("title") ? volumeObj.get("title").getAsString() : "未命名卷");
                 
+                // 解析卷大纲字段
+                if (volumeObj.has("summary")) {
+                    volume.setSummary(volumeObj.get("summary").getAsString());
+                }
+                if (volumeObj.has("targetWordCount")) {
+                    volume.setTargetWordCount(volumeObj.get("targetWordCount").getAsInt());
+                }
+                if (volumeObj.has("targetChapterCount")) {
+                    volume.setTargetChapterCount(volumeObj.get("targetChapterCount").getAsInt());
+                }
+                
                 List<Chapter> chapters = new ArrayList<>();
                 if (volumeObj.has("chapters")) {
                     com.google.gson.JsonArray chaptersArray = volumeObj.getAsJsonArray("chapters");
@@ -721,6 +733,61 @@ public class AIPanelFragment extends BaseFragment {
                         Chapter chapter = new Chapter();
                         chapter.setTitle(chapterObj.has("title") ? chapterObj.get("title").getAsString() : "未命名章");
                         chapter.setContent(chapterObj.has("content") ? chapterObj.get("content").getAsString() : "");
+                        
+                        // 解析章节大纲字段
+                        if (chapterObj.has("chapterRole")) {
+                            chapter.setChapterRole(chapterObj.get("chapterRole").getAsString());
+                        }
+                        if (chapterObj.has("chapterSummary")) {
+                            chapter.setChapterSummary(chapterObj.get("chapterSummary").getAsString());
+                        }
+                        if (chapterObj.has("chapterPurpose")) {
+                            chapter.setChapterPurpose(chapterObj.get("chapterPurpose").getAsString());
+                        }
+                        if (chapterObj.has("suspenseLevel")) {
+                            chapter.setSuspenseLevel(chapterObj.get("suspenseLevel").getAsFloat());
+                        }
+                        if (chapterObj.has("foreshadowing")) {
+                            chapter.setForeshadowing(chapterObj.get("foreshadowing").getAsString());
+                        }
+                        if (chapterObj.has("twistLevel")) {
+                            chapter.setTwistLevel(chapterObj.get("twistLevel").getAsFloat());
+                        }
+                        
+                        // 解析拓展信息（角色、物品、位置）
+                        if (chapterObj.has("involvedCharacters")) {
+                            try {
+                                chapter.setInvolvedCharacters(gson.fromJson(
+                                    chapterObj.get("involvedCharacters"),
+                                    new com.google.gson.reflect.TypeToken<List<String>>(){}.getType()
+                                ));
+                            } catch (Exception e) {
+                                // 忽略解析错误
+                            }
+                        }
+                        if (chapterObj.has("keyItems")) {
+                            try {
+                                chapter.setKeyItems(gson.fromJson(
+                                    chapterObj.get("keyItems"),
+                                    new com.google.gson.reflect.TypeToken<List<String>>(){}.getType()
+                                ));
+                            } catch (Exception e) {
+                                // 忽略解析错误
+                            }
+                        }
+                        if (chapterObj.has("sceneLocations")) {
+                            try {
+                                chapter.setSceneLocations(gson.fromJson(
+                                    chapterObj.get("sceneLocations"),
+                                    new com.google.gson.reflect.TypeToken<List<String>>(){}.getType()
+                                ));
+                            } catch (Exception e) {
+                                // 忽略解析错误
+                            }
+                        }
+                        if (chapterObj.has("timeConstraint")) {
+                            chapter.setTimeConstraint(chapterObj.get("timeConstraint").getAsString());
+                        }
                         
                         chapters.add(chapter);
                     }

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- 标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:background="#F5F5F5">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="全局大纲"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <Button
+            android:id="@+id/btn_save_global_outline"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="保存"
+            android:textSize="14sp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+    </LinearLayout>
+
+    <!-- 编辑区域 -->
+    <EditText
+        android:id="@+id/et_global_outline"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:hint="输入全局大纲（支持Markdown格式）&#10;&#10;例如：&#10;# 故事主线&#10;&#10;## 第一卷：觉醒&#10;- 主角意外获得异能&#10;- 探索能力边界&#10;&#10;## 第二卷：成长&#10;- 加入组织&#10;- 完成任务"
+        android:inputType="textMultiLine|textCapSentences"
+        android:gravity="top|start"
+        android:padding="16dp"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
+        android:background="@null"
+        android:scrollbars="vertical" />
+
+</LinearLayout>

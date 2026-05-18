@@ -119,10 +119,20 @@ public class WritingFragment extends BaseFragment {
     }
     
     @Override
+    public void onResume() {
+        super.onResume();
+        // 每次可见时从数据库重新加载最新数据，确保不会覆盖OutlineFragment的修改
+        android.util.Log.d("WritingFragment", "onResume: 重新加载数据");
+        if (storyId > 0) {
+            loadStoryData();
+        }
+    }
+    
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
         // View销毁时，先保存数据，防止切换Tab导致数据丢失
-        android.util.Log.d("WritingFragment", "onDestroyView: 保存数据");
+        android.util.Log.d("WritingFragment", "onDestroyView: 保存数据, isAdded=" + isAdded());
         saveStructureSilently();
         // 清除编辑状态
         currentEditingEditText = null;
@@ -1010,13 +1020,19 @@ public class WritingFragment extends BaseFragment {
     }
     
     /**
-     * 通知目录刷新
+     * 通知目录和大纲刷新
      */
     private void notifyTocRefresh() {
-        android.util.Log.d("WritingFragment", "notifyTocRefresh: 通知目录刷新");
+        android.util.Log.d("WritingFragment", "notifyTocRefresh: 通知目录和大纲刷新");
         if (getActivity() instanceof com.example.storyteller.ui.activity.StoryWorkspaceActivity) {
+            com.example.storyteller.ui.activity.StoryWorkspaceActivity activity = 
+                (com.example.storyteller.ui.activity.StoryWorkspaceActivity) getActivity();
+            // 刷新目录
             android.util.Log.d("WritingFragment", "调用 StoryWorkspaceActivity.refreshTocView");
-            ((com.example.storyteller.ui.activity.StoryWorkspaceActivity) getActivity()).refreshTocView();
+            activity.refreshTocView();
+            // 刷新大纲
+            android.util.Log.d("WritingFragment", "调用 StoryWorkspaceActivity.refreshOutlineView");
+            activity.refreshOutlineView();
         } else {
             android.util.Log.e("WritingFragment", "getActivity 不是 StoryWorkspaceActivity 实例");
         }
@@ -1045,6 +1061,12 @@ public class WritingFragment extends BaseFragment {
             android.util.Log.e("WritingFragment", "保存失败: currentStory为null");
             return;
         }
+        
+        // 检查Fragment和Activity是否处于有效状态
+        if (!isAdded() || getActivity() == null || getActivity().isFinishing() || getActivity().isDestroyed()) {
+            android.util.Log.w("WritingFragment", "保存跳过: Fragment或Activity已销毁");
+            return;
+        }
 
         // 计算总字数
         int totalWordCount = 0;
@@ -1055,6 +1077,8 @@ public class WritingFragment extends BaseFragment {
                 }
             }
         }
+        
+        // 【分离存储】不再需要合并大纲数据，因为大纲和写作内容已分离存储
         
         // 更新卷章结构
         String structureJson = JsonUtils.toJson(volumes);
@@ -1086,6 +1110,17 @@ public class WritingFragment extends BaseFragment {
         );
         
         if (result > 0) {
+            // 【同步】同步标题到outline_data
+            syncTitlesToOutlineData();
+            
+            // 通知Activity刷新大纲视图（如果当前在大纲Tab）
+            // 安全检查：确保Activity仍然有效且未处于状态保存后
+            if (isAdded() && getActivity() != null && !getActivity().isFinishing() && !getActivity().isDestroyed()) {
+                if (getActivity() instanceof com.example.storyteller.ui.activity.StoryWorkspaceActivity) {
+                    ((com.example.storyteller.ui.activity.StoryWorkspaceActivity) getActivity()).refreshOutlineView();
+                }
+            }
+            
             if (showToast) {
                 Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show();
             }
@@ -1095,7 +1130,82 @@ public class WritingFragment extends BaseFragment {
             }
         }
     }
-
+    
+    /**
+     * 同步标题到outline_data
+     * 
+     * 【设计说明】
+     * 虽然采用了分离存储（structure vs outline_data），但标题作为基础元数据，
+     * 需要在两个地方保持一致。这里采用单向同步策略：
+     * - WritingFragment修改标题后，自动同步到outline_data
+     * - OutlineFragment不应修改标题，只修改大纲字段（摘要、作用等）
+     * 
+     * TODO: 未来可以考虑将标题从outline_data中移除，改用volumeId引用，
+     * 实现真正的职责分离。但这需要重构OutlineFragment的数据加载逻辑。
+     */
+    private void syncTitlesToOutlineData() {
+        try {
+            // 读取现有的outline_data
+            Story story = storyRepository.getStoryById(currentStory.getId());
+            if (story == null) {
+                return;
+            }
+            
+            String outlineJson = story.getOutlineData();
+            List<Volume> outlineVolumes;
+            
+            if (!TextUtils.isEmpty(outlineJson)) {
+                outlineVolumes = JsonUtils.fromJson(outlineJson,
+                    new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            } else {
+                outlineVolumes = new ArrayList<>();
+            }
+            
+            boolean needUpdate = false;
+            
+            // 同步卷和章节的标题
+            for (int i = 0; i < volumes.size(); i++) {
+                Volume writingVol = volumes.get(i);
+                Volume outlineVol = (i < outlineVolumes.size()) ? outlineVolumes.get(i) : null;
+                
+                if (outlineVol != null) {
+                    // 检查卷标题是否变化
+                    if (!writingVol.getTitle().equals(outlineVol.getTitle())) {
+                        outlineVol.setTitle(writingVol.getTitle());
+                        needUpdate = true;
+                        android.util.Log.d("WritingFragment", "同步卷标题: '" + outlineVol.getTitle() + "' -> '" + writingVol.getTitle() + "'");
+                    }
+                    
+                    // 同步章节标题
+                    List<Chapter> writingChapters = writingVol.getChapters();
+                    List<Chapter> outlineChapters = outlineVol.getChapters();
+                    
+                    if (writingChapters != null && outlineChapters != null) {
+                        for (int j = 0; j < writingChapters.size(); j++) {
+                            Chapter writingChapter = writingChapters.get(j);
+                            Chapter outlineChapter = (j < outlineChapters.size()) ? outlineChapters.get(j) : null;
+                            
+                            if (outlineChapter != null && !writingChapter.getTitle().equals(outlineChapter.getTitle())) {
+                                outlineChapter.setTitle(writingChapter.getTitle());
+                                needUpdate = true;
+                                android.util.Log.d("WritingFragment", "同步章节标题: '" + outlineChapter.getTitle() + "' -> '" + writingChapter.getTitle() + "'");
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 如果有变化，保存到outline_data
+            if (needUpdate) {
+                String updatedOutlineJson = JsonUtils.toJson(outlineVolumes);
+                storyRepository.updateStoryOutline(currentStory.getId(), updatedOutlineJson);
+                android.util.Log.d("WritingFragment", "已同步标题到outline_data");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("WritingFragment", "同步标题失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
     /**
      * 获取当前卷章数据
      */

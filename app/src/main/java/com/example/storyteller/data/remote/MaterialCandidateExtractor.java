@@ -103,11 +103,11 @@ public class MaterialCandidateExtractor {
     private String buildPrompt(NovelSummary summary, List<String> requestedTypes) {
         String requestedTypeText = buildRequestedTypeText(requestedTypes);
         return "你是小说素材抽取助手。请基于下面的内容，提炼出适合写作复用的素材候选，严格只输出 JSON，不要 Markdown，不要解释。\n"
-                + "必须只抽取以下类型：" + requestedTypeText + "。\n"
+                + "优先从以下类型中抽取素材：" + requestedTypeText + "。\n"
                 + "输出格式：\n"
                 + "{\"settings\":[{\"category\":\"世界|角色|地点|剧情|规则体系|创作控制\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
                 + "要求：\n"
-                + "1. 只输出所选类型对应的素材，不要输出其他类型。\n"
+                + "1. 尽量从所选类型中抽取素材，如果某些类型在内容中没有体现，可以跳过，不要强行生成。\n"
                 + "2. title 要简短明确，适合素材库展示（20字以内）。\n"
                 + "3. subCategory 必须从下方对应类型的子分类中选择最匹配的一个。\n"
                 + "4. summary 以创作复用为目标，尽量短句（50字以内）。\n"
@@ -115,7 +115,7 @@ public class MaterialCandidateExtractor {
                 + "6. tags 提供3-5个关键词标签。\n"
                 + "7. confidence 取 0 到 1 之间的小数，表示素材质量评分。\n"
                 + "8. category 与 subCategory 的对应关系：\n"
-                + "   - 世界: 地理环境/时代背景/历史背景/文明种族/社会文化/政治势力/科技发展/物品资源\n"
+                + "   - 世界: 地理环境/时代背景/历史背景/文明种族/文化习俗/社会制度/政治势力/科技发展/物品资源\n"
                 + "   - 角色: 主要角色/次要角色/反派角色/组织阵营\n"
                 + "   - 地点: 国家地区/城市/村庄/自然景观/关键场景/建筑设施/特殊空间\n"
                 + "   - 剧情: 主线剧情/支线剧情/关键事件/悬念伏笔/章节规划/矛盾冲突/时间线\n"

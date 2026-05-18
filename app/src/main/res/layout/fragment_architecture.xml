@@ -264,27 +264,6 @@
                     android:textColor="#999999"
                     android:textSize="12sp" />
 
-                <!-- 大纲 -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="大纲（可选）"
-                    android:textColor="#1F1F1F"
-                    android:textSize="14sp" />
-
-                <EditText
-                    android:id="@+id/et_architecture_outline"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_outline_edittext"
-                    android:gravity="top|start"
-                    android:hint="输入故事的主要情节脉络"
-                    android:inputType="textMultiLine"
-                    android:padding="12dp"
-                    android:textSize="14sp" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
