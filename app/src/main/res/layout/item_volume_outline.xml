@@ -29,7 +29,7 @@
                 android:contentDescription="展开/收起"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="6dp"
-                android:tint="#1976D2" />
+                app:tint="#1976D2" />
 
             <!-- 卷标题 -->
             <TextView
