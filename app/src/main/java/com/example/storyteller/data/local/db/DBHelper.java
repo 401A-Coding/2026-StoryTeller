@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 13;  // 升级到版本13，添加global_outline字段
+    private static final int DB_VERSION = 14;  // 升级到版本14，添加story_documents表
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -27,6 +27,16 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_SERIES_NAME = "series_name";  // 系列名称
     public static final String COL_STORY_OUTLINE_DATA = "outline_data";  // 大纲数据JSON（与structure分离存储）
     public static final String COL_STORY_GLOBAL_OUTLINE = "global_outline";  // 全局大纲（Markdown格式文本）
+
+    // 故事文档表字段
+    public static final String TABLE_STORY_DOCUMENT = "story_document";
+    public static final String COL_STORY_DOCUMENT_ID = "id";
+    public static final String COL_STORY_DOCUMENT_STORY_ID = "story_id";
+    public static final String COL_STORY_DOCUMENT_TITLE = "title";
+    public static final String COL_STORY_DOCUMENT_CONTENT = "content";
+    public static final String COL_STORY_DOCUMENT_CATEGORY = "category";
+    public static final String COL_STORY_DOCUMENT_CREATE_TIME = "create_time";
+    public static final String COL_STORY_DOCUMENT_UPDATE_TIME = "update_time";
 
     // 素材表字段
     public static final String TABLE_MATERIAL = "material";
@@ -212,9 +222,10 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL(createBehaviorLogTable);
         db.execSQL(createImportedNovelTable);
         
-        // 创建新表：全局素材库和小说设定
+        // 创建新表：全局素材库、小说设定和故事文档
         createGlobalMaterialTable(db);
         createStorySettingTable(db);
+        createStoryDocumentTable(db);
     }
     // 数据库升级逻辑，后续补充逻辑
     @Override
@@ -280,6 +291,10 @@ public class DBHelper extends SQLiteOpenHelper {
             } catch (Exception e) {
                 // 字段可能已存在
             }
+        }
+        if (oldVersion < 14) {
+            // 版本14：添加story_documents表，用于存储故事相关文档
+            createStoryDocumentTable(db);
         }
     }
 
@@ -385,5 +400,29 @@ public class DBHelper extends SQLiteOpenHelper {
                    TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_TITLE + ")");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_story_setting_source_material ON " + 
                    TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_SOURCE_MATERIAL_ID + ")");
+    }
+    
+    /**
+     * 创建故事文档表
+     */
+    private void createStoryDocumentTable(SQLiteDatabase db) {
+        String createTable = "CREATE TABLE IF NOT EXISTS " + TABLE_STORY_DOCUMENT + " ("
+                + COL_STORY_DOCUMENT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_STORY_DOCUMENT_STORY_ID + " INTEGER NOT NULL, "
+                + COL_STORY_DOCUMENT_TITLE + " TEXT NOT NULL, "
+                + COL_STORY_DOCUMENT_CONTENT + " TEXT DEFAULT '', "
+                + COL_STORY_DOCUMENT_CATEGORY + " TEXT DEFAULT 'general', "
+                + COL_STORY_DOCUMENT_CREATE_TIME + " INTEGER NOT NULL, "
+                + COL_STORY_DOCUMENT_UPDATE_TIME + " INTEGER NOT NULL, "
+                + "FOREIGN KEY (" + COL_STORY_DOCUMENT_STORY_ID + ") REFERENCES " + 
+                TABLE_STORY + "(" + COL_STORY_ID + ") ON DELETE CASCADE"
+                + ")";
+        db.execSQL(createTable);
+        
+        // 创建索引
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_story_doc_story_id ON " + 
+                   TABLE_STORY_DOCUMENT + "(" + COL_STORY_DOCUMENT_STORY_ID + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_story_doc_category ON " + 
+                   TABLE_STORY_DOCUMENT + "(" + COL_STORY_DOCUMENT_CATEGORY + ")");
     }
 }

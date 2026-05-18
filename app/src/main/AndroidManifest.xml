@@ -40,6 +40,10 @@
         <activity
             android:name=".ui.activity.NovelDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
+        <activity
+            android:name=".ui.activity.DocumentEditorActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges"
+            android:label="文档编辑" />
     </application>
 
 </manifest>
