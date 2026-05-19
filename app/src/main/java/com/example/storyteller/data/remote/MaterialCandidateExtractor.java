@@ -5,6 +5,7 @@ import android.text.TextUtils;
 
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.NovelSummary;
+import com.example.storyteller.utils.PromptManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -61,6 +62,7 @@ public class MaterialCandidateExtractor {
 
     private final ApiClient apiClient = ApiClient.getInstance();
     private final Gson gson = new Gson();
+    private PromptManager promptManager;
 
     public interface Callback {
         void onSuccess(List<StorySetting> settings, String rawJson);
@@ -71,6 +73,11 @@ public class MaterialCandidateExtractor {
         if (summary == null) {
             callback.onFailure(new IllegalArgumentException("summary is null"));
             return;
+        }
+        
+        // 初始化 PromptManager
+        if (promptManager == null) {
+            promptManager = new PromptManager(context);
         }
 
         List<String> normalizedTypes = normalizeRequestedTypes(requestedTypes);
@@ -102,33 +109,22 @@ public class MaterialCandidateExtractor {
 
     private String buildPrompt(NovelSummary summary, List<String> requestedTypes) {
         String requestedTypeText = buildRequestedTypeText(requestedTypes);
-        return "你是小说素材抽取助手。请基于下面的内容，提炼出适合写作复用的素材候选，严格只输出 JSON，不要 Markdown，不要解释。\n"
-                + "优先从以下类型中抽取素材：" + requestedTypeText + "。\n"
-                + "输出格式：\n"
-                + "{\"settings\":[{\"category\":\"世界|角色|地点|剧情|规则体系|创作控制\",\"subCategory\":\"子分类\",\"title\":\"标题\",\"summary\":\"一句话总结\",\"detail\":\"详细说明\",\"tags\":[\"标签1\",\"标签2\"],\"confidence\":0.0}]}\n"
-                + "要求：\n"
-                + "1. 尽量从所选类型中抽取素材，如果某些类型在内容中没有体现，可以跳过，不要强行生成。\n"
-                + "2. title 要简短明确，适合素材库展示（20字以内）。\n"
-                + "3. subCategory 必须从下方对应类型的子分类中选择最匹配的一个。\n"
-                + "4. summary 以创作复用为目标，尽量短句（50字以内）。\n"
-                + "5. detail 要说明适用场景、核心特点或使用价值（200字以内）。\n"
-                + "6. tags 提供3-5个关键词标签。\n"
-                + "7. confidence 取 0 到 1 之间的小数，表示素材质量评分。\n"
-                + "8. category 与 subCategory 的对应关系：\n"
-                + "   - 世界: 地理环境/时代背景/历史背景/文明种族/文化习俗/社会制度/政治势力/科技发展/物品资源\n"
-                + "   - 角色: 主要角色/次要角色/反派角色/组织阵营\n"
-                + "   - 地点: 国家地区/城市/村庄/自然景观/关键场景/建筑设施/特殊空间\n"
-                + "   - 剧情: 主线剧情/支线剧情/关键事件/悬念伏笔/章节规划/矛盾冲突/时间线\n"
-                + "   - 规则体系: 力量体系/魔法或超能力/战斗系统/经济体系/时间规则/限制条件\n"
-                + "   - 创作控制: 主题内核/语言风格/情感基调/叙事视角/节奏控制\n"
-                + "\n内容信息：\n"
-                + "标题：" + safe(summary.getTitle()) + "\n"
-                + "作者：" + safe(summary.getAuthor()) + "\n"
-                + "简介：" + safe(summary.getDescription()) + "\n"
-                + "大纲：" + safe(summary.getOutline()) + "\n"
-                + "总结：" + safe(summary.getSummary()) + "\n"
-                + "人物：" + (summary.getCharacters() == null ? "" : String.join("、", summary.getCharacters())) + "\n"
-                + "人物画像：" + safe(summary.getCharacterProfiles()) + "\n";
+        
+        // 使用 PromptManager 加载模板
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("requested_types", requestedTypeText);
+        variables.put("title", safe(summary.getTitle()));
+        variables.put("author", safe(summary.getAuthor()));
+        variables.put("description", safe(summary.getDescription()));
+        variables.put("outline", safe(summary.getOutline()));
+        variables.put("summary", safe(summary.getSummary()));
+        variables.put("characters", summary.getCharacters() == null ? "" : String.join("、", summary.getCharacters()));
+        variables.put("character_profiles", safe(summary.getCharacterProfiles()));
+        
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.EXTRACT_MATERIALS.getCode(),
+            variables
+        );
     }
 
     private ExtractionResult parseResponse(NovelSummary summary, String responseText, List<String> requestedTypes) {

@@ -28,6 +28,7 @@ import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.CharacterAdapter;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 import com.example.storyteller.ui.dialog.CharacterRegenerateBottomSheetDialogFragment;
+import com.example.storyteller.utils.PromptManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -59,6 +60,7 @@ public class CharacterActivity extends BaseActivity {
     private CharacterAdapter adapter;
     private StoryDao storyDao;
     private CharacterDao characterDao;
+    private PromptManager promptManager;
     private final Gson gson = new Gson();
     private String currentModel = "pro";
 
@@ -73,6 +75,10 @@ public class CharacterActivity extends BaseActivity {
     protected void initView() {
         // 刘海屏适配：为根布局设置系统栏内边距
         applySystemWindowInsets(findViewById(android.R.id.content));
+        
+        // 初始化 PromptManager
+        promptManager = new PromptManager(this);
+        
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         RecyclerView rvCharacterList = findViewById(R.id.rv_character_list);
@@ -412,64 +418,41 @@ public class CharacterActivity extends BaseActivity {
 
     private String buildCharacterPrompt(Story story, String extraDemand) {
         String storyContext = buildCharacterPromptContext(story);
-
-        StringBuilder builder = new StringBuilder();
-        builder.append("你是一名严格、谨慎的小说人物分析师。请根据下面给出的小说内容，尽可能完整地提取正文中出现过的人物，并按重要度从高到低排序。\n")
-                .append("要求：\n")
-                .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. 尽量提取所有出现过且可辨识的人物，包括主角、核心配角、次要人物、过场人物；重要人物排前面，不重要的小人物放后面。\n")
-                .append("3. 严禁杜撰原文未明确出现的人名、身份、关系、经历；不确定就不要写。\n")
-                .append("4. 如果人物没有明确姓名，可以直接使用正文中自然出现的称呼，例如“主角”“客栈掌柜”“班主任”；不要硬编具体姓名。\n")
-                .append("5. 如果是第一人称叙事，叙述者“我”通常也是人物之一；若正文没有姓名，可以直接写“我”或文本中的自然称呼。\n")
-                .append("6. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句，不要空话。\n")
-                .append("7. detail 只写文本中能支持的内容，建议包含：身份/定位、性格特点、关键动机、主要关系、当前成长状态；文本没有明确给出的地方请写“文中暂未明确”。\n")
-                .append("8. 每个人物补充 evidence 字段，写 1 到 2 条证据，简述他出现在哪一卷/章、做了什么；证据必须来自给定文本。\n")
-                .append("9. 可以增加 importance 字段（high / medium / low），但最重要的是保证 characters 数组本身已经按重要度排序。\n")
-                .append("10. JSON 格式如下：\n")
-                .append("{\"characters\":[{\"name\":\"人物名\",\"summary\":\"冷静 / 谨慎 / 复仇者\",\"detail\":\"详细介绍\",\"importance\":\"high\",\"evidence\":[\"第1卷第2章：……\",\"第1卷第4章：……\"]}]}\n")
-                .append("\n在输出前请先自行检查：人物是否真的在正文出现、排序是否把核心人物放在前面、描述是否有原文依据。\n\n")
-                .append(storyContext);
-
+        
+        // 使用 PromptManager 加载模板
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("story_context", storyContext);
         if (!TextUtils.isEmpty(extraDemand)) {
-            builder.append("\n\n用户补充的生成需求（请尽量满足）：\n")
-                    .append(extraDemand)
-                    .append("\n\n请根据用户补充需求优化人物画像，但依然必须遵守“不能杜撰、必须以正文为准”的原则，只输出 JSON。\n");
+            variables.put("extra_demand", extraDemand);
+        } else {
+            variables.put("extra_demand", "");
         }
-        return builder.toString();
+        
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.EXTRACT_CHARACTERS.getCode(),
+            variables
+        );
     }
 
     private String buildSingleCharacterPrompt(Story story, Character target, String extraDemand) {
         String storyContext = buildCharacterPromptContext(story);
-
-        StringBuilder builder = new StringBuilder();
-        builder.append("你是一名严格、谨慎的小说人物分析师。请根据下面这篇小说，只针对指定人物生成或优化人物画像。\n")
-                .append("要求：\n")
-                .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. 只输出一个人物，且人物名必须与指定人物名完全一致。\n")
-                .append("3. 严禁杜撰该人物在正文中没有出现过的经历、关系和设定；不确定就写“文中暂未明确”。\n")
-                .append("4. 如果指定人物没有明确姓名，可以保留当前自然称呼；如果正文信息很少，也不要强行补全，只保留能确认的事实。\n")
-                .append("5. summary 必须是短标签风格，2到4个短词，用“ / ”分隔，不要长句。\n")
-                .append("6. detail 只写有文本依据的介绍，优先包含身份/定位、性格特点、关键动机、主要关系、当前成长状态。\n")
-                .append("7. JSON 格式如下：\n")
-                .append("{\"character\":{\"name\":\"人物名\",\"summary\":\"冷静 / 谨慎 / 复仇者\",\"detail\":\"详细介绍\",\"evidence\":[\"第1卷第2章：……\"]}}\n")
-                .append("\n指定人物名：")
-                .append(target.getName())
-                .append("\n")
-                .append("当前已有人物画像（供你优化，可参考但不要照抄）：\n")
-                .append("summary：")
-                .append(target.getProfile() == null ? "" : target.getProfile())
-                .append("\n")
-                .append("detail：")
-                .append(target.getDetail() == null ? "" : target.getDetail())
-                .append("\n\n在输出前请先自行检查：是否确实是这个人物、是否存在原文证据、是否有未经文本支持的臆测。\n\n")
-                .append(storyContext);
-
+        
+        // 使用 PromptManager 加载模板
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("character_name", target.getName());
+        variables.put("current_summary", target.getProfile() == null ? "" : target.getProfile());
+        variables.put("current_detail", target.getDetail() == null ? "" : target.getDetail());
+        variables.put("story_context", storyContext);
         if (!TextUtils.isEmpty(extraDemand)) {
-            builder.append("\n\n用户补充的生成需求（请尽量满足）：\n")
-                    .append(extraDemand)
-                    .append("\n\n请根据用户补充需求优化该人物画像，但依然必须遵守“不能杜撰、必须以正文为准”的原则，只输出 JSON。\n");
+            variables.put("extra_demand", extraDemand);
+        } else {
+            variables.put("extra_demand", "");
         }
-        return builder.toString();
+        
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.OPTIMIZE_CHARACTER.getCode(),
+            variables
+        );
     }
 
 
