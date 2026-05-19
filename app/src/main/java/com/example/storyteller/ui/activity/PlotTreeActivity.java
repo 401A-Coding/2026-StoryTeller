@@ -27,6 +27,7 @@ import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.PlotChapterSummaryAdapter;
 import com.example.storyteller.ui.adapter.StoryAdapter;
+import com.example.storyteller.utils.PromptManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -79,6 +80,8 @@ public class PlotTreeActivity extends BaseActivity {
     private String currentOverviewSource = OVERVIEW_SOURCE_LOCAL_FALLBACK;
     private PlotSummarySnapshot currentPlotSnapshot;
 
+    private PromptManager promptManager;
+
     private String currentModel = "flash";
     private String currentDetail = "standard";
     private int generationToken = 0;
@@ -92,6 +95,10 @@ public class PlotTreeActivity extends BaseActivity {
     protected void initView() {
         // 刘海屏适配：为根布局设置系统栏内边距
         applySystemWindowInsets(findViewById(android.R.id.content));
+        
+        // 初始化 PromptManager
+        promptManager = new PromptManager(this);
+        
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         tvCurrentStoryTitle = findViewById(R.id.tv_plot_current_story_title);
@@ -875,47 +882,44 @@ public class PlotTreeActivity extends BaseActivity {
 
     private String buildChapterSummaryPrompt(Story story, ChapterContext chapter) {
         if (isBriefMode()) {
-            return new StringBuilder()
-                    .append("你是一名小说剧情速记助手。请只根据给出的单章内容输出极简剧情卡片。\n")
-                    .append("要求：\n")
-                    .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                    .append("2. 不要杜撰正文里没有的信息。\n")
-                    .append("3. brief_summary 只写 1 句话，尽量控制在 20 到 40 个字。\n")
-                    .append("4. key_events 最多保留 2 条，每条尽量短。\n")
-                    .append("5. characters 只保留本章最关键的 1 到 3 人。\n")
-                    .append("6. 不要输出 detail_summary、conflict、story_function 等额外字段。\n")
-                    .append("7. JSON 格式如下：\n")
-                    .append("{\"chapter_title\":\"章节标题\",\"brief_summary\":\"一句话概括\",\"key_events\":[\"事件1\"],\"characters\":[\"人物1\"]}\n\n")
-                    .append("小说标题：").append(safeTrim(story.getTitle(), "未命名小说")).append("\n")
-                    .append("章节位置：第").append(chapter.volumeIndex).append("卷 第").append(chapter.chapterIndex).append("章\n")
-                    .append("章节标题：").append(chapter.title).append("\n")
-                    .append("章节正文：\n").append(chapter.content)
-                    .toString();
+            // 使用极简模式模板
+            java.util.Map<String, Object> variables = new java.util.HashMap<>();
+            variables.put("story_title", safeTrim(story.getTitle(), "未命名小说"));
+            variables.put("volume_index", chapter.volumeIndex);
+            variables.put("chapter_index", chapter.chapterIndex);
+            variables.put("chapter_title", chapter.title);
+            variables.put("chapter_content", chapter.content);
+            
+            return promptManager.getTaskPrompt(
+                com.example.storyteller.utils.TaskType.PLOT_QUICK_NOTE.getCode(),
+                variables
+            );
         }
 
+        // 标准/详细模式
         String detailInstruction;
         if ("detailed".equals(currentDetail)) {
             detailInstruction = "detail_summary 可以写成较完整的一段，key_events 保留 4 到 6 条，并补充章节情绪、伏笔或人物变化。";
         } else {
             detailInstruction = "detail_summary 写成 2 到 4 句的标准梳理，key_events 保留 3 到 4 条。";
         }
-
-        return new StringBuilder()
-                .append("你是一名小说剧情梳理助手。请只根据给出的单章内容输出结构化剧情摘要。\n")
-                .append("要求：\n")
-                .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. 不要杜撰正文里没有的信息。\n")
-                .append("3. ").append(detailInstruction).append("\n")
-                .append("4. JSON 格式如下：\n")
-                .append("{\"chapter_title\":\"章节标题\",\"brief_summary\":\"一句话概括\",\"detail_summary\":\"章节详细梳理\",\"key_events\":[\"事件1\",\"事件2\"],\"characters\":[\"人物1\",\"人物2\"],\"conflict\":\"本章冲突\",\"story_function\":\"本章在整体剧情中的作用\"}\n\n")
-                .append("小说标题：").append(safeTrim(story.getTitle(), "未命名小说")).append("\n")
-                .append("章节位置：第").append(chapter.volumeIndex).append("卷 第").append(chapter.chapterIndex).append("章\n")
-                .append("章节标题：").append(chapter.title).append("\n")
-                .append("章节正文：\n").append(chapter.content)
-                .toString();
+        
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("story_title", safeTrim(story.getTitle(), "未命名小说"));
+        variables.put("volume_index", chapter.volumeIndex);
+        variables.put("chapter_index", chapter.chapterIndex);
+        variables.put("chapter_title", chapter.title);
+        variables.put("chapter_content", chapter.content);
+        variables.put("detail_instruction", detailInstruction);
+        
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.PLOT_CHAPTER_SUMMARY.getCode(),
+            variables
+        );
     }
 
     private String buildOverviewPrompt(Story story, List<PlotChapterSummary> chapterSummaries) {
+        // 构建章节梳理上下文
         StringBuilder chapterContext = new StringBuilder();
         for (PlotChapterSummary summary : chapterSummaries) {
             chapterContext.append(summary.getChapterLabel())
@@ -933,55 +937,19 @@ public class PlotTreeActivity extends BaseActivity {
             }
             chapterContext.append("\n");
         }
-
-        return new StringBuilder()
-                .append("你是一名小说结构分析助手。请根据给出的各章梳理结果，汇总出全书级剧情梳理。\n")
-                .append("要求：\n")
-                .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. 不要杜撰章节梳理中没有出现的信息。\n")
-                .append("3. JSON 格式如下：\n")
-                .append("{\"overall_summary\":\"全书概述\",\"main_line\":[\"主线1\",\"主线2\"],\"turning_points\":[\"转折1\",\"转折2\"],\"character_threads\":[\"人物线1\",\"人物线2\"],\"rhythm\":\"节奏评价\"}\n\n")
-                .append("小说标题：").append(safeTrim(story.getTitle(), "未命名小说")).append("\n")
-                .append("章节梳理结果：\n")
-                .append(chapterContext)
-                .toString();
+        
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("story_title", safeTrim(story.getTitle(), "未命名小说"));
+        variables.put("chapter_summaries", chapterContext.toString());
+        
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.PLOT_BOOK_SUMMARY.getCode(),
+            variables
+        );
     }
 
     private String buildSinglePassPrompt(Story story, List<ChapterContext> chapterContexts) {
-        if (isBriefMode()) {
-            StringBuilder chapterBuilder = new StringBuilder();
-            for (ChapterContext chapter : chapterContexts) {
-                chapterBuilder.append(getString(R.string.plot_chapter_label_format, chapter.volumeIndex, chapter.chapterIndex))
-                        .append("\n标题：")
-                        .append(chapter.title)
-                        .append("\n正文：\n")
-                        .append(chapter.content)
-                        .append("\n\n");
-            }
-
-            return new StringBuilder()
-                    .append("你是一名小说剧情速记助手。请基于下面给出的章节内容，一次性完成所有章节的极简梳理。\n")
-                    .append("要求：\n")
-                    .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                    .append("2. 不要杜撰原文中没有的信息。\n")
-                    .append("3. 每章只保留一句 brief_summary、最多 2 条 key_events、1 到 3 个关键人物。\n")
-                    .append("4. 不要输出 overview，由系统本地根据章节结果汇总。\n")
-                    .append("5. JSON 格式如下：\n")
-                    .append("{\"chapters\":[{\"chapter_label\":\"第1卷 · 第1章\",\"chapter_title\":\"章节标题\",\"brief_summary\":\"一句话概括\",\"key_events\":[\"事件1\"],\"characters\":[\"人物1\"]}]}\n\n")
-                    .append("小说标题：")
-                    .append(safeTrim(story.getTitle(), "未命名小说"))
-                    .append("\n章节内容：\n")
-                    .append(chapterBuilder)
-                    .toString();
-        }
-
-        String detailInstruction;
-        if ("detailed".equals(currentDetail)) {
-            detailInstruction = "每章 detail_summary 可以更完整，补充冲突和章节作用，全书概述也可更详细。";
-        } else {
-            detailInstruction = "每章保持标准梳理深度，全书概述清晰概括主线、转折和人物线。";
-        }
-
+        // 构建章节内容
         StringBuilder chapterBuilder = new StringBuilder();
         for (ChapterContext chapter : chapterContexts) {
             chapterBuilder.append(getString(R.string.plot_chapter_label_format, chapter.volumeIndex, chapter.chapterIndex))
@@ -991,21 +959,36 @@ public class PlotTreeActivity extends BaseActivity {
                     .append(chapter.content)
                     .append("\n\n");
         }
-
-        return new StringBuilder()
-                .append("你是一名小说剧情梳理助手。请基于下面给出的整段短篇小说章节内容，一次性完成每章梳理和全书概览。\n")
-                .append("要求：\n")
-                .append("1. 只输出严格 JSON，不要 Markdown，不要解释。\n")
-                .append("2. 不要杜撰原文中没有的信息。\n")
-                .append("3. ").append(detailInstruction).append("\n")
-                .append("4. JSON 格式如下：\n")
-                .append("{\"overview\":{\"overall_summary\":\"全书概述\",\"main_line\":[\"主线1\"],\"turning_points\":[\"转折1\"],\"character_threads\":[\"人物线1\"],\"rhythm\":\"节奏评价\"},\"chapters\":[{\"chapter_label\":\"第1卷 · 第1章\",\"chapter_title\":\"章节标题\",\"brief_summary\":\"一句话概括\",\"detail_summary\":\"章节详细梳理\",\"key_events\":[\"事件1\"],\"characters\":[\"人物1\"],\"conflict\":\"本章冲突\",\"story_function\":\"本章作用\"}]}\n\n")
-                .append("小说标题：")
-                .append(safeTrim(story.getTitle(), "未命名小说"))
-                .append("\n")
-                .append("章节内容：\n")
-                .append(chapterBuilder)
-                .toString();
+            
+        if (isBriefMode()) {
+            // 使用批量极简模式模板
+            java.util.Map<String, Object> variables = new java.util.HashMap<>();
+            variables.put("story_title", safeTrim(story.getTitle(), "未命名小说"));
+            variables.put("chapters_content", chapterBuilder.toString());
+                
+            return promptManager.getTaskPrompt(
+                com.example.storyteller.utils.TaskType.BATCH_QUICK_NOTE.getCode(),
+                variables
+            );
+        }
+    
+        // 标准/详细模式
+        String detailInstruction;
+        if ("detailed".equals(currentDetail)) {
+            detailInstruction = "每章 detail_summary 可以更完整，补充冲突和章节作用，全书概述也可更详细。";
+        } else {
+            detailInstruction = "每章保持标准梳理深度，全书概述清晰概括主线、转折和人物线。";
+        }
+            
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("story_title", safeTrim(story.getTitle(), "未命名小说"));
+        variables.put("chapters_content", chapterBuilder.toString());
+        variables.put("detail_instruction", detailInstruction);
+            
+        return promptManager.getTaskPrompt(
+            com.example.storyteller.utils.TaskType.BATCH_CHAPTER_ANALYSIS.getCode(),
+            variables
+        );
     }
 
     private ChapterParseResult parseChapterSummary(ChapterContext chapter, String responseText) {
