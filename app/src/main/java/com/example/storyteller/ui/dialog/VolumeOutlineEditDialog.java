@@ -107,6 +107,13 @@ public class VolumeOutlineEditDialog extends BottomSheetDialogFragment {
         // 保存按钮
         btnSave.setOnClickListener(v -> saveAndDismiss());
 
+        // 防止卷摘要EditText的滚动事件冒泡到父容器（BottomSheet）
+        etSummary.setOnTouchListener((v, event) -> {
+            // 让EditText自己处理滚动事件，阻止事件向上传播
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
+
         // 字数增减按钮
         btnDecreaseWords.setOnClickListener(v -> {
             int current = parseInt(etTargetWordCount.getText().toString());

@@ -106,8 +106,15 @@ public class AgentCommandExecutor {
                 case "update_chapter_outline":
                     return handleUpdateChapterOutline(command.parameters, currentStoryId);
                 
-                case "generate_outline":
-                    return handleGenerateOutline(command.parameters, currentStoryId);
+                // AI生成大纲命令（自动创作并保存）
+                case "generate_global_outline":
+                    return handleGenerateGlobalOutline(command.parameters, currentStoryId);
+                
+                case "generate_volume_outline":
+                    return handleGenerateVolumeOutline(command.parameters, currentStoryId);
+                
+                case "generate_chapter_outline":
+                    return handleGenerateChapterOutline(command.parameters, currentStoryId);
                 
                 // === 文档模式 ===
                 case "create_document":
@@ -1312,6 +1319,11 @@ public class AgentCommandExecutor {
             Volume volume = volumes.get(volumeIndex);
             
             // 更新字段
+            boolean titleChanged = false;
+            if (params.containsKey("title")) {
+                volume.setTitle((String) params.get("title"));
+                titleChanged = true;
+            }
             if (params.containsKey("summary")) {
                 volume.setSummary((String) params.get("summary"));
             }
@@ -1322,9 +1334,14 @@ public class AgentCommandExecutor {
                 volume.setTargetChapterCount(((Number) params.get("targetChapterCount")).intValue());
             }
             
-            // 保存
+            // 保存outlineData
             String updatedJson = JsonUtils.toJson(volumes);
             repository.updateStoryOutline(storyId, updatedJson);
+            
+            // 如果标题发生变化，需要同步更新structure
+            if (titleChanged) {
+                syncVolumeTitleToStructure(storyId, volumeIndex, volume.getTitle());
+            }
             
             return CommandResult.success(
                 "✅ 已成功更新第" + (volumeIndex + 1) + "卷《" + volume.getTitle() + "》的大纲",
@@ -1369,42 +1386,89 @@ public class AgentCommandExecutor {
             // 更新字段
             @SuppressWarnings("unchecked")
             Map<String, Object> fields = (Map<String, Object>) params.get("fields");
+            boolean titleChanged = false;
             if (fields != null) {
+                // 安全地获取字符串字段
+                if (fields.containsKey("title")) {
+                    Object titleValue = fields.get("title");
+                    if (titleValue instanceof String) {
+                        chapter.setTitle((String) titleValue);
+                        titleChanged = true;
+                    } else {
+                        android.util.Log.w("AgentCommandExecutor", "title字段类型错误，期望String，实际: " + 
+                            (titleValue != null ? titleValue.getClass().getSimpleName() : "null"));
+                    }
+                }
                 if (fields.containsKey("chapterRole")) {
-                    chapter.setChapterRole((String) fields.get("chapterRole"));
+                    Object value = fields.get("chapterRole");
+                    if (value instanceof String) {
+                        chapter.setChapterRole((String) value);
+                    }
                 }
                 if (fields.containsKey("chapterSummary")) {
-                    chapter.setChapterSummary((String) fields.get("chapterSummary"));
+                    Object value = fields.get("chapterSummary");
+                    if (value instanceof String) {
+                        chapter.setChapterSummary((String) value);
+                    }
                 }
                 if (fields.containsKey("chapterPurpose")) {
-                    chapter.setChapterPurpose((String) fields.get("chapterPurpose"));
+                    Object value = fields.get("chapterPurpose");
+                    if (value instanceof String) {
+                        chapter.setChapterPurpose((String) value);
+                    }
                 }
                 if (fields.containsKey("suspenseLevel")) {
-                    chapter.setSuspenseLevel(((Number) fields.get("suspenseLevel")).floatValue());
+                    Object value = fields.get("suspenseLevel");
+                    if (value instanceof Number) {
+                        chapter.setSuspenseLevel(((Number) value).floatValue());
+                    }
                 }
                 if (fields.containsKey("foreshadowing")) {
-                    chapter.setForeshadowing((String) fields.get("foreshadowing"));
+                    Object value = fields.get("foreshadowing");
+                    if (value instanceof String) {
+                        chapter.setForeshadowing((String) value);
+                    }
                 }
                 if (fields.containsKey("twistLevel")) {
-                    chapter.setTwistLevel(((Number) fields.get("twistLevel")).floatValue());
+                    Object value = fields.get("twistLevel");
+                    if (value instanceof Number) {
+                        chapter.setTwistLevel(((Number) value).floatValue());
+                    }
                 }
                 if (fields.containsKey("involvedCharacters")) {
-                    chapter.setInvolvedCharacters((List<String>) fields.get("involvedCharacters"));
+                    Object value = fields.get("involvedCharacters");
+                    if (value instanceof List) {
+                        chapter.setInvolvedCharacters((List<String>) value);
+                    }
                 }
                 if (fields.containsKey("keyItems")) {
-                    chapter.setKeyItems((List<String>) fields.get("keyItems"));
+                    Object value = fields.get("keyItems");
+                    if (value instanceof List) {
+                        chapter.setKeyItems((List<String>) value);
+                    }
                 }
                 if (fields.containsKey("sceneLocations")) {
-                    chapter.setSceneLocations((List<String>) fields.get("sceneLocations"));
+                    Object value = fields.get("sceneLocations");
+                    if (value instanceof List) {
+                        chapter.setSceneLocations((List<String>) value);
+                    }
                 }
                 if (fields.containsKey("timeConstraint")) {
-                    chapter.setTimeConstraint((String) fields.get("timeConstraint"));
+                    Object value = fields.get("timeConstraint");
+                    if (value instanceof String) {
+                        chapter.setTimeConstraint((String) value);
+                    }
                 }
             }
             
-            // 保存
+            // 保存outlineData
             String updatedJson = JsonUtils.toJson(volumes);
             repository.updateStoryOutline(storyId, updatedJson);
+            
+            // 如果章节标题发生变化，需要同步更新structure
+            if (titleChanged) {
+                syncChapterTitleToStructure(storyId, volumeIndex, chapterIndex, chapter.getTitle());
+            }
             
             return CommandResult.success(
                 "✅ 已成功更新第" + (volumeIndex + 1) + "卷第" + (chapterIndex + 1) + "章《" + chapter.getTitle() + "》的大纲",
@@ -1418,12 +1482,27 @@ public class AgentCommandExecutor {
     }
     
     /**
-     * 处理生成大纲命令（批量）
+     * 处理生成全局大纲命令（AI自动创作）
+     * 与update_global_outline逻辑相同，语义上强调是AI创作
      */
-    private CommandResult handleGenerateOutline(Map<String, Object> params, int storyId) {
-        // TODO: 实现批量生成大纲逻辑
-        // 这需要调用AI API生成内容，然后更新到数据库
-        return CommandResult.error("⚠️ 批量生成大纲功能开发中...");
+    private CommandResult handleGenerateGlobalOutline(Map<String, Object> params, int storyId) {
+        return handleUpdateGlobalOutline(params, storyId);
+    }
+    
+    /**
+     * 处理生成卷纲命令（AI自动创作）
+     * 与update_volume_outline逻辑相同
+     */
+    private CommandResult handleGenerateVolumeOutline(Map<String, Object> params, int storyId) {
+        return handleUpdateVolumeOutline(params, storyId);
+    }
+    
+    /**
+     * 处理生成章纲命令（AI自动创作）
+     * 与update_chapter_outline逻辑相同
+     */
+    private CommandResult handleGenerateChapterOutline(Map<String, Object> params, int storyId) {
+        return handleUpdateChapterOutline(params, storyId);
     }
     
     // ==================== 文档模式命令处理 ====================
@@ -1562,7 +1641,7 @@ public class AgentCommandExecutor {
     // ==================== 辅助方法 ====================
     
     /**
-     * 从outlineData字段解析卷章结构
+     * 从 outlineData字段解析卷章结构
      */
     private List<Volume> parseVolumesFromOutlineData(Story story) {
         String outlineJson = story.getOutlineData();
@@ -1576,5 +1655,97 @@ public class AgentCommandExecutor {
         }
         // 如果解析失败，返回空列表
         return new ArrayList<>();
+    }
+    
+    /**
+     * 同步卷标题到structure字段
+     * 确保目录和写作区显示的标题与大纲一致
+     */
+    private void syncVolumeTitleToStructure(int storyId, int volumeIndex, String newTitle) {
+        try {
+            Story story = repository.getStoryById(storyId);
+            if (story == null) {
+                android.util.Log.e("AgentCommandExecutor", "同步标题失败：小说不存在");
+                return;
+            }
+            
+            // 解析structure
+            String structureJson = story.getStructure();
+            if (TextUtils.isEmpty(structureJson)) {
+                android.util.Log.w("AgentCommandExecutor", "structure为空，无法同步标题");
+                return;
+            }
+            
+            List<Volume> volumes = JsonUtils.fromJson(structureJson,
+                new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            
+            if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+                android.util.Log.e("AgentCommandExecutor", "同步标题失败：卷索引超出范围");
+                return;
+            }
+            
+            // 更新标题
+            Volume volume = volumes.get(volumeIndex);
+            volume.setTitle(newTitle);
+            
+            // 保存structure
+            String updatedStructure = JsonUtils.toJson(volumes);
+            repository.updateStoryStructure(storyId, updatedStructure);
+            
+            android.util.Log.d("AgentCommandExecutor", "已同步卷标题到structure：第" + (volumeIndex + 1) + "卷 -> " + newTitle);
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.util.Log.e("AgentCommandExecutor", "同步标题时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 同步章节标题到structure字段
+     * 确保目录和写作区显示的章节标题与大纲一致
+     */
+    private void syncChapterTitleToStructure(int storyId, int volumeIndex, int chapterIndex, String newTitle) {
+        try {
+            Story story = repository.getStoryById(storyId);
+            if (story == null) {
+                android.util.Log.e("AgentCommandExecutor", "同步章节标题失败：小说不存在");
+                return;
+            }
+            
+            // 解析structure
+            String structureJson = story.getStructure();
+            if (TextUtils.isEmpty(structureJson)) {
+                android.util.Log.w("AgentCommandExecutor", "structure为空，无法同步章节标题");
+                return;
+            }
+            
+            List<Volume> volumes = JsonUtils.fromJson(structureJson,
+                new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            
+            if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+                android.util.Log.e("AgentCommandExecutor", "同步章节标题失败：卷索引超出范围");
+                return;
+            }
+            
+            Volume volume = volumes.get(volumeIndex);
+            List<Chapter> chapters = volume.getChapters();
+            
+            if (chapterIndex < 0 || chapterIndex >= chapters.size()) {
+                android.util.Log.e("AgentCommandExecutor", "同步章节标题失败：章节索引超出范围");
+                return;
+            }
+            
+            // 更新标题
+            Chapter chapter = chapters.get(chapterIndex);
+            chapter.setTitle(newTitle);
+            
+            // 保存structure
+            String updatedStructure = JsonUtils.toJson(volumes);
+            repository.updateStoryStructure(storyId, updatedStructure);
+            
+            android.util.Log.d("AgentCommandExecutor", "已同步章节标题到structure：第" + (volumeIndex + 1) + "卷第" + (chapterIndex + 1) + "章 -> " + newTitle);
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.util.Log.e("AgentCommandExecutor", "同步章节标题时出错：" + e.getMessage());
+        }
     }
 }

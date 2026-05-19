@@ -30,6 +30,11 @@ public interface StoryRepository {
     int updateStoryOutline(int storyId, String outlineData);
     
     /**
+     * 只更新卷章结构（structure）
+     */
+    int updateStoryStructure(int storyId, String structure);
+    
+    /**
      * 只更新全局大纲（global_outline）
      */
     int updateStoryGlobalOutline(int storyId, String globalOutline);

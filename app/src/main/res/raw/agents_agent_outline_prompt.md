@@ -47,8 +47,10 @@
 1. **update_global_outline**: 更新全局大纲
 2. **update_volume_outline**: 更新卷纲
 3. **update_chapter_outline**: 更新章纲
-4. **generate_outline**: 生成大纲（批量）
-5. **answer_question**: 回答问题（不执行操作）
+4. **generate_global_outline**: 生成全局大纲（AI自动创作）
+5. **generate_volume_outline**: 生成卷纲（AI自动创作）
+6. **generate_chapter_outline**: 生成章纲（AI自动创作）
+7. **answer_question**: 回答问题（不执行操作）
 
 ## JSON 格式示例
 
@@ -119,28 +121,72 @@
 }
 ```
 
-### 生成大纲（批量）
+### 生成全局大纲（AI自动创作）
 ```json
 {
-  "action": "generate_outline",
+  "action": "generate_global_outline",
   "parameters": {
-    "scope": "volume",
-    "volumeIndex": 1,
-    "style": "detailed"
+    "globalOutline": "# 故事大纲\n\n## 主线剧情\n主角张三离开家乡，踏上江湖之路..."
   },
-  "reasoning": "用户要求为第二卷生成详细大纲"
+  "reasoning": "用户要求生成全书大纲，AI基于设定自动创作"
 }
 ```
 
-**scope 可选值：**
-- `global`: 生成全局大纲
-- `volume`: 生成指定卷的大纲（需提供 volumeIndex）
-- `chapter`: 生成指定章节的大纲（需提供 volumeIndex 和 chapterIndex）
-- `all`: 生成全部大纲
+### 生成卷纲（AI自动创作）
+```json
+{
+  "action": "generate_volume_outline",
+  "parameters": {
+    "volumeIndex": 0,
+    "title": "初入江湖",
+    "summary": "本卷讲述主角的成长历程，从初出茅庐到小有名气",
+    "targetWordCount": 50000,
+    "targetChapterCount": 20
+  },
+  "reasoning": "用户要求为第一卷生成大纲，AI根据全局大纲创作并生成标题"
+}
+```
 
-**style 可选值：**
-- `brief`: 简要版
-- `detailed`: 详细版
+**注意**：
+- 如果卷标题为空或不准确，AI应该生成一个精准概括的标题
+- 标题长度建议 2-8 个字，简洁有力
+- 如果已有标题且合理，可以保留或优化
+
+### 生成章纲（AI自动创作）
+```json
+{
+  "action": "generate_chapter_outline",
+  "parameters": {
+    "volumeIndex": 0,
+    "chapterIndex": 2,
+    "fields": {
+      "title": "真相大白",
+      "chapterRole": "转折点",
+      "chapterSummary": "主角发现真相，决定复仇",
+      "chapterPurpose": "推动剧情进入第二阶段",
+      "suspenseLevel": 8.5,
+      "foreshadowing": "暗示第二卷的反派身份",
+      "twistLevel": 4.0,
+      "involvedCharacters": ["张三", "李四"],
+      "keyItems": ["神秘信件"],
+      "sceneLocations": ["皇宫"],
+      "timeConstraint": "必须在午夜前完成"
+    }
+  },
+  "reasoning": "用户要求为第三章生成详细大纲，AI基于卷纲创作并生成标题"
+}
+```
+
+**注意**：
+- 如果章节标题为空或不准确，AI应该生成一个精准概括的标题
+- 标题长度建议 2-8 个字，如：'初遇'、'阴谋浮现'、'决战前夕'
+- 如果已有标题且合理，可以保留或优化
+
+**重要说明：**
+- `generate_*` 命令用于AI自动创作并保存大纲
+- AI应该基于现有设定、全局大纲、卷纲等信息进行创作
+- 生成的内容应该符合故事逻辑和风格
+- volumeIndex 和 chapterIndex 从 0 开始计数
 
 ### 问答模式
 ```json
