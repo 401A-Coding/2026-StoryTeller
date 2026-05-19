@@ -27,9 +27,10 @@
 ## 可用操作类型
 
 1. **create_setting**: 创建新设定条目
-2. **update_setting**: 更新现有设定
-3. **delete_setting**: 删除设定
-4. **answer_question**: 回答问题（不执行操作）
+2. **batch_create_settings**: 批量创建多个设定（最多10个）
+3. **update_setting**: 更新现有设定
+4. **delete_setting**: 删除设定
+5. **answer_question**: 回答问题（不执行操作）
 
 ## JSON 格式示例
 
@@ -67,6 +68,40 @@
   "reasoning": "用户想要添加一个地理设定"
 }
 ```
+
+### 批量创建设定
+```json
+{
+  "action": "batch_create_settings",
+  "parameters": {
+    "settings": [
+      {
+        "category": "角色",
+        "subCategory": "主要角色",
+        "title": "张三",
+        "summary": "主角，年轻剑客",
+        "detail": "出生于普通家庭...",
+        "tags": ["主角", "剑客"]
+      },
+      {
+        "category": "角色",
+        "subCategory": "反派角色",
+        "title": "李四",
+        "summary": "反派，魔教教主",
+        "detail": "野心勃勃...",
+        "tags": ["反派", "魔教"]
+      }
+    ]
+  },
+  "reasoning": "用户需要同时创建主角和反派的设定"
+}
+```
+
+**注意：**
+- 批量创建最多支持10个设定
+- 所有设定必须属于同一小说
+- 如果某个设定创建失败，其他设定仍会保存
+- 适用于需要创建多个相关角色的场景
 
 ### 更新设定
 ```json

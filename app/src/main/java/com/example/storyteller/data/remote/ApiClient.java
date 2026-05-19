@@ -245,6 +245,9 @@ public class ApiClient {
                     if (apiResponse.choices != null && !apiResponse.choices.isEmpty()) {
                         String aiResponse = apiResponse.choices.get(0).message.content;
                         
+                        // 清理Markdown代码块标记
+                        aiResponse = cleanMarkdownCodeBlock(aiResponse);
+                        
                         // 尝试解析为 JSON 命令
                         try {
                             AgentCommand command = gson.fromJson(aiResponse, AgentCommand.class);
@@ -280,5 +283,31 @@ public class ApiClient {
     public interface AgentCallback {
         void onCommandReady(AgentCommand command);
         void onFailure(Exception e);
+    }
+    
+    /**
+     * 清理AI返回内容中的Markdown代码块标记
+     * 例如：```json {...} ``` → {...}
+     */
+    private String cleanMarkdownCodeBlock(String content) {
+        if (content == null || content.isEmpty()) {
+            return content;
+        }
+        
+        String cleaned = content.trim();
+        
+        // 去除开头的 ```json 或 ```
+        if (cleaned.startsWith("```json")) {
+            cleaned = cleaned.substring(7); // 去除 "```json"
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.substring(3); // 去除 "```"
+        }
+        
+        // 去除结尾的 ```
+        if (cleaned.endsWith("```")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 3);
+        }
+        
+        return cleaned.trim();
     }
 }

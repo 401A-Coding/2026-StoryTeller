@@ -1,10 +1,15 @@
 package com.example.storyteller.utils;
 
+import android.content.Context;
 import android.text.TextUtils;
+import com.example.storyteller.data.local.db.StoryDocumentDao;
+import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.model.StoryDocument;
+import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.Volume;
 
 import java.util.ArrayList;
@@ -20,9 +25,16 @@ import java.util.Objects;
 public class AgentCommandExecutor {
 
     private final StoryRepository repository;
+    private final Context context;
 
     public AgentCommandExecutor(StoryRepository repository) {
         this.repository = repository;
+        this.context = null; // 兼容旧构造函数
+    }
+    
+    public AgentCommandExecutor(StoryRepository repository, Context context) {
+        this.repository = repository;
+        this.context = context;
     }
 
     /**
@@ -64,18 +76,51 @@ public class AgentCommandExecutor {
                 case "merge_chapters":
                     return handleMergeChapters(command.parameters, currentStoryId);
                 
-                case "generate_plot":
-                    return handleGeneratePlot(command.parameters);
-                
-                case "create_character":
-                    return handleCreateCharacter(command.parameters);
-                
                 case "answer_question":
                     // 只是回答问题，不执行操作
                     if (command.parameters != null && command.parameters.containsKey("response")) {
                         return CommandResult.success((String) command.parameters.get("response"));
                     }
                     return CommandResult.success("");
+                
+                // === 设定模式 ===
+                case "create_setting":
+                    return handleCreateSetting(command.parameters, currentStoryId);
+                
+                case "batch_create_settings":
+                    return handleBatchCreateSettings(command.parameters, currentStoryId);
+                
+                case "update_setting":
+                    return handleUpdateSetting(command.parameters, currentStoryId);
+                
+                case "delete_setting":
+                    return handleDeleteSetting(command.parameters, currentStoryId);
+                
+                // === 大纲模式 ===
+                case "update_global_outline":
+                    return handleUpdateGlobalOutline(command.parameters, currentStoryId);
+                
+                case "update_volume_outline":
+                    return handleUpdateVolumeOutline(command.parameters, currentStoryId);
+                
+                case "update_chapter_outline":
+                    return handleUpdateChapterOutline(command.parameters, currentStoryId);
+                
+                case "generate_outline":
+                    return handleGenerateOutline(command.parameters, currentStoryId);
+                
+                // === 文档模式 ===
+                case "create_document":
+                    return handleCreateDocument(command.parameters, currentStoryId);
+                
+                case "update_document":
+                    return handleUpdateDocument(command.parameters, currentStoryId);
+                
+                case "delete_document":
+                    return handleDeleteDocument(command.parameters, currentStoryId);
+                
+                case "extract_materials_from_document":
+                    return handleExtractMaterials(command.parameters, currentStoryId);
                 
                 default:
                     return CommandResult.error("未知操作：" + command.action);
@@ -572,23 +617,6 @@ public class AgentCommandExecutor {
         );
     }
 
-    /**
-     * 处理生成情节建议
-     */
-    private CommandResult handleGeneratePlot(Map<String, Object> params) {
-        if (params != null && params.containsKey("response")) {
-            return CommandResult.success("情节建议：\n" + params.get("response"));
-        }
-        return CommandResult.error("无法生成情节建议");
-    }
-
-    /**
-     * 处理创建角色
-     */
-    private CommandResult handleCreateCharacter(Map<String, Object> params) {
-        // TODO: 实现角色创建逻辑
-        return CommandResult.error("角色创建功能开发中...");
-    }
 
     /**
      * 处理移动章节命令
@@ -998,5 +1026,555 @@ public class AgentCommandExecutor {
         }
 
         return context.toString();
+    }
+    
+    // ==================== 设定模式命令处理 ====================
+    
+    /**
+     * 处理创建设定命令
+     */
+    private CommandResult handleCreateSetting(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法创建设定");
+        }
+        
+        try {
+            StorySettingDao settingDao = new StorySettingDao(context);
+            
+            StorySetting setting = new StorySetting();
+            setting.setStoryId(storyId);
+            setting.setCategory((String) params.get("category"));
+            setting.setSubCategory((String) params.get("subCategory"));
+            setting.setTitle((String) params.get("title"));
+            setting.setSummary((String) params.get("summary"));
+            setting.setDetail((String) params.get("detail"));
+            
+            // 处理tags（JSON数组）
+            if (params.containsKey("tags") && params.get("tags") != null) {
+                setting.setTags(JsonUtils.toJson(params.get("tags")));
+            }
+            
+            // 处理aliases（JSON数组）
+            if (params.containsKey("aliases") && params.get("aliases") != null) {
+                setting.setAliases(JsonUtils.toJson(params.get("aliases")));
+            }
+            
+            // 处理specificAttributes（JSON字符串）
+            if (params.containsKey("specificAttributes") && params.get("specificAttributes") != null) {
+                setting.setSpecificAttributes((String) params.get("specificAttributes"));
+            }
+            
+            long id = settingDao.insert(setting);
+            if (id > 0) {
+                return CommandResult.success(
+                    "✅ 已成功创建设定：《" + setting.getTitle() + "》",
+                    "create_setting",
+                    setting
+                );
+            } else {
+                return CommandResult.error("❌ 创建设定失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 创建设定时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理批量创建设定命令
+     */
+    @SuppressWarnings("unchecked")
+    private CommandResult handleBatchCreateSettings(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法创建设定");
+        }
+        
+        try {
+            StorySettingDao settingDao = new StorySettingDao(context);
+            
+            // 获取settings列表
+            List<Map<String, Object>> settingsList = (List<Map<String, Object>>) params.get("settings");
+            
+            if (settingsList == null || settingsList.isEmpty()) {
+                return CommandResult.error("❌ 错误：没有提供要创建的设定");
+            }
+            
+            // 限制最多10个
+            if (settingsList.size() > 10) {
+                return CommandResult.error("❌ 错误：批量创建最多支持10个设定");
+            }
+            
+            int successCount = 0;
+            int failCount = 0;
+            List<String> successTitles = new ArrayList<>();
+            List<String> failTitles = new ArrayList<>();
+            
+            // 逐个创建设定
+            for (Map<String, Object> settingParams : settingsList) {
+                try {
+                    StorySetting setting = new StorySetting();
+                    setting.setStoryId(storyId);
+                    setting.setCategory((String) settingParams.get("category"));
+                    setting.setSubCategory((String) settingParams.get("subCategory"));
+                    setting.setTitle((String) settingParams.get("title"));
+                    setting.setSummary((String) settingParams.get("summary"));
+                    setting.setDetail((String) settingParams.get("detail"));
+                    
+                    // 处理tags
+                    if (settingParams.containsKey("tags") && settingParams.get("tags") != null) {
+                        setting.setTags(JsonUtils.toJson(settingParams.get("tags")));
+                    }
+                    
+                    // 处理aliases
+                    if (settingParams.containsKey("aliases") && settingParams.get("aliases") != null) {
+                        setting.setAliases(JsonUtils.toJson(settingParams.get("aliases")));
+                    }
+                    
+                    // 处理specificAttributes
+                    if (settingParams.containsKey("specificAttributes") && settingParams.get("specificAttributes") != null) {
+                        setting.setSpecificAttributes((String) settingParams.get("specificAttributes"));
+                    }
+                    
+                    long id = settingDao.insert(setting);
+                    if (id > 0) {
+                        successCount++;
+                        successTitles.add(setting.getTitle());
+                    } else {
+                        failCount++;
+                        failTitles.add(setting.getTitle());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    failCount++;
+                    String title = (String) settingParams.get("title");
+                    failTitles.add(title != null ? title : "未知设定");
+                }
+            }
+            
+            // 构建结果消息
+            StringBuilder message = new StringBuilder();
+            message.append("✅ 批量创建完成：成功").append(successCount).append("个");
+            if (failCount > 0) {
+                message.append("，失败").append(failCount).append("个");
+            }
+            
+            if (!successTitles.isEmpty()) {
+                message.append("\n成功：").append(String.join("、", successTitles));
+            }
+            if (!failTitles.isEmpty()) {
+                message.append("\n失败：").append(String.join("、", failTitles));
+            }
+            
+            return CommandResult.success(message.toString(), "batch_create_settings", null);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 批量创建设定时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理更新设定命令
+     */
+    private CommandResult handleUpdateSetting(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法更新设定");
+        }
+        
+        try {
+            StorySettingDao settingDao = new StorySettingDao(context);
+            
+            int settingId = ((Number) params.get("settingId")).intValue();
+            StorySetting setting = settingDao.getById(settingId);
+            
+            if (setting == null) {
+                return CommandResult.error("❌ 错误：设定不存在（ID: " + settingId + "）");
+            }
+            
+            // 更新字段
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fields = (Map<String, Object>) params.get("fields");
+            if (fields != null) {
+                if (fields.containsKey("summary")) {
+                    setting.setSummary((String) fields.get("summary"));
+                }
+                if (fields.containsKey("detail")) {
+                    setting.setDetail((String) fields.get("detail"));
+                }
+                if (fields.containsKey("tags")) {
+                    setting.setTags(JsonUtils.toJson(fields.get("tags")));
+                }
+                if (fields.containsKey("aliases")) {
+                    setting.setAliases(JsonUtils.toJson(fields.get("aliases")));
+                }
+                if (fields.containsKey("specificAttributes")) {
+                    setting.setSpecificAttributes((String) fields.get("specificAttributes"));
+                }
+            }
+            
+            int result = settingDao.update(setting);
+            if (result > 0) {
+                return CommandResult.success(
+                    "✅ 已成功更新设定：《" + setting.getTitle() + "》",
+                    "update_setting",
+                    setting
+                );
+            } else {
+                return CommandResult.error("❌ 更新设定失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 更新设定时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理删除设定命令
+     */
+    private CommandResult handleDeleteSetting(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法删除设定");
+        }
+        
+        try {
+            StorySettingDao settingDao = new StorySettingDao(context);
+            
+            int settingId = ((Number) params.get("settingId")).intValue();
+            StorySetting setting = settingDao.getById(settingId);
+            
+            if (setting == null) {
+                return CommandResult.error("❌ 错误：设定不存在（ID: " + settingId + "）");
+            }
+            
+            String title = setting.getTitle();
+            int result = settingDao.delete(settingId);
+            
+            if (result > 0) {
+                return CommandResult.success(
+                    "✅ 已删除设定：《" + title + "》",
+                    "delete_setting",
+                    null
+                );
+            } else {
+                return CommandResult.error("❌ 删除设定失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 删除设定时出错：" + e.getMessage());
+        }
+    }
+    
+    // ==================== 大纲模式命令处理 ====================
+    
+    /**
+     * 处理更新全局大纲命令
+     */
+    private CommandResult handleUpdateGlobalOutline(Map<String, Object> params, int storyId) {
+        try {
+            String globalOutline = (String) params.get("globalOutline");
+            
+            int result = repository.updateStoryGlobalOutline(storyId, globalOutline);
+            
+            if (result > 0) {
+                return CommandResult.success(
+                    "✅ 已成功更新全局大纲",
+                    "update_global_outline",
+                    globalOutline
+                );
+            } else {
+                return CommandResult.error("❌ 更新全局大纲失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 更新全局大纲时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理更新卷纲命令
+     */
+    private CommandResult handleUpdateVolumeOutline(Map<String, Object> params, int storyId) {
+        try {
+            int volumeIndex = ((Number) params.get("volumeIndex")).intValue();
+            
+            Story story = repository.getStoryById(storyId);
+            if (story == null) {
+                return CommandResult.error("错误：小说不存在");
+            }
+            
+            // 解析outlineData
+            List<Volume> volumes = parseVolumesFromOutlineData(story);
+            
+            if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+                return CommandResult.error("❌ 错误：卷索引超出范围（当前有 " + volumes.size() + " 卷）");
+            }
+            
+            Volume volume = volumes.get(volumeIndex);
+            
+            // 更新字段
+            if (params.containsKey("summary")) {
+                volume.setSummary((String) params.get("summary"));
+            }
+            if (params.containsKey("targetWordCount")) {
+                volume.setTargetWordCount(((Number) params.get("targetWordCount")).intValue());
+            }
+            if (params.containsKey("targetChapterCount")) {
+                volume.setTargetChapterCount(((Number) params.get("targetChapterCount")).intValue());
+            }
+            
+            // 保存
+            String updatedJson = JsonUtils.toJson(volumes);
+            repository.updateStoryOutline(storyId, updatedJson);
+            
+            return CommandResult.success(
+                "✅ 已成功更新第" + (volumeIndex + 1) + "卷《" + volume.getTitle() + "》的大纲",
+                "update_volume_outline",
+                volume
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 更新卷纲时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理更新章纲命令
+     */
+    private CommandResult handleUpdateChapterOutline(Map<String, Object> params, int storyId) {
+        try {
+            int volumeIndex = ((Number) params.get("volumeIndex")).intValue();
+            int chapterIndex = ((Number) params.get("chapterIndex")).intValue();
+            
+            Story story = repository.getStoryById(storyId);
+            if (story == null) {
+                return CommandResult.error("错误：小说不存在");
+            }
+            
+            // 解析outlineData
+            List<Volume> volumes = parseVolumesFromOutlineData(story);
+            
+            if (volumeIndex < 0 || volumeIndex >= volumes.size()) {
+                return CommandResult.error("❌ 错误：卷索引超出范围");
+            }
+            
+            Volume volume = volumes.get(volumeIndex);
+            List<Chapter> chapters = volume.getChapters();
+            
+            if (chapterIndex < 0 || chapterIndex >= chapters.size()) {
+                return CommandResult.error("❌ 错误：章节索引超出范围（当前有 " + chapters.size() + " 章）");
+            }
+            
+            Chapter chapter = chapters.get(chapterIndex);
+            
+            // 更新字段
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fields = (Map<String, Object>) params.get("fields");
+            if (fields != null) {
+                if (fields.containsKey("chapterRole")) {
+                    chapter.setChapterRole((String) fields.get("chapterRole"));
+                }
+                if (fields.containsKey("chapterSummary")) {
+                    chapter.setChapterSummary((String) fields.get("chapterSummary"));
+                }
+                if (fields.containsKey("chapterPurpose")) {
+                    chapter.setChapterPurpose((String) fields.get("chapterPurpose"));
+                }
+                if (fields.containsKey("suspenseLevel")) {
+                    chapter.setSuspenseLevel(((Number) fields.get("suspenseLevel")).floatValue());
+                }
+                if (fields.containsKey("foreshadowing")) {
+                    chapter.setForeshadowing((String) fields.get("foreshadowing"));
+                }
+                if (fields.containsKey("twistLevel")) {
+                    chapter.setTwistLevel(((Number) fields.get("twistLevel")).floatValue());
+                }
+                if (fields.containsKey("involvedCharacters")) {
+                    chapter.setInvolvedCharacters((List<String>) fields.get("involvedCharacters"));
+                }
+                if (fields.containsKey("keyItems")) {
+                    chapter.setKeyItems((List<String>) fields.get("keyItems"));
+                }
+                if (fields.containsKey("sceneLocations")) {
+                    chapter.setSceneLocations((List<String>) fields.get("sceneLocations"));
+                }
+                if (fields.containsKey("timeConstraint")) {
+                    chapter.setTimeConstraint((String) fields.get("timeConstraint"));
+                }
+            }
+            
+            // 保存
+            String updatedJson = JsonUtils.toJson(volumes);
+            repository.updateStoryOutline(storyId, updatedJson);
+            
+            return CommandResult.success(
+                "✅ 已成功更新第" + (volumeIndex + 1) + "卷第" + (chapterIndex + 1) + "章《" + chapter.getTitle() + "》的大纲",
+                "update_chapter_outline",
+                chapter
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 更新章纲时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理生成大纲命令（批量）
+     */
+    private CommandResult handleGenerateOutline(Map<String, Object> params, int storyId) {
+        // TODO: 实现批量生成大纲逻辑
+        // 这需要调用AI API生成内容，然后更新到数据库
+        return CommandResult.error("⚠️ 批量生成大纲功能开发中...");
+    }
+    
+    // ==================== 文档模式命令处理 ====================
+    
+    /**
+     * 处理创建文档命令
+     */
+    private CommandResult handleCreateDocument(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法创建文档");
+        }
+        
+        try {
+            StoryDocumentDao documentDao = new StoryDocumentDao(context);
+            
+            StoryDocument doc = new StoryDocument();
+            doc.setStoryId(storyId);
+            doc.setTitle((String) params.get("title"));
+            doc.setContent((String) params.get("content"));
+            doc.setCategory((String) params.get("category"));
+            
+            long id = documentDao.insertDocument(doc);
+            if (id > 0) {
+                doc.setId((int) id);
+                return CommandResult.success(
+                    "✅ 已成功创建文档：《" + doc.getTitle() + "》",
+                    "create_document",
+                    doc
+                );
+            } else {
+                return CommandResult.error("❌ 创建文档失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 创建文档时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理更新文档命令
+     */
+    private CommandResult handleUpdateDocument(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法更新文档");
+        }
+        
+        try {
+            StoryDocumentDao documentDao = new StoryDocumentDao(context);
+            
+            int documentId = ((Number) params.get("documentId")).intValue();
+            StoryDocument doc = documentDao.getDocumentById(documentId);
+            
+            if (doc == null) {
+                return CommandResult.error("❌ 错误：文档不存在（ID: " + documentId + "）");
+            }
+            
+            // 更新字段
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fields = (Map<String, Object>) params.get("fields");
+            if (fields != null) {
+                if (fields.containsKey("title")) {
+                    doc.setTitle((String) fields.get("title"));
+                }
+                if (fields.containsKey("content")) {
+                    doc.setContent((String) fields.get("content"));
+                }
+                if (fields.containsKey("category")) {
+                    doc.setCategory((String) fields.get("category"));
+                }
+            }
+            
+            int result = documentDao.updateDocument(doc);
+            if (result > 0) {
+                return CommandResult.success(
+                    "✅ 已成功更新文档：《" + doc.getTitle() + "》",
+                    "update_document",
+                    doc
+                );
+            } else {
+                return CommandResult.error("❌ 更新文档失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 更新文档时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理删除文档命令
+     */
+    private CommandResult handleDeleteDocument(Map<String, Object> params, int storyId) {
+        if (context == null) {
+            return CommandResult.error("错误：未初始化Context，无法删除文档");
+        }
+        
+        try {
+            StoryDocumentDao documentDao = new StoryDocumentDao(context);
+            
+            int documentId = ((Number) params.get("documentId")).intValue();
+            StoryDocument doc = documentDao.getDocumentById(documentId);
+            
+            if (doc == null) {
+                return CommandResult.error("❌ 错误：文档不存在（ID: " + documentId + "）");
+            }
+            
+            String title = doc.getTitle();
+            int result = documentDao.deleteDocument(documentId);
+            
+            if (result > 0) {
+                return CommandResult.success(
+                    "✅ 已删除文档：《" + title + "》",
+                    "delete_document",
+                    null
+                );
+            } else {
+                return CommandResult.error("❌ 删除文档失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 删除文档时出错：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理从文档提取素材命令
+     */
+    private CommandResult handleExtractMaterials(Map<String, Object> params, int storyId) {
+        // TODO: 实现从文档提取素材并创建设定的逻辑
+        // 这需要：
+        // 1. 读取指定文档的内容
+        // 2. 调用专用任务Prompt进行智能提取
+        // 3. 根据extractType创建对应的StorySetting条目
+        return CommandResult.error("⚠️ 从文档提取素材功能开发中...");
+    }
+    
+    // ==================== 辅助方法 ====================
+    
+    /**
+     * 从outlineData字段解析卷章结构
+     */
+    private List<Volume> parseVolumesFromOutlineData(Story story) {
+        String outlineJson = story.getOutlineData();
+        if (!TextUtils.isEmpty(outlineJson)) {
+            try {
+                return JsonUtils.fromJson(outlineJson,
+                    new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        // 如果解析失败，返回空列表
+        return new ArrayList<>();
     }
 }
