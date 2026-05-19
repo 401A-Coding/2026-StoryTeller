@@ -114,6 +114,23 @@ public class StoryDao {
                 new String[]{String.valueOf(storyId)}
         );
     }
+    
+    /**
+     * 只更新卷章结构（structure），不覆盖其他字段
+     */
+    public int updateStoryStructure(int storyId, String structure) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_STRUCTURE, structure);
+        values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
 
     /**
      * 只更新全局大纲（global_outline），不覆盖其他字段

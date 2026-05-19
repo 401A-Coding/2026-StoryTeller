@@ -279,6 +279,35 @@ public class StoryInfoPanelFragment extends BaseFragment {
     }
     
     /**
+     * 刷新设定列表面板（公开方法）
+     */
+    public void refreshSettingsList() {
+        // 重新创建SettingsFragment
+        if (storyId > 0) {
+            StorySettingsListFragment settingsFragment = StorySettingsListFragment.newInstance(storyId);
+            getChildFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_setting, settingsFragment)
+                .commit();
+        }
+    }
+    
+    /**
+     * 刷新文档列表面板（公开方法）
+     */
+    public void refreshDocumentsList() {
+        // 重新创建DocumentsFragment
+        if (storyId > 0) {
+            com.example.storyteller.ui.fragment.DocumentsFragment documentsFragment = 
+                com.example.storyteller.ui.fragment.DocumentsFragment.newInstance(storyId);
+            getChildFragmentManager()
+                .beginTransaction()
+                .replace(R.id.panel_docs, documentsFragment)
+                .commit();
+        }
+    }
+    
+    /**
      * 加载文档列表面板
      */
     private void loadDocumentsFragment() {

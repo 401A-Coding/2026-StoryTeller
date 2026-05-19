@@ -8,9 +8,7 @@
 5. delete_volume: 删除卷（至少保留一个卷）
 6. move_chapter: 移动章节到新位置（可在同卷内或跨卷）
 7. merge_chapters: 合并多个连续章节为一个
-8. generate_plot: 生成情节建议
-9. create_character: 创建角色
-10. answer_question: 回答问题（不执行操作）
+8. answer_question: 回答问题（不执行操作）
 
 重要说明：
 - volume_id 和 chapter_id 从1开始计数

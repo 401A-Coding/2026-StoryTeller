@@ -390,6 +390,10 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
                 refreshTocView();
                 // 同时刷新大纲视图
                 refreshOutlineView();
+                // 刷新设定视图
+                refreshSettingsView();
+                // 刷新文档视图
+                refreshDocumentsView();
             });
             getSupportFragmentManager()
                 .beginTransaction()
@@ -459,6 +463,26 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         android.util.Log.d("StoryWorkspace", "refreshOutlineView: 刷新大纲视图");
         if (storyInfoPanelFragment != null) {
             storyInfoPanelFragment.refreshOutlineData();
+        }
+    }
+    
+    /**
+     * 刷新设定视图（公开方法）
+     */
+    public void refreshSettingsView() {
+        android.util.Log.d("StoryWorkspace", "refreshSettingsView: 刷新设定视图");
+        if (storyInfoPanelFragment != null) {
+            storyInfoPanelFragment.refreshSettingsList();
+        }
+    }
+    
+    /**
+     * 刷新文档视图（公开方法）
+     */
+    public void refreshDocumentsView() {
+        android.util.Log.d("StoryWorkspace", "refreshDocumentsView: 刷新文档视图");
+        if (storyInfoPanelFragment != null) {
+            storyInfoPanelFragment.refreshDocumentsList();
         }
     }
     

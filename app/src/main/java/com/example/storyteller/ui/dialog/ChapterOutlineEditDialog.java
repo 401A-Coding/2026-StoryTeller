@@ -167,6 +167,9 @@ public class ChapterOutlineEditDialog extends DialogFragment {
         
         viewPager.setAdapter(adapter);
         
+        // 设置预加载策略：保持两个Fragment都存活，避免切换时重建
+        viewPager.setOffscreenPageLimit(1);
+        
         // 关联TabLayout和ViewPager2
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             if (position == 0) {
@@ -206,6 +209,8 @@ public class ChapterOutlineEditDialog extends DialogFragment {
      * 拓展信息Fragment
      */
     public static class ExtendedInfoFragment extends Fragment {
+        private ChapterOutlineEditDialog parentDialog;
+        
         public static ExtendedInfoFragment newInstance() {
             return new ExtendedInfoFragment();
         }
@@ -215,7 +220,7 @@ public class ChapterOutlineEditDialog extends DialogFragment {
         public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                                  @Nullable Bundle savedInstanceState) {
             View view = inflater.inflate(R.layout.fragment_chapter_outline_extended, container, false);
-            ChapterOutlineEditDialog parentDialog = (ChapterOutlineEditDialog) requireParentFragment();
+            parentDialog = (ChapterOutlineEditDialog) requireParentFragment();
             parentDialog.initExtendedInfoViews(view);
             
             // 视图创建完成后加载拓展信息
@@ -235,6 +240,12 @@ public class ChapterOutlineEditDialog extends DialogFragment {
         etForeshadowing = view.findViewById(R.id.et_foreshadowing);
         sliderTwist = view.findViewById(R.id.slider_twist);
         tvTwistValue = view.findViewById(R.id.tv_twist_value);
+        
+        // 防止EditText的滚动事件冒泡到父容器（ScrollView）
+        setupEditTextScrollListener(etChapterRole);
+        setupEditTextScrollListener(etChapterSummary);
+        setupEditTextScrollListener(etChapterPurpose);
+        setupEditTextScrollListener(etForeshadowing);
         
         // Slider监听
         if (sliderSuspense != null) {
@@ -300,9 +311,9 @@ public class ChapterOutlineEditDialog extends DialogFragment {
             if (etChapterRole != null) etChapterRole.setText(role);
             if (etChapterSummary != null) etChapterSummary.setText(summary);
             if (etChapterPurpose != null) etChapterPurpose.setText(purpose);
-            if (sliderSuspense != null) sliderSuspense.setValue(suspense);
+            if (sliderSuspense != null) sliderSuspense.setValue(roundToStep(suspense, 0.5f));
             if (etForeshadowing != null) etForeshadowing.setText(foreshadowing);
-            if (sliderTwist != null) sliderTwist.setValue(twist);
+            if (sliderTwist != null) sliderTwist.setValue(roundToStep(twist, 0.5f));
             
             updateSuspenseDisplay(suspense);
             updateTwistDisplay(twist);
@@ -313,34 +324,42 @@ public class ChapterOutlineEditDialog extends DialogFragment {
      * 加载拓展信息数据
      */
     private void loadExtendedData() {
+        // 安全检查：确保视图已经初始化
+        if (chipGroupCharacters == null || chipGroupItems == null || chipGroupLocations == null) {
+            android.util.Log.w("ChapterOutlineEditDialog", "loadExtendedData: 视图未初始化，跳过加载");
+            return;
+        }
+        
         // 填充拓展信息
-        if (chipGroupCharacters != null) {
-            chipGroupCharacters.removeAllViews();
-            for (String character : involvedCharacters) {
-                addChipToGroup(chipGroupCharacters, character);
-            }
+        chipGroupCharacters.removeAllViews();
+        for (String character : involvedCharacters) {
+            addChipToGroup(chipGroupCharacters, character);
         }
-        if (chipGroupItems != null) {
-            chipGroupItems.removeAllViews();
-            for (String item : keyItems) {
-                addChipToGroup(chipGroupItems, item);
-            }
+        
+        chipGroupItems.removeAllViews();
+        for (String item : keyItems) {
+            addChipToGroup(chipGroupItems, item);
         }
-        if (chipGroupLocations != null) {
-            chipGroupLocations.removeAllViews();
-            for (String location : sceneLocations) {
-                addChipToGroup(chipGroupLocations, location);
-            }
+        
+        chipGroupLocations.removeAllViews();
+        for (String location : sceneLocations) {
+            addChipToGroup(chipGroupLocations, location);
         }
+        
         if (etTimeConstraint != null) {
             etTimeConstraint.setText(timeConstraint);
         }
+        
+        android.util.Log.d("ChapterOutlineEditDialog", "loadExtendedData: 已加载 " + 
+            involvedCharacters.size() + " 个角色, " + 
+            keyItems.size() + " 个物品, " + 
+            sceneLocations.size() + " 个位置");
     }
 
 
     private void updateSuspenseDisplay(float value) {
         String level = getSuspenseLevelText(value);
-        tvSuspenseValue.setText(String.format("当前: %.0f/10 (%s)", value, level));
+        tvSuspenseValue.setText(String.format("当前: %.1f/10 (%s)", value, level));
     }
 
     private void updateTwistDisplay(float value) {
@@ -360,6 +379,30 @@ public class ChapterOutlineEditDialog extends DialogFragment {
         if (value <= 2) return "轻微";
         if (value <= 3) return "中等";
         return "重大";
+    }
+    
+    /**
+     * 将值四舍五入到最近的步长倍数
+     * @param value 原始值
+     * @param stepSize 步长
+     * @return 对齐后的值
+     */
+    private float roundToStep(float value, float stepSize) {
+        if (stepSize <= 0) return value;
+        return Math.round(value / stepSize) * stepSize;
+    }
+    
+    /**
+     * 设置EditText滚动监听，防止滚动事件冒泡到父容器
+     */
+    private void setupEditTextScrollListener(EditText editText) {
+        if (editText != null) {
+            editText.setOnTouchListener((v, event) -> {
+                // 让EditText自己处理滚动事件，阻止事件向上传播
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+                return false;
+            });
+        }
     }
 
     private void saveAndDismiss() {
