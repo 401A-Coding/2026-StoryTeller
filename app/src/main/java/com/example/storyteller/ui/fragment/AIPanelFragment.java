@@ -29,6 +29,7 @@ import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
 import com.example.storyteller.utils.AgentCommandExecutor;
+import com.example.storyteller.utils.PromptManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +61,7 @@ public class AIPanelFragment extends BaseFragment {
     private StoryRepository storyRepository;
     private AgentCommandExecutor commandExecutor;
     private StorySettingDao settingDao;  // 设定DAO
+    private PromptManager promptManager;  // Prompt管理器
     
     private int storyId;
     private String currentMode = "agent"; // agent 或 ask
@@ -114,6 +116,7 @@ public class AIPanelFragment extends BaseFragment {
         storyRepository = new StoryRepositoryImpl(requireContext());
         commandExecutor = new AgentCommandExecutor(storyRepository);
         settingDao = new StorySettingDao(requireContext());  // 初始化设定DAO
+        promptManager = new PromptManager(requireContext());  // 初始化Prompt管理器
     }
 
     @Override
@@ -267,10 +270,15 @@ public class AIPanelFragment extends BaseFragment {
         ));
         adapter.notifyItemChanged(messagePosition[0]);
         
-        apiClient.processAgentCommand(
+        // 根据当前模式选择对应的 System Prompt
+        String systemPrompt = getSystemPromptForMode(currentMode);
+        
+        // 使用自定义 System Prompt 调用 API
+        apiClient.processAgentCommandWithSystemPrompt(
             userMessage,
             storyContext,
             currentModel,
+            systemPrompt,
             requireContext(),
             new ApiClient.AgentCallback() {
                 @Override
@@ -891,6 +899,23 @@ public class AIPanelFragment extends BaseFragment {
         if (!TextUtils.isEmpty(message)) {
             etMessage.setText(message);
             etMessage.requestFocus();
+        }
+    }
+    
+    /**
+     * 根据当前模式获取对应的 System Prompt
+     * @param mode 模式名称：agent, ask
+     * @return System Prompt 文本
+     */
+    private String getSystemPromptForMode(String mode) {
+        // 目前只有 agent 和 ask 两种模式
+        // agent 模式使用编辑助手 prompt
+        // ask 模式使用顾问 prompt
+        if ("ask".equals(mode)) {
+            return promptManager.getAgentSystemPrompt("consultant", null);
+        } else {
+            // 默认使用编辑助手 prompt
+            return promptManager.getAgentSystemPrompt("editor", null);
         }
     }
 }

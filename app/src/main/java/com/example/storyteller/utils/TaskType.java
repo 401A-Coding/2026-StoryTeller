@@ -40,9 +40,14 @@ public enum TaskType {
     PLOT_BOOK_SUMMARY("plot_book_summary", "全书剧情汇总"),
     
     /**
-     * 批量章节分析
+     * 批量章节分析（标准/详细模式）
      */
-    BATCH_CHAPTER_ANALYSIS("batch_chapter_analysis", "批量章节分析");
+    BATCH_CHAPTER_ANALYSIS("batch_chapter_analysis", "批量章节分析"),
+    
+    /**
+     * 批量章节速记（极简模式）
+     */
+    BATCH_QUICK_NOTE("batch_quick_note", "批量章节速记");
     
     private final String code;
     private final String description;
