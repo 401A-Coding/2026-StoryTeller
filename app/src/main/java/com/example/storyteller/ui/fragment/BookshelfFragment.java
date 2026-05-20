@@ -48,7 +48,7 @@ public class BookshelfFragment extends BaseFragment {
     // 搜索关键词
     private String searchKeyword = "";
 
-    // 当前排序方式：0=创建时间降序, 1=创建时间升序, 2=标题升序, 3=字数降序
+    // 当前排序方式：0=创建时间降序, 1=创建时间升序, 2=标题升序, 3=字数降序, 4=最近编辑降序
     private int currentSortType = 0;
 
     // 筛选条件
@@ -355,6 +355,11 @@ public class BookshelfFragment extends BaseFragment {
                 sortedStories.sort((left, right) -> 
                     Integer.compare(right.getWordCount(), left.getWordCount()));
                 break;
+            
+            case 4: // 最近编辑时间降序（最近编辑在前）
+                sortedStories.sort((left, right) -> 
+                    Long.compare(right.getLastEditTime(), left.getLastEditTime()));
+                break;
         }
 
         return sortedStories;
@@ -368,7 +373,8 @@ public class BookshelfFragment extends BaseFragment {
             "创建时间（最新在前）",
             "创建时间（最早在前）",
             "标题（A-Z）",
-            "字数（多到少）"
+            "字数（多到少）",
+            "最近编辑（最近在前）"
         };
         
         new AlertDialog.Builder(requireContext())
@@ -392,7 +398,8 @@ public class BookshelfFragment extends BaseFragment {
             "⇅ 最新",
             "⇅ 最早",
             "⇅ 标题",
-            "⇅ 字数"
+            "⇅ 字数",
+            "⇅ 编辑"
         };
         btnSort.setText(sortLabels[currentSortType]);
     }

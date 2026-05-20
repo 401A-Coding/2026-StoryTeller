@@ -8,6 +8,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
@@ -18,12 +20,16 @@ import com.example.storyteller.ui.activity.PlotTreeActivity;
 import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import com.example.storyteller.ui.fragment.MaterialLibraryFragment;
 import com.example.storyteller.ui.adapter.StoryAdapter;
+import com.example.storyteller.ui.adapter.RecentStoryAdapter;
 import java.util.List;
 
 public class HomeFragment extends BaseFragment {
 
     private TextView tvCurrentNovel;
     private StoryDao storyDao;
+    private RecyclerView rvRecentStories;
+    private RecentStoryAdapter recentAdapter;
+    private View tvRecentTitle;
 
     @Override
     protected int getLayoutId() {
@@ -98,6 +104,11 @@ public class HomeFragment extends BaseFragment {
 
         // 本地数据存储演示（直接写入测试故事，不走 AI）
         tvCurrentNovel = view.findViewById(R.id.tv_current_novel);
+        
+        // 初始化最近编辑列表
+        rvRecentStories = view.findViewById(R.id.rv_recent_stories);
+        tvRecentTitle = view.findViewById(R.id.tv_recent_title);
+        setupRecentStoriesList();
     }
 
     @Override
@@ -111,12 +122,14 @@ public class HomeFragment extends BaseFragment {
         android.util.Log.d("HomeFragment", "initData - 数据库中的小说数量: " + (allStories != null ? allStories.size() : 0));
 
         refreshCurrentNovel();
+        loadRecentStories();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         refreshCurrentNovel();
+        loadRecentStories();
     }
 
     private void refreshCurrentNovel() {
@@ -348,5 +361,45 @@ public class HomeFragment extends BaseFragment {
         });
 
         dialog.show();
+    }
+
+    /**
+     * 初始化最近编辑列表
+     */
+    private void setupRecentStoriesList() {
+        recentAdapter = new RecentStoryAdapter(requireContext(), new java.util.ArrayList<>());
+        rvRecentStories.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvRecentStories.setAdapter(recentAdapter);
+        
+        // 设置点击监听器
+        recentAdapter.setOnStoryClickListener(story -> {
+            // 直接进入编辑页面
+            Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+            intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, story.getId());
+            startActivity(intent);
+        });
+    }
+
+    /**
+     * 加载最近编辑的小说
+     */
+    private void loadRecentStories() {
+        if (storyDao == null || recentAdapter == null) {
+            return;
+        }
+        
+        // 获取最近3个编辑的小说
+        List<Story> recentStories = storyDao.getRecentStories(3);
+        
+        if (recentStories == null || recentStories.isEmpty()) {
+            // 如果没有最近编辑的小说，隐藏该区域
+            tvRecentTitle.setVisibility(View.GONE);
+            rvRecentStories.setVisibility(View.GONE);
+        } else {
+            // 显示最近编辑的小说
+            tvRecentTitle.setVisibility(View.VISIBLE);
+            rvRecentStories.setVisibility(View.VISIBLE);
+            recentAdapter.setData(recentStories);
+        }
     }
 }

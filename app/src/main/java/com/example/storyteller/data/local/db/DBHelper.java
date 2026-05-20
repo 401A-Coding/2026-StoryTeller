@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 14;  // 升级到版本14，添加story_documents表
+    private static final int DB_VERSION = 15;  // 升级到版本15，添加last_edit_time字段
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -27,6 +27,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_SERIES_NAME = "series_name";  // 系列名称
     public static final String COL_STORY_OUTLINE_DATA = "outline_data";  // 大纲数据JSON（与structure分离存储）
     public static final String COL_STORY_GLOBAL_OUTLINE = "global_outline";  // 全局大纲（Markdown格式文本）
+    public static final String COL_STORY_LAST_EDIT_TIME = "last_edit_time";  // 最近编辑时间
 
     // 故事文档表字段
     public static final String TABLE_STORY_DOCUMENT = "story_document";
@@ -166,7 +167,9 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_COVER_PATH + " TEXT, "
                 + COL_STORY_WORD_COUNT + " INTEGER DEFAULT 0, "
                 + COL_STORY_SERIES_NAME + " TEXT, "
-                + COL_STORY_OUTLINE_DATA + " TEXT"
+                + COL_STORY_OUTLINE_DATA + " TEXT, "
+                + COL_STORY_GLOBAL_OUTLINE + " TEXT, "
+                + COL_STORY_LAST_EDIT_TIME + " INTEGER"
                 + ")";
 
         String createCharacterTable = "CREATE TABLE IF NOT EXISTS " + TABLE_CHARACTER + " ("
@@ -295,6 +298,16 @@ public class DBHelper extends SQLiteOpenHelper {
         if (oldVersion < 14) {
             // 版本14：添加story_documents表，用于存储故事相关文档
             createStoryDocumentTable(db);
+        }
+        if (oldVersion < 15) {
+            // 版本15：添加last_edit_time字段，用于记录最近编辑时间
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_LAST_EDIT_TIME + " INTEGER");
+                // 将现有数据的last_edit_time初始化为create_time
+                db.execSQL("UPDATE " + TABLE_STORY + " SET " + COL_STORY_LAST_EDIT_TIME + " = " + COL_STORY_CREATE_TIME + " WHERE " + COL_STORY_LAST_EDIT_TIME + " IS NULL");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
         }
     }
 

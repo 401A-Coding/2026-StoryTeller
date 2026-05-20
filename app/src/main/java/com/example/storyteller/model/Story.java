@@ -33,6 +33,8 @@ public class Story {
     private String outlineData;
     // 全局大纲（Markdown格式文本）
     private String globalOutline;
+    // 最近编辑时间
+    private long lastEditTime;
 
     // 构造方法（用于创建新故事）
     public Story(String title, String content, String genre, long createTime) {
@@ -40,6 +42,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = false;
         this.structure = null;
         this.description = null;
@@ -58,6 +61,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = null;
         this.description = null;
@@ -76,6 +80,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
@@ -94,6 +99,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
@@ -112,6 +118,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
@@ -130,6 +137,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
@@ -148,6 +156,7 @@ public class Story {
         this.content = content;
         this.genre = genre;
         this.createTime = createTime;
+        this.lastEditTime = createTime;
         this.isCollected = isCollected;
         this.structure = structure;
         this.description = description;
@@ -159,6 +168,27 @@ public class Story {
         this.seriesName = seriesName;
         this.outlineData = null;
         this.globalOutline = null;
+    }
+
+    // 完整构造方法（含lastEditTime）
+    public Story(int id, String title, String content, String genre, long createTime, long lastEditTime, boolean isCollected, String structure, String description, String plotSummaryJson, String category, String coverColor, String coverPath, int wordCount, String seriesName, String outlineData, String globalOutline) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.genre = genre;
+        this.createTime = createTime;
+        this.lastEditTime = lastEditTime;
+        this.isCollected = isCollected;
+        this.structure = structure;
+        this.description = description;
+        this.plotSummaryJson = plotSummaryJson;
+        this.category = category;
+        this.coverColor = coverColor;
+        this.coverPath = coverPath;
+        this.wordCount = wordCount;
+        this.seriesName = seriesName;
+        this.outlineData = outlineData;
+        this.globalOutline = globalOutline;
     }
 
     /**
@@ -211,4 +241,6 @@ public class Story {
     public void setOutlineData(String outlineData) { this.outlineData = outlineData; }
     public String getGlobalOutline() { return globalOutline; }
     public void setGlobalOutline(String globalOutline) { this.globalOutline = globalOutline; }
+    public long getLastEditTime() { return lastEditTime; }
+    public void setLastEditTime(long lastEditTime) { this.lastEditTime = lastEditTime; }
 }
