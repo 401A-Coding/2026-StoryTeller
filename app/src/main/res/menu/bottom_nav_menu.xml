@@ -9,10 +9,6 @@
         android:icon="@android:drawable/ic_menu_agenda"
         android:title="@string/tab_story_management" />
     <item
-        android:id="@+id/menu_creation"
-        android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/tab_creation" />
-    <item
         android:id="@+id/menu_settings"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/tab_settings" />

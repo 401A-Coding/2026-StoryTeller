@@ -72,6 +72,28 @@
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 最近编辑区域 -->
+            <TextView
+                android:id="@+id/tv_recent_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="最近编辑"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@id/card_current_novel"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_recent_stories"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                app:layout_constraintTop_toBottomOf="@id/tv_recent_title"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_story_generate"
                 android:layout_width="0dp"
@@ -82,7 +104,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/card_current_novel"
+                app:layout_constraintTop_toBottomOf="@id/rv_recent_stories"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/card_character" >
 
@@ -143,7 +165,7 @@
                 app:cardUseCompatPadding="true"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/card_story_generate"
-                app:layout_constraintTop_toBottomOf="@id/card_current_novel">
+                app:layout_constraintTop_toBottomOf="@id/rv_recent_stories">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"

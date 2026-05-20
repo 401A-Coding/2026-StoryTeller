@@ -24,6 +24,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_CONTENT, story.getContent());
         values.put(DBHelper.COL_STORY_GENRE, story.getGenre());
         values.put(DBHelper.COL_STORY_CREATE_TIME, story.getCreateTime());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, story.getLastEditTime());
         values.put(DBHelper.COL_STORY_IS_COLLECTED, story.isCollected() ? 1 : 0);
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
@@ -51,6 +52,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, story.getLastEditTime());
         
         return db.update(
                 DBHelper.TABLE_STORY,
@@ -89,6 +91,7 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_WORD_COUNT, wordCount);
         values.put(DBHelper.COL_STORY_CONTENT, content);
         values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
         
         return db.update(
                 DBHelper.TABLE_STORY,
@@ -106,6 +109,7 @@ public class StoryDao {
         ContentValues values = new ContentValues();
         values.put(DBHelper.COL_STORY_OUTLINE_DATA, outlineData);
         values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
         
         return db.update(
                 DBHelper.TABLE_STORY,
@@ -123,6 +127,7 @@ public class StoryDao {
         ContentValues values = new ContentValues();
         values.put(DBHelper.COL_STORY_STRUCTURE, structure);
         values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
         
         return db.update(
                 DBHelper.TABLE_STORY,
@@ -140,6 +145,7 @@ public class StoryDao {
         ContentValues values = new ContentValues();
         values.put(DBHelper.COL_STORY_GLOBAL_OUTLINE, globalOutline);
         values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
         
         return db.update(
                 DBHelper.TABLE_STORY,
@@ -222,9 +228,10 @@ public class StoryDao {
         db.execSQL(
                 "UPDATE " + DBHelper.TABLE_STORY + 
                 " SET " + DBHelper.COL_STORY_WORD_COUNT + " = " + DBHelper.COL_STORY_WORD_COUNT + " + ?, " +
-                DBHelper.COL_STORY_CREATE_TIME + " = ? " +
+                DBHelper.COL_STORY_CREATE_TIME + " = ?, " +
+                DBHelper.COL_STORY_LAST_EDIT_TIME + " = ? " +
                 "WHERE " + DBHelper.COL_STORY_ID + " = ?",
-                new Object[]{wordCount, System.currentTimeMillis(), storyId}
+                new Object[]{wordCount, System.currentTimeMillis(), System.currentTimeMillis(), storyId}
         );
     }
 
@@ -236,9 +243,10 @@ public class StoryDao {
         db.execSQL(
                 "UPDATE " + DBHelper.TABLE_STORY + 
                 " SET " + DBHelper.COL_STORY_WORD_COUNT + " = " + DBHelper.COL_STORY_WORD_COUNT + " - ?, " +
-                DBHelper.COL_STORY_CREATE_TIME + " = ? " +
+                DBHelper.COL_STORY_CREATE_TIME + " = ?, " +
+                DBHelper.COL_STORY_LAST_EDIT_TIME + " = ? " +
                 "WHERE " + DBHelper.COL_STORY_ID + " = ?",
-                new Object[]{wordCount, System.currentTimeMillis(), storyId}
+                new Object[]{wordCount, System.currentTimeMillis(), System.currentTimeMillis(), storyId}
         );
     }
 
@@ -256,6 +264,7 @@ public class StoryDao {
         ContentValues values = new ContentValues();
         values.put(DBHelper.COL_STORY_WORD_COUNT, totalWords);
         values.put(DBHelper.COL_STORY_CREATE_TIME, System.currentTimeMillis());
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
         db.update(
                 DBHelper.TABLE_STORY,
                 values,
@@ -408,6 +417,50 @@ public class StoryDao {
         return story;
     }
 
+    /**
+     * 更新最近编辑时间
+     */
+    public void updateLastEditTime(int storyId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
+        db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    /**
+     * 获取最近编辑的故事列表
+     * @param limit 返回数量限制
+     */
+    public List<Story> getRecentStories(int limit) {
+        List<Story> stories = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        
+        Cursor cursor = db.query(
+                DBHelper.TABLE_STORY,
+                null,
+                null,
+                null,
+                null,
+                null,
+                DBHelper.COL_STORY_LAST_EDIT_TIME + " DESC",
+                String.valueOf(limit)
+        );
+
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                stories.add(mapStory(cursor));
+            }
+            cursor.close();
+        }
+        
+        return stories;
+    }
+
     private Story mapStory(Cursor cursor) {
         int id = cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_ID));
         String title = cursor.getString(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_TITLE));
@@ -480,9 +533,13 @@ public class StoryDao {
             globalOutline = cursor.getString(globalOutlineIndex);
         }
 
-        Story story = new Story(id, title, content, genre, createTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName);
-        story.setOutlineData(outlineData);
-        story.setGlobalOutline(globalOutline);
+        long lastEditTime = createTime;
+        int lastEditTimeIndex = cursor.getColumnIndex(DBHelper.COL_STORY_LAST_EDIT_TIME);
+        if (lastEditTimeIndex >= 0 && !cursor.isNull(lastEditTimeIndex)) {
+            lastEditTime = cursor.getLong(lastEditTimeIndex);
+        }
+
+        Story story = new Story(id, title, content, genre, createTime, lastEditTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName, outlineData, globalOutline);
         return story;
     }
 }

@@ -5,7 +5,6 @@ import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.ui.fragment.HomeFragment;
 import com.example.storyteller.ui.fragment.StoryManagementFragment;
-import com.example.storyteller.ui.fragment.CreationFragment;
 import com.example.storyteller.ui.fragment.SettingsFragment;
 import com.example.storyteller.utils.DatabaseMigrationUtils;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -16,7 +15,6 @@ public class MainActivity extends BaseActivity {
     public static final String EXTRA_TARGET_TAB = "target_tab";
     public static final String TAB_HOME = "home";
     public static final String TAB_STORY_MANAGEMENT = "story_management";
-    public static final String TAB_CREATION = "creation";
     public static final String TAB_SETTINGS = "settings";
 
     private BottomNavigationView bottomNav;
@@ -40,8 +38,6 @@ public class MainActivity extends BaseActivity {
                 fragment = new HomeFragment();
             } else if (itemId == R.id.menu_story_management) {
                 fragment = new StoryManagementFragment();
-            } else if (itemId == R.id.menu_creation) {
-                fragment = new CreationFragment();
             } else if (itemId == R.id.menu_settings) {
                 fragment = new SettingsFragment();
             } else {
@@ -91,9 +87,6 @@ public class MainActivity extends BaseActivity {
     private int getMenuIdForTab(String tab) {
         if (TAB_STORY_MANAGEMENT.equals(tab)) {
             return R.id.menu_story_management;
-        }
-        if (TAB_CREATION.equals(tab)) {
-            return R.id.menu_creation;
         }
         if (TAB_SETTINGS.equals(tab)) {
             return R.id.menu_settings;

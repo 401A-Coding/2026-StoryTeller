@@ -11,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,6 +44,7 @@ public class ArchitectureFragment extends BaseFragment {
 
     // UI组件
     private MaterialCardView cardCover;
+    private ImageView ivCoverImage;
     private View vCoverBackground;
     private View layoutStatusContainer;
     private Spinner spinnerStatus;
@@ -101,6 +103,7 @@ public class ArchitectureFragment extends BaseFragment {
     protected void initView(View view) {
         // 初始化封面相关组件
         cardCover = view.findViewById(R.id.card_cover);
+        ivCoverImage = view.findViewById(R.id.iv_cover_image);
         vCoverBackground = view.findViewById(R.id.v_cover_background);
         layoutStatusContainer = view.findViewById(R.id.layout_status_container);
         spinnerStatus = view.findViewById(R.id.spinner_status);
@@ -270,6 +273,9 @@ public class ArchitectureFragment extends BaseFragment {
         
         // 更新封面背景
         updateCoverBackground(currentStory.getTitle());
+        
+        // 加载封面图片（如果有）
+        loadCoverImage();
         
         // 更新收藏图标
         updateFavoriteIcon();
@@ -539,6 +545,40 @@ public class ArchitectureFragment extends BaseFragment {
     }
     
     /**
+     * 加载封面图片
+     */
+    private void loadCoverImage() {
+        if (currentStory == null) {
+            return;
+        }
+        
+        String coverPath = currentStory.getCoverPath();
+        if (!TextUtils.isEmpty(coverPath)) {
+            // 有封面图片，显示图片，隐藏渐变背景
+            try {
+                android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(coverPath);
+                if (bitmap != null) {
+                    ivCoverImage.setImageBitmap(bitmap);
+                    ivCoverImage.setVisibility(View.VISIBLE);
+                    vCoverBackground.setVisibility(View.GONE);
+                } else {
+                    // 图片加载失败，显示渐变背景
+                    ivCoverImage.setVisibility(View.GONE);
+                    vCoverBackground.setVisibility(View.VISIBLE);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                ivCoverImage.setVisibility(View.GONE);
+                vCoverBackground.setVisibility(View.VISIBLE);
+            }
+        } else {
+            // 没有封面图片，显示渐变背景
+            ivCoverImage.setVisibility(View.GONE);
+            vCoverBackground.setVisibility(View.VISIBLE);
+        }
+    }
+    
+    /**
      * 选择封面图片
      */
     private void selectCoverImage() {
@@ -595,6 +635,9 @@ public class ArchitectureFragment extends BaseFragment {
             String coverPath = coverFile.getAbsolutePath();
             currentStory.setCoverPath(coverPath);
             storyDao.updateStoryCoverPath(currentStory.getId(), coverPath);
+            
+            // 刷新UI显示新封面
+            loadCoverImage();
             
             Toast.makeText(requireContext(), "封面已更新", Toast.LENGTH_SHORT).show();
             
