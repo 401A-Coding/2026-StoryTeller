@@ -3,6 +3,7 @@ package com.example.storyteller.ui.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -13,26 +14,54 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 记忆提取结果适配器（只读，支持删除）
+ * 记忆提取结果适配器（支持批量选择）
  */
 public class MemoryExtractionAdapter extends RecyclerView.Adapter<MemoryExtractionAdapter.ViewHolder> {
     
     private final List<AiMemory> memories = new ArrayList<>();
-    private OnMemoryDeleteListener deleteListener;
-    
-    public interface OnMemoryDeleteListener {
-        void onDelete(AiMemory memory);
-    }
-    
-    public void setOnMemoryDeleteListener(OnMemoryDeleteListener listener) {
-        this.deleteListener = listener;
-    }
+    private final java.util.Set<Integer> selectedPositions = new java.util.HashSet<>();
     
     public void setMemories(List<AiMemory> newMemories) {
         memories.clear();
         if (newMemories != null) {
             memories.addAll(newMemories);
+            // 默认全选
+            for (int i = 0; i < newMemories.size(); i++) {
+                selectedPositions.add(i);
+            }
         }
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 获取所有选中的记忆
+     */
+    public List<AiMemory> getSelectedMemories() {
+        List<AiMemory> selected = new ArrayList<>();
+        for (int position : selectedPositions) {
+            if (position >= 0 && position < memories.size()) {
+                selected.add(memories.get(position));
+            }
+        }
+        return selected;
+    }
+    
+    /**
+     * 全选
+     */
+    public void selectAll() {
+        selectedPositions.clear();
+        for (int i = 0; i < memories.size(); i++) {
+            selectedPositions.add(i);
+        }
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 取消全选
+     */
+    public void deselectAll() {
+        selectedPositions.clear();
         notifyDataSetChanged();
     }
     
@@ -47,7 +76,7 @@ public class MemoryExtractionAdapter extends RecyclerView.Adapter<MemoryExtracti
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AiMemory memory = memories.get(position);
-        holder.bind(memory);
+        holder.bind(memory, position);
     }
     
     @Override
@@ -55,21 +84,29 @@ public class MemoryExtractionAdapter extends RecyclerView.Adapter<MemoryExtracti
         return memories.size();
     }
     
+    public int getSelectedCount() {
+        return selectedPositions.size();
+    }
+    
     class ViewHolder extends RecyclerView.ViewHolder {
+        private final CheckBox cbSelected;
         private final TextView tvTitle;
         private final TextView tvContent;
+        private final TextView tvMemoryType;
         private final TextView tvImportance;
-        private final ImageButton btnDelete;
+        private final TextView tvSource;
         
         ViewHolder(View itemView) {
             super(itemView);
+            cbSelected = itemView.findViewById(R.id.cb_selected);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvContent = itemView.findViewById(R.id.tv_content);
+            tvMemoryType = itemView.findViewById(R.id.tv_memory_type);
             tvImportance = itemView.findViewById(R.id.tv_importance);
-            btnDelete = itemView.findViewById(R.id.btn_delete);
+            tvSource = itemView.findViewById(R.id.tv_source);
         }
         
-        void bind(AiMemory memory) {
+        void bind(AiMemory memory, int position) {
             // 标题
             tvTitle.setText(memory.getTitle());
             
@@ -81,16 +118,56 @@ public class MemoryExtractionAdapter extends RecyclerView.Adapter<MemoryExtracti
                 tvContent.setVisibility(View.GONE);
             }
             
+            // 记忆类型标签
+            String typeLabel = getTypeLabel(memory.getMemoryType());
+            tvMemoryType.setText(typeLabel);
+            
             // 重要性
             String stars = buildStars(memory.getImportance());
             tvImportance.setText("重要性: " + stars);
             
-            // 删除按钮
-            btnDelete.setOnClickListener(v -> {
-                if (deleteListener != null) {
-                    deleteListener.onDelete(memory);
+            // 来源标识
+            tvSource.setVisibility(View.VISIBLE);
+            
+            // CheckBox状态
+            boolean isSelected = selectedPositions.contains(position);
+            cbSelected.setChecked(isSelected);
+            
+            // 点击事件
+            View.OnClickListener clickListener = v -> {
+                if (selectedPositions.contains(position)) {
+                    selectedPositions.remove(position);
+                } else {
+                    selectedPositions.add(position);
+                }
+                notifyItemChanged(position);
+            };
+            
+            itemView.setOnClickListener(clickListener);
+            cbSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                // 防止RecyclerView复用导致的误触发
+                if (buttonView.isPressed()) {
+                    if (isChecked) {
+                        selectedPositions.add(position);
+                    } else {
+                        selectedPositions.remove(position);
+                    }
                 }
             });
+        }
+        
+        private String getTypeLabel(String type) {
+            if (type == null) return "其他";
+            switch (type) {
+                case AiMemory.TYPE_PLOT:
+                    return "剧情类";
+                case AiMemory.TYPE_PERSONALITY:
+                    return "人设类";
+                case AiMemory.TYPE_WORLD:
+                    return "世界观类";
+                default:
+                    return "其他类";
+            }
         }
         
         private String buildStars(int importance) {

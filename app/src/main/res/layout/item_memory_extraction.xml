@@ -3,10 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_margin="4dp"
     app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="#FAFAFA">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,12 +13,18 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- 标题和删除按钮 -->
+        <!-- 标题和类型 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
+
+            <CheckBox
+                android:id="@+id/cb_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:id="@+id/tv_title"
@@ -28,17 +33,23 @@
                 android:layout_weight="1"
                 android:text="记忆标题"
                 android:textColor="#333333"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
 
-            <ImageButton
-                android:id="@+id/btn_delete"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@android:drawable/ic_menu_delete"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="删除"
-                app:tint="#FF5252" />
+            <TextView
+                android:id="@+id/tv_memory_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:background="#E0E0E0"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="剧情类" />
+
         </LinearLayout>
 
         <!-- 内容 -->
@@ -48,20 +59,43 @@
             android:layout_height="wrap_content"
             android:text="记忆内容"
             android:textColor="#666666"
-            android:textSize="13sp"
-            android:lineSpacingExtra="4dp"
-            android:layout_marginTop="8dp"
+            android:textSize="14sp"
+            android:lineSpacingMultiplier="1.2"
+            android:layout_marginTop="6dp"
+            android:maxLines="3"
+            android:ellipsize="end"
             android:visibility="gone" />
 
-        <!-- 重要性 -->
-        <TextView
-            android:id="@+id/tv_importance"
-            android:layout_width="wrap_content"
+        <!-- 底部信息 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="重要性: ⭐⭐⭐"
-            android:textColor="#999999"
-            android:textSize="12sp"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_importance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="重要性: ⭐⭐⭐"
+                android:textColor="#999999"
+                android:textSize="11sp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tv_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="#2196F3"
+                android:text="📥 AI提取" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

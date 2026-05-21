@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * 记忆提取结果对话框
- * 展示AI提取的记忆，允许用户删除不需要的，然后批量保存
+ * 展示AI提取的记忆，允许用户勾选需要保存的，然后批量保存
  */
 public class MemoryExtractionDialog extends DialogFragment {
     
@@ -47,8 +47,10 @@ public class MemoryExtractionDialog extends DialogFragment {
     private MemoryExtractionAdapter adapterWorld;
     private MemoryExtractionAdapter adapterOther;
     
-    // 已删除的记忆ID列表
-    private List<Integer> deletedIndices = new ArrayList<>();
+    // 底部按钮
+    private com.google.android.material.button.MaterialButton btnDeselectAll;
+    private com.google.android.material.button.MaterialButton btnCancel;
+    private com.google.android.material.button.MaterialButton btnConfirm;
     
     public interface OnMemoriesSavedListener {
         void onMemoriesSaved(int count);
@@ -91,16 +93,11 @@ public class MemoryExtractionDialog extends DialogFragment {
         
         builder.setTitle("AI记忆提取结果");
         
-        // 添加按钮
-        builder.setNegativeButton("取消", null);
-        builder.setPositiveButton("确认保存", (dialog, which) -> {
-            saveMemories();
-        });
-        
         AlertDialog dialog = builder.create();
         
         initViews(contentView);
         loadMemories();
+        setupButtons();
         
         return dialog;
     }
@@ -119,12 +116,6 @@ public class MemoryExtractionDialog extends DialogFragment {
         adapterWorld = new MemoryExtractionAdapter();
         adapterOther = new MemoryExtractionAdapter();
         
-        // 设置删除监听
-        adapterPlot.setOnMemoryDeleteListener(this::deleteMemory);
-        adapterPersonality.setOnMemoryDeleteListener(this::deleteMemory);
-        adapterWorld.setOnMemoryDeleteListener(this::deleteMemory);
-        adapterOther.setOnMemoryDeleteListener(this::deleteMemory);
-        
         // 设置RecyclerView
         RecyclerView rvPlot = contentView.findViewById(R.id.rv_plot);
         RecyclerView rvPersonality = contentView.findViewById(R.id.rv_personality);
@@ -142,17 +133,34 @@ public class MemoryExtractionDialog extends DialogFragment {
         
         rvOther.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvOther.setAdapter(adapterOther);
+        
+        // 底部按钮
+        btnDeselectAll = contentView.findViewById(R.id.btn_deselect_all);
+        btnCancel = contentView.findViewById(R.id.btn_cancel);
+        btnConfirm = contentView.findViewById(R.id.btn_confirm);
+    }
+    
+    private void setupButtons() {
+        // 取消全选
+        btnDeselectAll.setOnClickListener(v -> {
+            adapterPlot.deselectAll();
+            adapterPersonality.deselectAll();
+            adapterWorld.deselectAll();
+            adapterOther.deselectAll();
+            updateUI();
+        });
+        
+        // 取消
+        btnCancel.setOnClickListener(v -> dismiss());
+        
+        // 确认
+        btnConfirm.setOnClickListener(v -> saveMemories());
     }
     
     private void loadMemories() {
         // 按类型分组
         Map<String, List<AiMemory>> grouped = new HashMap<>();
-        for (int i = 0; i < extractedMemories.size(); i++) {
-            if (deletedIndices.contains(i)) {
-                continue; // 跳过已删除的
-            }
-            
-            AiMemory memory = extractedMemories.get(i);
+        for (AiMemory memory : extractedMemories) {
             String type = memory.getMemoryType();
             if (!grouped.containsKey(type)) {
                 grouped.put(type, new ArrayList<>());
@@ -202,8 +210,21 @@ public class MemoryExtractionDialog extends DialogFragment {
             layoutOther.setVisibility(View.GONE);
         }
         
-        // 更新统计
-        tvMemoryCount.setText("共 " + totalCount + " 条记忆");
+        updateUI();
+    }
+    
+    private void updateUI() {
+        int selectedCount = adapterPlot.getSelectedCount() + 
+                           adapterPersonality.getSelectedCount() + 
+                           adapterWorld.getSelectedCount() + 
+                           adapterOther.getSelectedCount();
+        
+        int totalCount = adapterPlot.getItemCount() + 
+                        adapterPersonality.getItemCount() + 
+                        adapterWorld.getItemCount() + 
+                        adapterOther.getItemCount();
+        
+        tvMemoryCount.setText("共 " + totalCount + " 条记忆，已选 " + selectedCount + " 条");
         
         // 空状态
         if (totalCount == 0) {
@@ -211,30 +232,22 @@ public class MemoryExtractionDialog extends DialogFragment {
         } else {
             tvEmpty.setVisibility(View.GONE);
         }
-    }
-    
-    private void deleteMemory(AiMemory memory) {
-        // 找到该记忆在原始列表中的索引
-        int index = extractedMemories.indexOf(memory);
-        if (index >= 0 && !deletedIndices.contains(index)) {
-            deletedIndices.add(index);
-            Toast.makeText(requireContext(), "已移除", Toast.LENGTH_SHORT).show();
-            loadMemories(); // 重新加载
-        }
+        
+        // 更新确认按钮状态
+        btnConfirm.setEnabled(selectedCount > 0);
     }
     
     private void saveMemories() {
-        if (deletedIndices.size() == extractedMemories.size()) {
-            Toast.makeText(requireContext(), "没有要保存的记忆", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        // 过滤出未删除的记忆
+        // 获取所有选中的记忆
         List<AiMemory> toSave = new ArrayList<>();
-        for (int i = 0; i < extractedMemories.size(); i++) {
-            if (!deletedIndices.contains(i)) {
-                toSave.add(extractedMemories.get(i));
-            }
+        toSave.addAll(adapterPlot.getSelectedMemories());
+        toSave.addAll(adapterPersonality.getSelectedMemories());
+        toSave.addAll(adapterWorld.getSelectedMemories());
+        toSave.addAll(adapterOther.getSelectedMemories());
+        
+        if (toSave.isEmpty()) {
+            Toast.makeText(requireContext(), "请至少选择一条记忆", Toast.LENGTH_SHORT).show();
+            return;
         }
         
         // 保存到数据库
