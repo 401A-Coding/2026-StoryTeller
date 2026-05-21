@@ -1522,6 +1522,25 @@ public class AIPanelFragment extends BaseFragment {
      * 构建记忆提取Prompt
      */
     private String buildMemoryExtractionPrompt(String fullContext) {
+        // 使用外置的Prompt模板
+        java.util.Map<String, Object> variables = new java.util.HashMap<>();
+        variables.put("full_context", fullContext);
+        
+        String prompt = promptManager.getTaskPrompt("memory_extractor", variables);
+        
+        if (prompt == null || prompt.isEmpty()) {
+            // 降级：使用硬编码的Prompt（备用方案）
+            android.util.Log.w("AIPanelFragment", "Failed to load memory extraction prompt, using fallback");
+            return buildFallbackMemoryExtractionPrompt(fullContext);
+        }
+        
+        return prompt;
+    }
+    
+    /**
+     * 备用的硬编码Prompt（仅在外置Prompt加载失败时使用）
+     */
+    private String buildFallbackMemoryExtractionPrompt(String fullContext) {
         return "请分析以下小说的全部信息，提取需要长期记住的重要内容。\n\n" +
                "【输入数据】\n" + fullContext + "\n\n" +
                "【提取要求】\n" +
