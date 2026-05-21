@@ -549,6 +549,11 @@ public class BookshelfFragment extends BaseFragment {
             long id = storyDao.insertStory(newStory);
 
             if (id > 0) {
+                // 复制全局偏好到新小说
+                com.example.storyteller.utils.PreferenceManager preferenceManager = 
+                    com.example.storyteller.utils.PreferenceManager.getInstance(requireContext());
+                preferenceManager.copyGlobalPreferenceToStory((int) id);
+                
                 Toast.makeText(requireContext(), "创建成功", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 refreshStories();

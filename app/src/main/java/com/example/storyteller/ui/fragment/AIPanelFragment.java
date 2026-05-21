@@ -31,6 +31,8 @@ import com.example.storyteller.model.StoryDocument;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
+import com.example.storyteller.ui.dialog.AiMemoryDialog;
+import com.example.storyteller.ui.dialog.WritingPreferenceDialog;
 import com.example.storyteller.utils.AgentCommandExecutor;
 import com.example.storyteller.utils.ConversationMemory;
 import com.example.storyteller.utils.PromptManager;
@@ -58,6 +60,7 @@ public class AIPanelFragment extends BaseFragment {
     private HorizontalScrollView scrollQuickActions;
     private com.google.android.material.chip.ChipGroup chipGroupQuickActions;
     private ImageView btnCloseAi;
+    private ImageView btnAiSettings;  // AI设置按钮
 
     // Data
     private ChatMessageAdapter adapter;
@@ -143,6 +146,7 @@ public class AIPanelFragment extends BaseFragment {
         scrollQuickActions = view.findViewById(R.id.scroll_quick_actions);
         chipGroupQuickActions = view.findViewById(R.id.chip_group_quick_actions);
         btnCloseAi = view.findViewById(R.id.btn_close_ai);
+        btnAiSettings = view.findViewById(R.id.btn_ai_settings);  // AI设置按钮
     }
 
     @Override
@@ -152,6 +156,11 @@ public class AIPanelFragment extends BaseFragment {
         
         // 初始化Agent设置按钮可见性
         updateAgentSettingsButtonVisibility();
+        
+        // 显示AI设置按钮（始终显示）
+        if (btnAiSettings != null) {
+            btnAiSettings.setVisibility(View.VISIBLE);
+        }
         
         // 如果有预填充消息，自动填入
         if (!TextUtils.isEmpty(prefillMessage)) {
@@ -176,6 +185,11 @@ public class AIPanelFragment extends BaseFragment {
                     closeListener.onClose();
                 }
             });
+        }
+        
+        // 设置按钮
+        if (btnAiSettings != null) {
+            btnAiSettings.setOnClickListener(v -> showAiSettingsPopup());
         }
         
         // 发送按钮
@@ -999,10 +1013,61 @@ public class AIPanelFragment extends BaseFragment {
                 context.append(conversationMemory.buildContextSummary());
             }
             
+            // 添加用户写作偏好
+            appendUserPreferenceContext(context);
+            
+            // 添加AI记忆
+            appendAiMemoryContext(context);
+            
             return context.toString();
             
         } catch (Exception e) {
             return "获取小说信息失败: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * 添加用户写作偏好到上下文中
+     */
+    private void appendUserPreferenceContext(StringBuilder context) {
+        try {
+            com.example.storyteller.utils.PreferenceManager prefManager = 
+                com.example.storyteller.utils.PreferenceManager.getInstance(requireContext());
+            com.example.storyteller.model.UserWritingPreference preference;
+            
+            if (storyId > 0) {
+                // 获取合并后的偏好（小说专属优先，否则使用全局）
+                preference = prefManager.getMergedPreference(storyId);
+            } else {
+                preference = prefManager.getGlobalPreference();
+            }
+            
+            if (preference.hasAnyPreference()) {
+                context.append(preference.buildPreferenceDescription());
+            }
+        } catch (Exception e) {
+            // 忽略偏好加载错误
+            android.util.Log.e("AIPanelFragment", "Failed to load user preferences", e);
+        }
+    }
+    
+    /**
+     * 添加AI记忆到上下文中
+     */
+    private void appendAiMemoryContext(StringBuilder context) {
+        try {
+            com.example.storyteller.utils.AiMemoryManager memoryManager = 
+                com.example.storyteller.utils.AiMemoryManager.getInstance(requireContext());
+            
+            if (storyId > 0) {
+                String memoryContext = memoryManager.buildMemoryContext(storyId);
+                if (!memoryContext.isEmpty()) {
+                    context.append(memoryContext);
+                }
+            }
+        } catch (Exception e) {
+            // 忽略记忆加载错误
+            android.util.Log.e("AIPanelFragment", "Failed to load AI memory", e);
         }
     }
     
@@ -1274,5 +1339,129 @@ public class AIPanelFragment extends BaseFragment {
         } else {
             context.append("【正文内容】暂无正文\n\n");
         }
+    }
+    
+    /**
+     * 显示AI设置菜单
+     */
+    private void showAiSettingsPopup() {
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), btnAiSettings);
+        popupMenu.getMenu().add(0, 1, 0, "写作偏好");
+        popupMenu.getMenu().add(0, 2, 1, "AI记忆管理");
+        popupMenu.getMenu().add(0, 3, 2, "关于审核Agent");
+        
+        popupMenu.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            switch (itemId) {
+                case 1:
+                    // 打开写作偏好设置
+                    showWritingPreferenceDialog();
+                    return true;
+                case 2:
+                    // 打开AI记忆管理
+                    showAiMemoryDialog();
+                    return true;
+                case 3:
+                    // TODO: 显示审核Agent帮助
+                    showReviewAgentHelp();
+                    return true;
+            }
+            return false;
+        });
+        
+        popupMenu.show();
+    }
+    
+    /**
+     * 显示审核Agent帮助对话框
+     */
+    private void showReviewAgentHelp() {
+        String helpText = 
+            "📊 评分维度：\n" +
+            "• 一致性（大纲/设定）\n" +
+            "• 情感冲击力\n" +
+            "• 冲突强度\n" +
+            "• 悬念设置\n" +
+            "• 节奏把控\n\n" +
+            "💡 使用示例：\n" +
+            "“帮我审核一下剧情”\n" +
+            "“检查设定是否冲突”\n" +
+            "“评估情感冲击力”\n\n" +
+            "❓ 常见问题：\n" +
+            "Q: 评分低怎么办？\n" +
+            "A: 查看改进建议，按建议修改后重新审核";
+        
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("审核Agent使用指南")
+            .setMessage(helpText)
+            .setPositiveButton("关闭", null)
+            .show();
+    }
+    
+    /**
+     * 显示写作偏好设置对话框
+     */
+    private void showWritingPreferenceDialog() {
+        WritingPreferenceDialog dialog;
+        
+        // 获取对话历史
+        String conversationHistory = "";
+        if (conversationMemory != null && conversationMemory.hasHistory()) {
+            conversationHistory = conversationMemory.buildContextSummary();
+        }
+        
+        if (storyId > 0) {
+            // 获取小说标题
+            String storyTitle = "";
+            try {
+                com.example.storyteller.data.repository.StoryRepository repo = 
+                    new com.example.storyteller.data.repository.StoryRepositoryImpl(requireContext());
+                com.example.storyteller.model.Story story = repo.getStoryById(storyId);
+                if (story != null) {
+                    storyTitle = story.getTitle();
+                }
+            } catch (Exception e) {
+                // 忽略
+            }
+            dialog = WritingPreferenceDialog.newInstance(storyId, storyTitle, conversationHistory);
+        } else {
+            dialog = WritingPreferenceDialog.newInstance();
+            dialog.setConversationHistory(conversationHistory);
+        }
+        
+        dialog.setOnPreferenceSavedListener(preference -> {
+            Toast.makeText(requireContext(), "偏好已保存，将在下一次对话中生效", Toast.LENGTH_SHORT).show();
+        });
+        
+        dialog.show(getParentFragmentManager(), "writing_preference");
+    }
+    
+    /**
+     * 显示AI记忆管理对话框
+     */
+    private void showAiMemoryDialog() {
+        if (storyId <= 0) {
+            Toast.makeText(requireContext(), "请先选择小说", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 获取小说标题
+        String storyTitle = "";
+        if (getContext() != null) {
+            try {
+                com.example.storyteller.data.repository.StoryRepository repo = 
+                    new com.example.storyteller.data.repository.StoryRepositoryImpl(requireContext());
+                com.example.storyteller.model.Story story = repo.getStoryById(storyId);
+                if (story != null) {
+                    storyTitle = story.getTitle();
+                }
+            } catch (Exception e) {
+                // 忽略
+            }
+        }
+        
+        com.example.storyteller.ui.dialog.AiMemoryDialog dialog = 
+            com.example.storyteller.ui.dialog.AiMemoryDialog.newInstance(storyId, storyTitle);
+        dialog.show(getParentFragmentManager(), "ai_memory");
     }
 }
