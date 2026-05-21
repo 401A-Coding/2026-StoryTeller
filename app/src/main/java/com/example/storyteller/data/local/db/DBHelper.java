@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 15;  // 升级到版本15，添加last_edit_time字段
+    private static final int DB_VERSION = 18;  // 升级到版本18，添加AI分析偏好字段
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -135,6 +135,42 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_CHARACTER_PROFILE = "profile";
     public static final String COL_CHARACTER_DETAIL = "detail";
     public static final String COL_CHARACTER_AVATAR = "avatar_res_id";
+    
+    // 用户写作偏好表字段
+    public static final String TABLE_USER_PREFERENCES = "user_preferences";
+    public static final String COL_PREF_ID = "id";
+    public static final String COL_PREF_STORY_ID = "story_id";  // NULL表示全局偏好
+    public static final String COL_PREF_WRITING_STYLE = "writing_style";  // simple/elegant/humorous/suspense/custom
+    public static final String COL_PREF_CUSTOM_STYLE = "custom_style";  // 自定义风格描述
+    public static final String COL_PREF_NARRATIVE_PERSPECTIVE = "narrative_perspective";  // first/third_limited/third_omniscient
+    public static final String COL_PREF_PARAGRAPH_LENGTH = "paragraph_length";  // short/medium/long
+    public static final String COL_PREF_AVOID_BLOODY = "avoid_bloody";  // 避免血腥
+    public static final String COL_PREF_AVOID_VIOLENCE = "avoid_violence";  // 避免暴力
+    public static final String COL_PREF_AVOID_SENSITIVE = "avoid_sensitive";  // 避免敏感话题
+    public static final String COL_PREF_SPECIAL_REQUIREMENTS = "special_requirements";  // 其他特殊要求
+    public static final String COL_PREF_SOURCE = "source";  // manual/ai_extracted
+    public static final String COL_PREF_UPDATED_AT = "updated_at";
+    
+    // AI分析偏好字段（新增）
+    public static final String COL_PREF_AI_WRITING_STYLE = "ai_writing_style";
+    public static final String COL_PREF_AI_NARRATIVE_PERSPECTIVE = "ai_narrative_perspective";
+    public static final String COL_PREF_AI_PARAGRAPH_LENGTH = "ai_paragraph_length";
+    public static final String COL_PREF_AI_AVOID_BLOODY = "ai_avoid_bloody";
+    public static final String COL_PREF_AI_AVOID_VIOLENCE = "ai_avoid_violence";
+    public static final String COL_PREF_AI_AVOID_SENSITIVE = "ai_avoid_sensitive";
+    public static final String COL_PREF_AI_SPECIAL_REQUIREMENTS = "ai_special_requirements";
+    public static final String COL_PREF_AI_SOURCE = "ai_source";
+
+    // AI记忆表字段
+    public static final String TABLE_AI_MEMORY = "ai_memory";
+    public static final String COL_MEMORY_ID = "id";
+    public static final String COL_MEMORY_STORY_ID = "story_id";  // NULL表示全局记忆
+    public static final String COL_MEMORY_TYPE = "memory_type";  // plot/personality/world/other
+    public static final String COL_MEMORY_TITLE = "title";  // 记忆标题（用于显示）
+    public static final String COL_MEMORY_CONTENT = "content";  // 记忆内容
+    public static final String COL_MEMORY_IMPORTANCE = "importance";  // 重要性 1-5
+    public static final String COL_MEMORY_CREATED_AT = "created_at";
+    public static final String COL_MEMORY_UPDATED_AT = "updated_at";
 
     // 单例模式（全局只有一个数据库实例）
     private static DBHelper instance;
@@ -229,6 +265,45 @@ public class DBHelper extends SQLiteOpenHelper {
         createGlobalMaterialTable(db);
         createStorySettingTable(db);
         createStoryDocumentTable(db);
+        
+        // 创建用户写作偏好表
+        createUserPreferencesTable(db);
+        
+        // 创建AI记忆表
+        createAiMemoryTable(db);
+        
+        // 升级AI分析偏好字段（版本18）
+        addAiPreferenceColumns(db);
+    }
+    
+    /**
+     * 添加AI分析偏好字段（版本18升级）
+     */
+    private void addAiPreferenceColumns(SQLiteDatabase db) {
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_WRITING_STYLE + " TEXT");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_NARRATIVE_PERSPECTIVE + " TEXT");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_PARAGRAPH_LENGTH + " TEXT");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_AVOID_BLOODY + " INTEGER");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_AVOID_VIOLENCE + " INTEGER");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_AVOID_SENSITIVE + " INTEGER");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_SPECIAL_REQUIREMENTS + " TEXT");
+        } catch (Exception e) { /* 字段可能已存在 */ }
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_USER_PREFERENCES + " ADD COLUMN " + COL_PREF_AI_SOURCE + " TEXT");
+        } catch (Exception e) { /* 字段可能已存在 */ }
     }
     // 数据库升级逻辑，后续补充逻辑
     @Override
@@ -308,6 +383,18 @@ public class DBHelper extends SQLiteOpenHelper {
             } catch (Exception e) {
                 // 字段可能已存在
             }
+        }
+        if (oldVersion < 16) {
+            // 版本16：添加用户写作偏好表
+            createUserPreferencesTable(db);
+        }
+        if (oldVersion < 17) {
+            // 版本17：添加AI记忆表
+            createAiMemoryTable(db);
+        }
+        if (oldVersion < 18) {
+            // 版本18：添加AI分析偏好字段到user_preferences表
+            addAiPreferenceColumns(db);
         }
     }
 
@@ -437,5 +524,67 @@ public class DBHelper extends SQLiteOpenHelper {
                    TABLE_STORY_DOCUMENT + "(" + COL_STORY_DOCUMENT_STORY_ID + ")");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_story_doc_category ON " + 
                    TABLE_STORY_DOCUMENT + "(" + COL_STORY_DOCUMENT_CATEGORY + ")");
+    }
+    
+    /**
+     * 创建用户写作偏好表
+     * story_id为NULL表示全局偏好，非NULL表示小说专属偏好
+     * 包含用户手动设置的偏好和AI分析的偏好
+     */
+    private void createUserPreferencesTable(SQLiteDatabase db) {
+        String createTable = "CREATE TABLE IF NOT EXISTS " + TABLE_USER_PREFERENCES + " ("
+                + COL_PREF_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_PREF_STORY_ID + " INTEGER, "  // NULL表示全局偏好
+                + COL_PREF_WRITING_STYLE + " TEXT, "
+                + COL_PREF_CUSTOM_STYLE + " TEXT, "
+                + COL_PREF_NARRATIVE_PERSPECTIVE + " TEXT, "
+                + COL_PREF_PARAGRAPH_LENGTH + " TEXT, "
+                + COL_PREF_AVOID_BLOODY + " INTEGER DEFAULT 0, "
+                + COL_PREF_AVOID_VIOLENCE + " INTEGER DEFAULT 0, "
+                + COL_PREF_AVOID_SENSITIVE + " INTEGER DEFAULT 0, "
+                + COL_PREF_SPECIAL_REQUIREMENTS + " TEXT, "
+                + COL_PREF_SOURCE + " TEXT DEFAULT 'manual', "
+                // AI分析的偏好字段
+                + COL_PREF_AI_WRITING_STYLE + " TEXT, "
+                + COL_PREF_AI_NARRATIVE_PERSPECTIVE + " TEXT, "
+                + COL_PREF_AI_PARAGRAPH_LENGTH + " TEXT, "
+                + COL_PREF_AI_AVOID_BLOODY + " INTEGER, "
+                + COL_PREF_AI_AVOID_VIOLENCE + " INTEGER, "
+                + COL_PREF_AI_AVOID_SENSITIVE + " INTEGER, "
+                + COL_PREF_AI_SPECIAL_REQUIREMENTS + " TEXT, "
+                + COL_PREF_AI_SOURCE + " TEXT, "
+                + COL_PREF_UPDATED_AT + " INTEGER, "
+                + "FOREIGN KEY(" + COL_PREF_STORY_ID + ") REFERENCES " + TABLE_STORY + "(" + COL_STORY_ID + ") ON DELETE CASCADE"
+                + ")";
+        db.execSQL(createTable);
+        
+        // 创建索引
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_pref_story_id ON " + 
+                   TABLE_USER_PREFERENCES + "(" + COL_PREF_STORY_ID + ")");
+    }
+    
+    /**
+     * 创建AI记忆表
+     * 用于存储AI认为重要的上下文信息，可按小说隔离
+     */
+    private void createAiMemoryTable(SQLiteDatabase db) {
+        String createTable = "CREATE TABLE IF NOT EXISTS " + TABLE_AI_MEMORY + " ("
+                + COL_MEMORY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_MEMORY_STORY_ID + " INTEGER, "  // NULL表示全局记忆
+                + COL_MEMORY_TYPE + " TEXT NOT NULL, "  // plot/personality/world/other
+                + COL_MEMORY_TITLE + " TEXT NOT NULL, "
+                + COL_MEMORY_CONTENT + " TEXT, "
+                + COL_MEMORY_IMPORTANCE + " INTEGER DEFAULT 3, "  // 重要性 1-5
+                + COL_MEMORY_CREATED_AT + " INTEGER, "
+                + COL_MEMORY_UPDATED_AT + " INTEGER, "
+                + "FOREIGN KEY(" + COL_MEMORY_STORY_ID + ") REFERENCES " + TABLE_STORY + "(" + COL_STORY_ID + ") ON DELETE CASCADE"
+                + ")";
+        db.execSQL(createTable);
+        
+        // 创建索引
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_ai_memory_story_id ON " + 
+                   TABLE_AI_MEMORY + "(" + COL_MEMORY_STORY_ID + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_ai_memory_type ON " + 
+                   TABLE_AI_MEMORY + "(" + COL_MEMORY_TYPE + ")");
     }
 }

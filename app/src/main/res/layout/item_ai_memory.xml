@@ -13,21 +13,15 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- 标题和分类 -->
+        <!-- 标题和操作按钮 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <CheckBox
-                android:id="@+id/cb_candidate_selected"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp" />
-
             <TextView
-                android:id="@+id/tv_candidate_title"
+                android:id="@+id/tv_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -36,36 +30,47 @@
                 android:textColor="#333333"
                 android:maxLines="2"
                 android:ellipsize="end"
-                android:text="候选标题" />
+                android:text="记忆标题" />
 
-            <TextView
-                android:id="@+id/tv_candidate_category"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <!-- 删除按钮 -->
+            <ImageButton
+                android:id="@+id/btn_delete"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:layout_marginStart="8dp"
-                android:textSize="12sp"
-                android:textColor="#666666"
-                android:background="#E0E0E0"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:text="分类" />
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="删除记忆"
+                android:padding="4dp" />
 
         </LinearLayout>
 
-        <!-- 摘要预览 -->
+        <!-- 记忆类型标签 -->
         <TextView
-            android:id="@+id/tv_candidate_preview"
+            android:id="@+id/tv_memory_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:background="#E0E0E0"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="剧情类" />
+
+        <!-- 内容预览（收起状态隐藏） -->
+        <TextView
+            android:id="@+id/tv_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textSize="14sp"
             android:textColor="#666666"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:lineSpacingMultiplier="1.2"
-            android:text="候选预览内容..." />
+            android:lineSpacingMultiplier="1.3"
+            android:visibility="gone"
+            android:text="记忆详细内容..." />
 
-        <!-- 底部信息 -->
+        <!-- 重要性指示 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -74,13 +79,12 @@
             android:gravity="center_vertical">
 
             <TextView
-                android:id="@+id/tv_candidate_source"
+                android:id="@+id/tv_importance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#2196F3"
-                android:visibility="gone"
-                android:text="📥 AI提取" />
+                android:textColor="#FF9800"
+                android:text="⭐⭐⭐" />
 
             <View
                 android:layout_width="0dp"
@@ -88,12 +92,12 @@
                 android:layout_weight="1" />
 
             <TextView
-                android:id="@+id/tv_candidate_confidence"
+                android:id="@+id/tv_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
                 android:textColor="#999999"
-                android:text="置信度: 高" />
+                android:text="2026-05-22" />
 
         </LinearLayout>
 

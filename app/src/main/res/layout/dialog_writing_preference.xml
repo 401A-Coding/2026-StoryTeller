@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 写作风格 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="写作风格"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_writing_style"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_style_simple"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="简洁直白"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_style_elegant"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="华丽抒情"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_style_humorous"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="幽默风趣"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_style_suspense"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="悬疑紧张"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_style_custom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="自定义"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <!-- 自定义风格输入 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_custom_style"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="24dp"
+            android:hint="描述您的写作风格"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_custom_style"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:maxLines="3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <!-- 叙事视角 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="叙事视角"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_narrative"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_narrative_first"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="第一人称"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_narrative_third_limited"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="第三人称限知"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_narrative_third_omniscient"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="第三人称全知"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <!-- 段落长度 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="段落长度"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_paragraph"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_paragraph_short"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="短段落（快节奏）"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_paragraph_medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="中等"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rb_paragraph_long"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="长段落（沉浸感）"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <!-- 禁忌内容 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="禁忌内容"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <CheckBox
+            android:id="@+id/cb_avoid_bloody"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="避免血腥描写"
+            android:textSize="14sp" />
+
+        <CheckBox
+            android:id="@+id/cb_avoid_violence"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="避免暴力场景"
+            android:textSize="14sp" />
+
+        <CheckBox
+            android:id="@+id/cb_avoid_sensitive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="避免敏感话题"
+            android:textSize="14sp" />
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <!-- 其他特殊要求 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="其他特殊要求（可选）"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="例如：多用对话，少用描写"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_special_requirements"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:maxLines="4" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <!-- AI学习的偏好区域容器 -->
+        <LinearLayout
+            android:id="@+id/layout_ai_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- AI学习的偏好 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI学习的偏好"
+                android:textSize="14sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="从对话历史中分析您的写作习惯，显示AI分析结果供您参考"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="12dp" />
+
+            <!-- 分析按钮区域 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_learn_preference"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="分析偏好"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_apply_ai_preference"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="应用这些偏好"
+                    android:layout_marginStart="8dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            </LinearLayout>
+
+
+            <!-- AI分析结果区域 -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_ai_preference"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#F5F5F5"
+                xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AI分析结果"
+                        android:textSize="12sp"
+                        android:textColor="#666666"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_ai_preference_result"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="【当前无分析结果】"
+                        android:textSize="13sp"
+                        android:textColor="#999999"
+                        android:lineSpacingExtra="4dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

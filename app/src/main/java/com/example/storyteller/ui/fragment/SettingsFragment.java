@@ -8,6 +8,7 @@ import android.widget.Toast;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.ui.dialog.WritingPreferenceDialog;
 
 /**
  * 设置Fragment
@@ -33,6 +34,14 @@ public class SettingsFragment extends BaseFragment {
             } else {
                 Toast.makeText(requireContext(), "请输入API Key", Toast.LENGTH_SHORT).show();
             }
+        });
+        
+        // 全局写作偏好设置入口
+        Button btnGlobalPreference = view.findViewById(R.id.btn_global_writing_preference);
+        btnGlobalPreference.setOnClickListener(v -> {
+            // 打开全局偏好对话框（storyId为null表示全局）
+            WritingPreferenceDialog dialog = WritingPreferenceDialog.newInstance();
+            dialog.show(getChildFragmentManager(), "global_writing_preference");
         });
     }
 
