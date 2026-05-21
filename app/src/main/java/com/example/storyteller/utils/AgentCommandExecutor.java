@@ -129,6 +129,10 @@ public class AgentCommandExecutor {
                 case "extract_materials_from_document":
                     return handleExtractMaterials(command.parameters, currentStoryId);
                 
+                // === 审核模式 ===
+                case "review_report":
+                    return handleReviewReport(command.parameters, currentStoryId);
+                
                 default:
                     return CommandResult.error("未知操作：" + command.action);
             }
@@ -1747,5 +1751,117 @@ public class AgentCommandExecutor {
             e.printStackTrace();
             android.util.Log.e("AgentCommandExecutor", "同步章节标题时出错：" + e.getMessage());
         }
+    }
+    
+    /**
+     * 处理审核报告命令
+     * 将AI返回的审核结果格式化为可读的报告
+     */
+    private CommandResult handleReviewReport(Map<String, Object> params, int storyId) {
+        try {
+            if (params == null) {
+                return CommandResult.error("❌ 审核结果为空");
+            }
+            
+            // 提取评分
+            Number overallScore = (Number) params.get("overall_score");
+            int score = overallScore != null ? overallScore.intValue() : 0;
+            
+            // 构建报告
+            StringBuilder report = new StringBuilder();
+            report.append("📊 **小说审核报告**\n\n");
+            
+            // 总体评分
+            String scoreLevel = getScoreLevel(score);
+            report.append("【总体评分】").append(score).append("/100 - ").append(scoreLevel).append("\n\n");
+            
+            // 维度评分
+            @SuppressWarnings("unchecked")
+            Map<String, Object> dimensionScores = (Map<String, Object>) params.get("dimension_scores");
+            if (dimensionScores != null && !dimensionScores.isEmpty()) {
+                report.append("【维度评分】\n");
+                report.append("- 一致性: ").append(getDimensionScore(dimensionScores, "consistency")).append("/100\n");
+                report.append("- 情感冲击: ").append(getDimensionScore(dimensionScores, "emotional_impact")).append("/100\n");
+                report.append("- 冲突强度: ").append(getDimensionScore(dimensionScores, "conflict_strength")).append("/100\n");
+                report.append("- 悬念设置: ").append(getDimensionScore(dimensionScores, "suspense")).append("/100\n");
+                report.append("- 节奏把控: ").append(getDimensionScore(dimensionScores, "pacing")).append("/100\n\n");
+            }
+            
+            // 关键问题
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> issues = (List<Map<String, Object>>) params.get("critical_issues");
+            if (issues != null && !issues.isEmpty()) {
+                report.append("⚠️ 【发现的问题】共").append(issues.size()).append("个\n\n");
+                for (int i = 0; i < issues.size(); i++) {
+                    Map<String, Object> issue = issues.get(i);
+                    String severity = (String) issue.get("severity");
+                    String description = (String) issue.get("description");
+                    String location = (String) issue.get("location");
+                    
+                    String severityIcon = "🔴";
+                    if ("medium".equals(severity)) {
+                        severityIcon = "🟡";
+                    } else if ("low".equals(severity)) {
+                        severityIcon = "🟢";
+                    }
+                    
+                    report.append(severityIcon).append(" **问题").append(i + 1).append("**");
+                    if (location != null && !location.isEmpty()) {
+                        report.append("（").append(location).append("）");
+                    }
+                    report.append("\n");
+                    report.append(description).append("\n\n");
+                }
+            } else {
+                report.append("✅ **未发现明显问题**\n\n");
+            }
+            
+            // 改进建议
+            @SuppressWarnings("unchecked")
+            List<String> suggestions = (List<String>) params.get("suggestions");
+            if (suggestions != null && !suggestions.isEmpty()) {
+                report.append("💡 【改进建议】\n");
+                for (int i = 0; i < suggestions.size(); i++) {
+                    report.append((i + 1)).append(". ").append(suggestions.get(i)).append("\n");
+                }
+                report.append("\n");
+            }
+            
+            // 优点
+            @SuppressWarnings("unchecked")
+            List<String> strengths = (List<String>) params.get("strengths");
+            if (strengths != null && !strengths.isEmpty()) {
+                report.append("✨ 【优点】\n");
+                for (int i = 0; i < strengths.size(); i++) {
+                    report.append("• ").append(strengths.get(i)).append("\n");
+                }
+                report.append("\n");
+            }
+            
+            return CommandResult.success(report.toString(), "review_report", params);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 生成审核报告失败：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取评分等级描述
+     */
+    private String getScoreLevel(int score) {
+        if (score >= 90) return "优秀";
+        if (score >= 80) return "良好";
+        if (score >= 70) return "中等";
+        if (score >= 60) return "较差";
+        return "不合格";
+    }
+    
+    /**
+     * 获取维度评分
+     */
+    private int getDimensionScore(Map<String, Object> scores, String key) {
+        Number value = (Number) scores.get(key);
+        return value != null ? value.intValue() : 0;
     }
 }
