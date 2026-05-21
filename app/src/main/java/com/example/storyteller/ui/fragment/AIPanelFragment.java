@@ -9,6 +9,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -31,6 +32,7 @@ import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.ui.adapter.ChatMessageAdapter;
 import com.example.storyteller.utils.AgentCommandExecutor;
+import com.example.storyteller.utils.ConversationMemory;
 import com.example.storyteller.utils.PromptManager;
 
 import java.util.ArrayList;
@@ -65,9 +67,10 @@ public class AIPanelFragment extends BaseFragment {
     private AgentCommandExecutor commandExecutor;
     private StorySettingDao settingDao;  // 设定DAO
     private PromptManager promptManager;  // Prompt管理器
+    private ConversationMemory conversationMemory;  // 短期记忆
     
     private int storyId;
-    private String currentMode = "editor"; // editor/setting/outline/document/ask
+    private String currentMode = "editor"; // editor/setting/outline/document/ask/review
     private String currentModel = "flash"; // flash 或 pro
     private String prefillMessage;
     private boolean hasStartedConversation = false;
@@ -120,6 +123,7 @@ public class AIPanelFragment extends BaseFragment {
         commandExecutor = new AgentCommandExecutor(storyRepository, requireContext());  // 传入Context
         settingDao = new StorySettingDao(requireContext());  // 初始化设定DAO
         promptManager = new PromptManager(requireContext());  // 初始化Prompt管理器
+        conversationMemory = new ConversationMemory();  // 初始化短期记忆
     }
 
     @Override
@@ -217,7 +221,7 @@ public class AIPanelFragment extends BaseFragment {
         progressBar.setVisibility(View.VISIBLE);
 
         if ("editor".equals(currentMode) || "setting".equals(currentMode) || 
-            "outline".equals(currentMode) || "document".equals(currentMode)) {
+            "outline".equals(currentMode) || "document".equals(currentMode) || "review".equals(currentMode)) {
             // Agent mode: 使用步骤展示
             callAgentAPI(content);
         } else {
@@ -232,6 +236,11 @@ public class AIPanelFragment extends BaseFragment {
     private void appendMessage(ChatMessage message) {
         messages.add(message);
         adapter.notifyItemInserted(messages.size() - 1);
+        
+        // 添加到短期记忆
+        if (conversationMemory != null) {
+            conversationMemory.addMessage(message);
+        }
         
         // 延迟滚动，确保布局完成
         rvChat.post(() -> {
@@ -773,6 +782,7 @@ public class AIPanelFragment extends BaseFragment {
         popupMenu.getMenu().add(0, 2, 1, "设定");
         popupMenu.getMenu().add(0, 3, 2, "大纲");
         popupMenu.getMenu().add(0, 4, 3, "文档");
+        popupMenu.getMenu().add(0, 5, 4, "审核");
         
         // 标记当前选中的模式
         int selectedIndex = 0;
@@ -781,6 +791,7 @@ public class AIPanelFragment extends BaseFragment {
             case "setting": selectedIndex = 1; break;
             case "outline": selectedIndex = 2; break;
             case "document": selectedIndex = 3; break;
+            case "review": selectedIndex = 4; break;
         }
         popupMenu.getMenu().getItem(selectedIndex).setChecked(true);
         
@@ -802,6 +813,10 @@ public class AIPanelFragment extends BaseFragment {
                 case 4:
                     setMode("document");
                     Toast.makeText(requireContext(), "已切换到文档模式", Toast.LENGTH_SHORT).show();
+                    return true;
+                case 5:
+                    setMode("review");
+                    Toast.makeText(requireContext(), "已切换到审核模式", Toast.LENGTH_SHORT).show();
                     return true;
             }
             return false;
@@ -867,6 +882,8 @@ public class AIPanelFragment extends BaseFragment {
                 return promptManager.getAgentSystemPrompt("outline", null);
             case "document":
                 return promptManager.getAgentSystemPrompt("document", null);
+            case "review":
+                return promptManager.getAgentSystemPrompt("review", null);
             case "ask":
                 return promptManager.getAgentSystemPrompt("consultant", null);
             case "editor":
@@ -878,7 +895,7 @@ public class AIPanelFragment extends BaseFragment {
     
     /**
      * 公开方法：设置AI模式
-     * @param mode 模式名称：editor/setting/outline/document/ask
+     * @param mode 模式名称：editor/setting/outline/document/ask/review
      */
     public void setMode(String mode) {
         this.currentMode = mode;
@@ -890,7 +907,7 @@ public class AIPanelFragment extends BaseFragment {
     /**
      * 更新Agent设置按钮的可见性
      * - Ask模式：隐藏
-     * - Agent模式（editor/setting/outline/document）：显示
+     * - Agent模式（editor/setting/outline/document/review）：显示
      */
     private void updateAgentSettingsButtonVisibility() {
         if (btnAgentSettings == null) return;
@@ -917,6 +934,9 @@ public class AIPanelFragment extends BaseFragment {
                 break;
             case "document":
                 etMessage.setHint("输入指令，如：添加参考文档、从文档提取角色...");
+                break;
+            case "review":
+                etMessage.setHint("输入指令，如：审核当前剧情、检查一致性...");
                 break;
             case "ask":
                 etMessage.setHint("向我提问，如：如何写好悬疑小说？...");
@@ -963,12 +983,20 @@ public class AIPanelFragment extends BaseFragment {
                 case "document":
                     appendDocumentContext(context, story);
                     break;
+                case "review":
+                    appendReviewContext(context, story);
+                    break;
                 case "editor":
                 default:
                     // 写作模式：使用原有的buildStoryContext逻辑
                     List<Volume> volumes = parseVolumesFromStory(story);
                     context.append(AgentCommandExecutor.buildStoryContext(story, volumes));
                     break;
+            }
+            
+            // 添加短期记忆（对话历史）
+            if (conversationMemory != null && conversationMemory.hasHistory()) {
+                context.append(conversationMemory.buildContextSummary());
             }
             
             return context.toString();
@@ -1139,6 +1167,112 @@ public class AIPanelFragment extends BaseFragment {
             }
         } else {
             context.append("暂无文档\n\n");
+        }
+    }
+    
+    /**
+     * 添加审核模式的上下文
+     * 需要提供完整的大纲、设定和正文内容，以便AI进行全面审核
+     */
+    private void appendReviewContext(StringBuilder context, Story story) {
+        // 全局大纲
+        context.append("【全局大纲】\n");
+        String globalOutline = story.getGlobalOutline();
+        if (!TextUtils.isEmpty(globalOutline)) {
+            context.append(globalOutline).append("\n\n");
+        } else {
+            context.append("暂无全局大纲\n\n");
+        }
+        
+        // 卷章大纲结构
+        List<Volume> volumes = parseVolumesFromStory(story);
+        context.append("【卷章大纲结构】\n");
+        context.append("共 ").append(volumes.size()).append(" 卷\n\n");
+        
+        for (int i = 0; i < volumes.size(); i++) {
+            Volume v = volumes.get(i);
+            context.append("📖 卷").append(i+1).append(": ").append(v.getTitle()).append("\n");
+            
+            // 卷纲信息
+            if (!TextUtils.isEmpty(v.getSummary())) {
+                context.append("  摘要: ").append(v.getSummary()).append("\n");
+            }
+            
+            // 章节大纲
+            List<Chapter> chapters = v.getChapters();
+            if (chapters != null && !chapters.isEmpty()) {
+                context.append("  共 ").append(chapters.size()).append(" 章\n\n");
+                
+                for (int j = 0; j < chapters.size(); j++) {
+                    Chapter c = chapters.get(j);
+                    context.append("  📄 章").append(j+1).append(": ").append(c.getTitle()).append("\n");
+                    
+                    if (!TextUtils.isEmpty(c.getChapterRole())) {
+                        context.append("    作用: ").append(c.getChapterRole()).append("\n");
+                    }
+                    if (!TextUtils.isEmpty(c.getChapterSummary())) {
+                        context.append("    摘要: ").append(c.getChapterSummary()).append("\n");
+                    }
+                    if (!TextUtils.isEmpty(c.getForeshadowing())) {
+                        context.append("    伏笔: ").append(c.getForeshadowing()).append("\n");
+                    }
+                    
+                    // 拓展信息
+                    if (c.getInvolvedCharacters() != null && !c.getInvolvedCharacters().isEmpty()) {
+                        context.append("    角色: ").append(String.join(", ", c.getInvolvedCharacters())).append("\n");
+                    }
+                    if (c.getKeyItems() != null && !c.getKeyItems().isEmpty()) {
+                        context.append("    物品: ").append(String.join(", ", c.getKeyItems())).append("\n");
+                    }
+                    if (c.getSceneLocations() != null && !c.getSceneLocations().isEmpty()) {
+                        context.append("    场景: ").append(String.join(", ", c.getSceneLocations())).append("\n");
+                    }
+                    
+                    context.append("\n");
+                }
+            } else {
+                context.append("  暂无章节\n\n");
+            }
+        }
+        
+        // 现有设定
+        List<StorySetting> settings = settingDao.getByStoryId(storyId);
+        if (settings != null && !settings.isEmpty()) {
+            context.append("【现有设定】共").append(settings.size()).append("个\n\n");
+            
+            // 按category分组
+            java.util.Map<String, List<StorySetting>> grouped = new java.util.HashMap<>();
+            for (StorySetting s : settings) {
+                String key = s.getCategory() + " > " + s.getSubCategory();
+                grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
+            }
+            
+            for (java.util.Map.Entry<String, List<StorySetting>> entry : grouped.entrySet()) {
+                context.append("📂 ").append(entry.getKey()).append("\n");
+                for (StorySetting s : entry.getValue()) {
+                    context.append("  - ").append(s.getTitle());
+                    if (!TextUtils.isEmpty(s.getSummary())) {
+                        context.append(": ").append(s.getSummary());
+                    }
+                    context.append("\n");
+                }
+                context.append("\n");
+            }
+        } else {
+            context.append("【现有设定】暂无设定\n\n");
+        }
+        
+        // 正文内容（用于审核实际写作）
+        if (!TextUtils.isEmpty(story.getContent())) {
+            context.append("【正文内容】\n");
+            // 限制长度，避免超出token限制
+            String content = story.getContent();
+            if (content.length() > 3000) {
+                content = content.substring(0, 3000) + "...（内容过长，已截断）";
+            }
+            context.append(content).append("\n\n");
+        } else {
+            context.append("【正文内容】暂无正文\n\n");
         }
     }
 }
