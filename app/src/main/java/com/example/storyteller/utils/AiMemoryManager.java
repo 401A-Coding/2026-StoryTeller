@@ -238,4 +238,105 @@ public class AiMemoryManager {
                 return "📝";
         }
     }
+    
+    /**
+     * 截断文本到指定长度
+     */
+    private String truncateText(String text, int maxLength) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength) + "...";
+    }
+    
+    /**
+     * 构建用于记忆提取的完整上下文
+     * 包含：对话历史 + 角色列表 + 设定列表 + 大纲
+     * 
+     * @param conversationHistory 对话历史（由调用方提供）
+     * @param storyId 小说ID
+     * @param characterDao 角色DAO
+     * @param settingDao 设定DAO
+     * @param storyRepository 故事仓库
+     * @return 完整的上下文字符串
+     */
+    public String buildFullContextForExtraction(
+            String conversationHistory,
+            int storyId,
+            com.example.storyteller.data.local.db.CharacterDao characterDao,
+            com.example.storyteller.data.local.db.StorySettingDao settingDao,
+            com.example.storyteller.data.repository.StoryRepository storyRepository) {
+        
+        StringBuilder context = new StringBuilder();
+        
+        // 1. 对话历史
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            context.append("【对话历史】\n");
+            context.append(conversationHistory);
+            context.append("\n\n");
+        } else {
+            context.append("【对话历史】\n暂无对话历史\n\n");
+        }
+        
+        // 2. 角色列表
+        try {
+            List<com.example.storyteller.model.Character> characters = characterDao.getCharactersByStoryId(storyId);
+            context.append("【现有角色】\n");
+            if (characters != null && !characters.isEmpty()) {
+                for (com.example.storyteller.model.Character c : characters) {
+                    context.append("- ").append(c.getName());
+                    if (c.getProfile() != null && !c.getProfile().isEmpty()) {
+                        String summary = truncateText(c.getProfile(), 200);
+                        context.append(": ").append(summary);
+                    }
+                    context.append("\n");
+                }
+            } else {
+                context.append("暂无角色\n");
+            }
+            context.append("\n");
+        } catch (Exception e) {
+            context.append("【现有角色】\n加载失败\n\n");
+        }
+        
+        // 3. 设定列表
+        try {
+            List<com.example.storyteller.model.StorySetting> settings = settingDao.getByStoryId(storyId);
+            context.append("【现有设定】\n");
+            if (settings != null && !settings.isEmpty()) {
+                for (com.example.storyteller.model.StorySetting s : settings) {
+                    context.append("- [").append(s.getCategory()).append(" > ").append(s.getSubCategory()).append("] ");
+                    context.append(s.getTitle());
+                    if (s.getSummary() != null && !s.getSummary().isEmpty()) {
+                        context.append(": ").append(truncateText(s.getSummary(), 150));
+                    }
+                    context.append("\n");
+                }
+            } else {
+                context.append("暂无设定\n");
+            }
+            context.append("\n");
+        } catch (Exception e) {
+            context.append("【现有设定】\n加载失败\n\n");
+        }
+        
+        // 4. 全局大纲
+        try {
+            com.example.storyteller.model.Story story = storyRepository.getStoryById(storyId);
+            context.append("【故事大纲】\n");
+            if (story != null && story.getGlobalOutline() != null && !story.getGlobalOutline().isEmpty()) {
+                context.append(story.getGlobalOutline());
+            } else {
+                context.append("暂无全局大纲");
+            }
+            context.append("\n\n");
+        } catch (Exception e) {
+            context.append("【故事大纲】\n加载失败\n\n");
+        }
+        
+        return context.toString();
+    }
 }

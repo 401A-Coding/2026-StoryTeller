@@ -6,6 +6,16 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- 提示信息 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AI已分析完成，以下是提取的记忆。您可以删除不需要的记忆，然后点击确认保存。"
+        android:textColor="#666666"
+        android:textSize="13sp"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="16dp" />
+
     <!-- 记忆统计 -->
     <TextView
         android:id="@+id/tv_memory_count"
@@ -21,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:maxHeight="400dp">
+        android:maxHeight="500dp">
 
         <LinearLayout
             android:id="@+id/ll_memory_list"
@@ -133,7 +143,7 @@
                 android:id="@+id/tv_empty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="暂无AI记忆"
+                android:text="未提取到重要记忆"
                 android:textColor="#999999"
                 android:textSize="14sp"
                 android:gravity="center"
@@ -142,17 +152,5 @@
 
         </LinearLayout>
     </ScrollView>
-
-    <!-- 清空按钮 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_clear"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="清空记忆"
-        android:textColor="#FF5252"
-        android:layout_gravity="end"
-        android:layout_marginTop="16dp"
-        android:visibility="gone" />
 
 </LinearLayout>

@@ -15,24 +15,24 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.model.AiMemory;
-import com.example.storyteller.ui.adapter.AiMemoryAdapter;
-import com.example.storyteller.utils.AiMemoryManager;
+import com.example.storyteller.ui.adapter.MemoryExtractionAdapter;
 import com.google.android.material.button.MaterialButton;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * AI记忆管理对话框
- * 允许用户查看和删除AI记忆
+ * 记忆提取结果对话框
+ * 展示AI提取的记忆，允许用户删除不需要的，然后批量保存
  */
-public class AiMemoryDialog extends DialogFragment {
+public class MemoryExtractionDialog extends DialogFragment {
     
     private static final String ARG_STORY_ID = "story_id";
-    private static final String ARG_STORY_TITLE = "story_title";
+    private static final String ARG_MEMORIES = "memories";
     
-    private AiMemoryManager memoryManager;
     private int storyId;
-    private String storyTitle;
+    private List<AiMemory> extractedMemories;
     
     // UI组件
     private TextView tvMemoryCount;
@@ -41,18 +41,30 @@ public class AiMemoryDialog extends DialogFragment {
     private LinearLayout layoutWorld;
     private LinearLayout layoutOther;
     private TextView tvEmpty;
-    private MaterialButton btnClear;
     
-    private AiMemoryAdapter adapterPlot;
-    private AiMemoryAdapter adapterPersonality;
-    private AiMemoryAdapter adapterWorld;
-    private AiMemoryAdapter adapterOther;
+    private MemoryExtractionAdapter adapterPlot;
+    private MemoryExtractionAdapter adapterPersonality;
+    private MemoryExtractionAdapter adapterWorld;
+    private MemoryExtractionAdapter adapterOther;
     
-    public static AiMemoryDialog newInstance(int storyId, String storyTitle) {
-        AiMemoryDialog dialog = new AiMemoryDialog();
+    // 已删除的记忆ID列表
+    private List<Integer> deletedIndices = new ArrayList<>();
+    
+    public interface OnMemoriesSavedListener {
+        void onMemoriesSaved(int count);
+    }
+    
+    private OnMemoriesSavedListener savedListener;
+    
+    public void setOnMemoriesSavedListener(OnMemoriesSavedListener listener) {
+        this.savedListener = listener;
+    }
+    
+    public static MemoryExtractionDialog newInstance(int storyId, List<AiMemory> memories) {
+        MemoryExtractionDialog dialog = new MemoryExtractionDialog();
         Bundle args = new Bundle();
         args.putInt(ARG_STORY_ID, storyId);
-        args.putString(ARG_STORY_TITLE, storyTitle);
+        args.putSerializable(ARG_MEMORIES, new ArrayList<>(memories));
         dialog.setArguments(args);
         return dialog;
     }
@@ -60,11 +72,13 @@ public class AiMemoryDialog extends DialogFragment {
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        memoryManager = AiMemoryManager.getInstance(context);
         
         if (getArguments() != null) {
             storyId = getArguments().getInt(ARG_STORY_ID, -1);
-            storyTitle = getArguments().getString(ARG_STORY_TITLE);
+            extractedMemories = (List<AiMemory>) getArguments().getSerializable(ARG_MEMORIES);
+            if (extractedMemories == null) {
+                extractedMemories = new ArrayList<>();
+            }
         }
     }
     
@@ -72,18 +86,16 @@ public class AiMemoryDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        View contentView = getLayoutInflater().inflate(R.layout.dialog_ai_memory, null);
+        View contentView = getLayoutInflater().inflate(R.layout.dialog_memory_extraction, null);
         builder.setView(contentView);
         
-        // 设置标题
-        String title = "AI记忆管理";
-        if (storyTitle != null && !storyTitle.isEmpty()) {
-            title = "《" + storyTitle + "》AI记忆";
-        }
-        builder.setTitle(title);
+        builder.setTitle("AI记忆提取结果");
         
-        // 设置按钮
-        builder.setPositiveButton("关闭", null);
+        // 添加按钮
+        builder.setNegativeButton("取消", null);
+        builder.setPositiveButton("确认保存", (dialog, which) -> {
+            saveMemories();
+        });
         
         AlertDialog dialog = builder.create();
         
@@ -100,13 +112,12 @@ public class AiMemoryDialog extends DialogFragment {
         layoutWorld = contentView.findViewById(R.id.layout_world);
         layoutOther = contentView.findViewById(R.id.layout_other);
         tvEmpty = contentView.findViewById(R.id.tv_empty);
-        btnClear = contentView.findViewById(R.id.btn_clear);
         
         // 初始化适配器
-        adapterPlot = new AiMemoryAdapter();
-        adapterPersonality = new AiMemoryAdapter();
-        adapterWorld = new AiMemoryAdapter();
-        adapterOther = new AiMemoryAdapter();
+        adapterPlot = new MemoryExtractionAdapter();
+        adapterPersonality = new MemoryExtractionAdapter();
+        adapterWorld = new MemoryExtractionAdapter();
+        adapterOther = new MemoryExtractionAdapter();
         
         // 设置删除监听
         adapterPlot.setOnMemoryDeleteListener(this::deleteMemory);
@@ -131,13 +142,23 @@ public class AiMemoryDialog extends DialogFragment {
         
         rvOther.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvOther.setAdapter(adapterOther);
-        
-        // 清空按钮
-        btnClear.setOnClickListener(v -> showClearConfirmDialog());
     }
     
     private void loadMemories() {
-        Map<String, List<AiMemory>> grouped = memoryManager.getMemoriesGroupedByType(storyId);
+        // 按类型分组
+        Map<String, List<AiMemory>> grouped = new HashMap<>();
+        for (int i = 0; i < extractedMemories.size(); i++) {
+            if (deletedIndices.contains(i)) {
+                continue; // 跳过已删除的
+            }
+            
+            AiMemory memory = extractedMemories.get(i);
+            String type = memory.getMemoryType();
+            if (!grouped.containsKey(type)) {
+                grouped.put(type, new ArrayList<>());
+            }
+            grouped.get(type).add(memory);
+        }
         
         int totalCount = 0;
         
@@ -187,40 +208,54 @@ public class AiMemoryDialog extends DialogFragment {
         // 空状态
         if (totalCount == 0) {
             tvEmpty.setVisibility(View.VISIBLE);
-            btnClear.setVisibility(View.GONE);
         } else {
             tvEmpty.setVisibility(View.GONE);
-            btnClear.setVisibility(View.VISIBLE);
         }
     }
     
     private void deleteMemory(AiMemory memory) {
-        new AlertDialog.Builder(requireContext())
-            .setTitle("删除记忆")
-            .setMessage("确定要删除这条记忆吗？\n\n" + memory.getTitle())
-            .setPositiveButton("删除", (dialog, which) -> {
-                boolean success = memoryManager.deleteMemory(memory.getId());
-                if (success) {
-                    Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
-                    loadMemories();
-                } else {
-                    Toast.makeText(requireContext(), "删除失败", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        // 找到该记忆在原始列表中的索引
+        int index = extractedMemories.indexOf(memory);
+        if (index >= 0 && !deletedIndices.contains(index)) {
+            deletedIndices.add(index);
+            Toast.makeText(requireContext(), "已移除", Toast.LENGTH_SHORT).show();
+            loadMemories(); // 重新加载
+        }
     }
     
-    private void showClearConfirmDialog() {
-        new AlertDialog.Builder(requireContext())
-            .setTitle("清空记忆")
-            .setMessage("确定要清空当前小说的所有AI记忆吗？\n全局记忆不会被删除。")
-            .setPositiveButton("清空", (dialog, which) -> {
-                int count = memoryManager.clearStoryMemories(storyId);
-                Toast.makeText(requireContext(), "已清空 " + count + " 条记忆", Toast.LENGTH_SHORT).show();
-                loadMemories();
-            })
-            .setNegativeButton("取消", null)
-            .show();
+    private void saveMemories() {
+        if (deletedIndices.size() == extractedMemories.size()) {
+            Toast.makeText(requireContext(), "没有要保存的记忆", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 过滤出未删除的记忆
+        List<AiMemory> toSave = new ArrayList<>();
+        for (int i = 0; i < extractedMemories.size(); i++) {
+            if (!deletedIndices.contains(i)) {
+                toSave.add(extractedMemories.get(i));
+            }
+        }
+        
+        // 保存到数据库
+        com.example.storyteller.utils.AiMemoryManager memoryManager = 
+            com.example.storyteller.utils.AiMemoryManager.getInstance(requireContext());
+        
+        int savedCount = 0;
+        for (AiMemory memory : toSave) {
+            memory.setStoryId(storyId);
+            long id = memoryManager.addMemory(memory);
+            if (id > 0) {
+                savedCount++;
+            }
+        }
+        
+        Toast.makeText(requireContext(), "已保存 " + savedCount + " 条记忆", Toast.LENGTH_SHORT).show();
+        
+        if (savedListener != null) {
+            savedListener.onMemoriesSaved(savedCount);
+        }
+        
+        dismiss();
     }
 }

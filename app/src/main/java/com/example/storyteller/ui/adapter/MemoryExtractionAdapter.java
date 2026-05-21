@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * AI记忆列表适配器
+ * 记忆提取结果适配器（只读，支持删除）
  */
-public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHolder> {
+public class MemoryExtractionAdapter extends RecyclerView.Adapter<MemoryExtractionAdapter.ViewHolder> {
     
     private final List<AiMemory> memories = new ArrayList<>();
     private OnMemoryDeleteListener deleteListener;
@@ -40,7 +40,7 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_ai_memory, parent, false);
+                .inflate(R.layout.item_memory_extraction, parent, false);
         return new ViewHolder(view);
     }
     
@@ -58,41 +58,22 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
     class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvTitle;
         private final TextView tvContent;
-        private final TextView tvMemoryType;
         private final TextView tvImportance;
-        private final TextView tvTime;
         private final ImageButton btnDelete;
         
         ViewHolder(View itemView) {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvContent = itemView.findViewById(R.id.tv_content);
-            tvMemoryType = itemView.findViewById(R.id.tv_memory_type);
             tvImportance = itemView.findViewById(R.id.tv_importance);
-            tvTime = itemView.findViewById(R.id.tv_time);
             btnDelete = itemView.findViewById(R.id.btn_delete);
         }
         
         void bind(AiMemory memory) {
+            // 标题
             tvTitle.setText(memory.getTitle());
             
-            // 设置记忆类型标签
-            String typeLabel = getTypeLabel(memory.getMemoryType());
-            tvMemoryType.setText(typeLabel);
-            
-            // 设置重要性指示
-            String importanceStars = getImportanceStars(memory.getImportance());
-            tvImportance.setText(importanceStars);
-            
-            // 设置时间（如果有）
-            if (memory.getCreatedAt() > 0) {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CHINA);
-                tvTime.setText(sdf.format(new java.util.Date(memory.getCreatedAt())));
-            } else {
-                tvTime.setText("");
-            }
-            
-            // 设置内容
+            // 内容
             if (memory.getContent() != null && !memory.getContent().isEmpty()) {
                 tvContent.setVisibility(View.VISIBLE);
                 tvContent.setText(memory.getContent());
@@ -100,15 +81,11 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
                 tvContent.setVisibility(View.GONE);
             }
             
-            // 点击卡片展开/收起详情
-            itemView.setOnClickListener(v -> {
-                if (tvContent.getVisibility() == View.VISIBLE) {
-                    tvContent.setVisibility(View.GONE);
-                } else {
-                    tvContent.setVisibility(View.VISIBLE);
-                }
-            });
+            // 重要性
+            String stars = buildStars(memory.getImportance());
+            tvImportance.setText("重要性: " + stars);
             
+            // 删除按钮
             btnDelete.setOnClickListener(v -> {
                 if (deleteListener != null) {
                     deleteListener.onDelete(memory);
@@ -116,25 +93,12 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
             });
         }
         
-        private String getTypeLabel(String type) {
-            switch (type) {
-                case com.example.storyteller.model.AiMemory.TYPE_PLOT:
-                    return "剧情类";
-                case com.example.storyteller.model.AiMemory.TYPE_PERSONALITY:
-                    return "人设类";
-                case com.example.storyteller.model.AiMemory.TYPE_WORLD:
-                    return "世界观类";
-                default:
-                    return "其他类";
-            }
-        }
-        
-        private String getImportanceStars(int importance) {
-            StringBuilder stars = new StringBuilder();
+        private String buildStars(int importance) {
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < importance; i++) {
-                stars.append("⭐");
+                sb.append("⭐");
             }
-            return stars.toString();
+            return sb.toString();
         }
     }
 }
