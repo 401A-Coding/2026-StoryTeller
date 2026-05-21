@@ -1348,7 +1348,6 @@ public class AIPanelFragment extends BaseFragment {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), btnAiSettings);
         popupMenu.getMenu().add(0, 1, 0, "写作偏好");
         popupMenu.getMenu().add(0, 2, 1, "AI记忆管理");
-        popupMenu.getMenu().add(0, 3, 2, "关于审核Agent");
         
         popupMenu.setOnMenuItemClickListener(item -> {
             int itemId = item.getItemId();
@@ -1361,10 +1360,6 @@ public class AIPanelFragment extends BaseFragment {
                     // 打开AI记忆管理
                     showAiMemoryDialog();
                     return true;
-                case 3:
-                    // TODO: 显示审核Agent帮助
-                    showReviewAgentHelp();
-                    return true;
             }
             return false;
         });
@@ -1372,32 +1367,7 @@ public class AIPanelFragment extends BaseFragment {
         popupMenu.show();
     }
     
-    /**
-     * 显示审核Agent帮助对话框
-     */
-    private void showReviewAgentHelp() {
-        String helpText = 
-            "📊 评分维度：\n" +
-            "• 一致性（大纲/设定）\n" +
-            "• 情感冲击力\n" +
-            "• 冲突强度\n" +
-            "• 悬念设置\n" +
-            "• 节奏把控\n\n" +
-            "💡 使用示例：\n" +
-            "“帮我审核一下剧情”\n" +
-            "“检查设定是否冲突”\n" +
-            "“评估情感冲击力”\n\n" +
-            "❓ 常见问题：\n" +
-            "Q: 评分低怎么办？\n" +
-            "A: 查看改进建议，按建议修改后重新审核";
-        
-        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("审核Agent使用指南")
-            .setMessage(helpText)
-            .setPositiveButton("关闭", null)
-            .show();
-    }
-    
+
     /**
      * 显示写作偏好设置对话框
      */
