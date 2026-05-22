@@ -93,7 +93,7 @@ public class SpecificAttributesParser {
         // 世界 - 历史背景
         SUB_CATEGORY_DISPLAY_MAP.put("历史背景", "历史");
         List<AttributeField> historyFields = new ArrayList<>();
-        historyFields.add(new AttributeField("majorEvents", "重大事件", FieldType.TEXT_MULTI, null));
+        historyFields.add(new AttributeField("majorEvents", "重大事件", FieldType.STRUCTURED_LIST, null, "年份,事件,重要性", "\n", ":"));
         historyFields.add(new AttributeField("keyFigures", "关键人物", FieldType.TAG_LIST, null));
         historyFields.add(new AttributeField("historicalImpact", "历史影响", FieldType.TEXT_MULTI, null));
         historyFields.add(new AttributeField("legacy", "遗留影响", FieldType.TEXT_MULTI, null));
@@ -203,7 +203,7 @@ public class SpecificAttributesParser {
         mainCharFields.add(new AttributeField("weaknesses", "弱点", FieldType.TAG_LIST, null));
         mainCharFields.add(new AttributeField("strengths", "优势", FieldType.TAG_LIST, null));
         mainCharFields.add(new AttributeField("backgroundStory", "背景故事", FieldType.TEXT_MULTI, null));
-        mainCharFields.add(new AttributeField("relationships", "关系网", FieldType.TEXT_MULTI, null));
+        mainCharFields.add(new AttributeField("relationships", "关系网", FieldType.STRUCTURED_LIST, null, "角色名,关系,描述", "\n", ":"));
         mainCharFields.add(new AttributeField("characterArc", "成长弧光", FieldType.TEXT_MULTI, null));
         mainCharFields.add(new AttributeField("signatureItems", "标志性物品", FieldType.TAG_LIST, null));
         mainCharFields.add(new AttributeField("quotes", "经典台词", FieldType.TAG_LIST, null));
@@ -247,7 +247,7 @@ public class SpecificAttributesParser {
         villainFields.add(new AttributeField("methods", "作恶手段", FieldType.TAG_LIST, null));
         villainFields.add(new AttributeField("strengths", "优势", FieldType.TAG_LIST, null));
         villainFields.add(new AttributeField("weaknesses", "弱点", FieldType.TAG_LIST, null));
-        villainFields.add(new AttributeField("relationships", "关系网", FieldType.TEXT_MULTI, null));
+        villainFields.add(new AttributeField("relationships", "关系网", FieldType.STRUCTURED_LIST, null, "角色名,关系,描述", "\n", ":"));
         villainFields.add(new AttributeField("motive", "动机", FieldType.TEXT_MULTI, null));
         villainFields.add(new AttributeField("threatLevel", "威胁等级", FieldType.SLIDER, null));
         villainFields.add(new AttributeField("currentStatus", "现状", FieldType.SELECT, 
@@ -409,7 +409,7 @@ public class SpecificAttributesParser {
         SUB_CATEGORY_DISPLAY_MAP.put("主线剧情", "主线");
         List<AttributeField> mainPlotFields = new ArrayList<>();
         mainPlotFields.add(new AttributeField("storyArc", "起承转合", FieldType.TEXT_MULTI, null));
-        mainPlotFields.add(new AttributeField("keyTurningPoints", "关键转折点", FieldType.TEXT_MULTI, null));
+        mainPlotFields.add(new AttributeField("keyTurningPoints", "关键转折点", FieldType.STRUCTURED_LIST, null, "章节,事件,重要性", "\n", ":"));
         mainPlotFields.add(new AttributeField("centralConflict", "核心冲突", FieldType.TEXT_MULTI, null));
         mainPlotFields.add(new AttributeField("resolution", "结局走向", FieldType.TEXT_MULTI, null));
         mainPlotFields.add(new AttributeField("themes", "涉及主题", FieldType.TAG_LIST, null));
@@ -518,7 +518,7 @@ public class SpecificAttributesParser {
         powerFields.add(new AttributeField("systemName", "体系名称", FieldType.TEXT, null));
         powerFields.add(new AttributeField("systemType", "体系类型", FieldType.SELECT, 
             new String[]{"修真", "魔法", "异能", "武技", "科技", "混合"}));
-        powerFields.add(new AttributeField("progressionPath", "晋升路径", FieldType.TAG_LIST, null));
+        powerFields.add(new AttributeField("progressionPath", "晋升路径", FieldType.STRUCTURED_LIST, null, "等级阶段", "\n", ":"));
         powerFields.add(new AttributeField("requirements", "晋升条件", FieldType.TAG_LIST, null));
         powerFields.add(new AttributeField("coreAbilities", "核心能力", FieldType.TAG_LIST, null));
         powerFields.add(new AttributeField("limitations", "限制条件", FieldType.TEXT_MULTI, null));
@@ -712,13 +712,60 @@ public class SpecificAttributesParser {
     
     private Object jsonToObject(com.google.gson.JsonElement element) {
         if (element.isJsonNull()) return null;
-        if (element.isJsonPrimitive()) return element.getAsString();
+        if (element.isJsonPrimitive()) {
+            com.google.gson.JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isNumber()) {
+                // 数值类型转为字符串，便于统一处理
+                Number num = primitive.getAsNumber();
+                if (num instanceof Float || num instanceof Double) {
+                    return String.valueOf(num.doubleValue());
+                }
+                return String.valueOf(num.longValue());
+            }
+            return primitive.getAsString();
+        }
         if (element.isJsonArray()) {
-            return gson.fromJson(element, new TypeToken<List<String>>(){}.getType());
+            com.google.gson.JsonArray jsonArray = element.getAsJsonArray();
+            // 检查是否是嵌套数组（结构化列表）
+            if (jsonArray.size() > 0 && jsonArray.get(0).isJsonArray()) {
+                // 嵌套数组：List<List<String>>
+                List<List<String>> nestedList = new ArrayList<>();
+                for (com.google.gson.JsonElement item : jsonArray) {
+                    com.google.gson.JsonArray subArray = item.getAsJsonArray();
+                    List<String> subList = new ArrayList<>();
+                    for (com.google.gson.JsonElement subItem : subArray) {
+                        subList.add(jsonElementToString(subItem));
+                    }
+                    nestedList.add(subList);
+                }
+                return nestedList;
+            } else {
+                // 普通数组：List<String>
+                List<String> list = new ArrayList<>();
+                for (com.google.gson.JsonElement item : jsonArray) {
+                    list.add(jsonElementToString(item));
+                }
+                return list;
+            }
         } else if (element.isJsonObject()) {
             return gson.fromJson(element, new TypeToken<Map<String, Object>>(){}.getType());
         }
         return null;
+    }
+    
+    /**
+     * 将JsonElement转换为字符串
+     */
+    private String jsonElementToString(com.google.gson.JsonElement element) {
+        if (element.isJsonNull()) return "";
+        if (element.isJsonPrimitive()) {
+            com.google.gson.JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isNumber()) {
+                return String.valueOf(primitive.getAsNumber());
+            }
+            return primitive.getAsString();
+        }
+        return element.toString();
     }
     
     /**
@@ -785,18 +832,46 @@ public class SpecificAttributesParser {
         private String label;
         private FieldType type;
         private String[] options;
+        // 结构化列表的输入模板，格式为逗号分隔的字段描述
+        // 例如："角色名,关系,描述" 或 "章节,事件,重要性"
+        private String inputTemplate;
+        // 结构化列表的字段分隔符
+        private String itemDelimiter;
+        // 结构化列表的字段分隔符（内部字段用冒号分隔）
+        private String fieldDelimiter;
         
         public AttributeField(String key, String label, FieldType type, String[] options) {
+            this(key, label, type, options, null);
+        }
+        
+        public AttributeField(String key, String label, FieldType type, String[] options, String inputTemplate) {
             this.key = key;
             this.label = label;
             this.type = type;
             this.options = options;
+            this.inputTemplate = inputTemplate;
+            this.itemDelimiter = "\n";  // 默认每行一条记录
+            this.fieldDelimiter = ":";  // 默认冒号分隔
+        }
+        
+        public AttributeField(String key, String label, FieldType type, String[] options, String inputTemplate, 
+                                 String itemDelimiter, String fieldDelimiter) {
+            this.key = key;
+            this.label = label;
+            this.type = type;
+            this.options = options;
+            this.inputTemplate = inputTemplate;
+            this.itemDelimiter = itemDelimiter;
+            this.fieldDelimiter = fieldDelimiter;
         }
         
         public String getKey() { return key; }
         public String getLabel() { return label; }
         public FieldType getType() { return type; }
         public String[] getOptions() { return options; }
+        public String getInputTemplate() { return inputTemplate; }
+        public String getItemDelimiter() { return itemDelimiter; }
+        public String getFieldDelimiter() { return fieldDelimiter; }
     }
     
     public enum FieldType {
@@ -805,6 +880,7 @@ public class SpecificAttributesParser {
         NUMBER,         // 数字
         SLIDER,         // 滑块（1-10）
         SELECT,          // 下拉选择
-        TAG_LIST        // 标签列表
+        TAG_LIST,        // 标签列表
+        STRUCTURED_LIST  // 结构化列表输入（如关系网、转折点等有固定格式的列表）
     }
 }
