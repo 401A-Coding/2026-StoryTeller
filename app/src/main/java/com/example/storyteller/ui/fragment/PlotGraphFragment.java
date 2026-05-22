@@ -13,6 +13,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -25,7 +27,9 @@ import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.activity.SettingDetailActivity;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -325,8 +329,8 @@ public class PlotGraphFragment extends BaseFragment {
      */
     private class JsInterface {
         @JavascriptInterface
-        public void onNodeClick(int settingId) {
-            // 点击节点，跳转到设定详情
+        public void onNodeClicked(int settingId) {
+            // 双击节点，跳转到设定详情
             requireActivity().runOnUiThread(() -> {
                 Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
                 intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, settingId);
@@ -334,6 +338,113 @@ public class PlotGraphFragment extends BaseFragment {
                 startActivity(intent);
             });
         }
+        
+        @JavascriptInterface
+        public void onNodeSelected(int settingId) {
+            // 单击节点，显示预览弹出卡片
+            requireActivity().runOnUiThread(() -> {
+                StorySetting setting = settingDao.getById(settingId);
+                if (setting != null) {
+                    int relationCount = 0;
+                    List<SettingRelationship> relations = relationshipDao.getBySettingId(settingId);
+                    if (relations != null) {
+                        relationCount = relations.size();
+                    }
+                    showNodePreviewDialog(setting, relationCount);
+                }
+            });
+        }
+    }
+    
+    /**
+     * 显示节点预览底部弹出卡片
+     */
+    private void showNodePreviewDialog(StorySetting setting, int relationCount) {
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
+        View contentView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_node_preview, null);
+        builder.setView(contentView);
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        
+        // 使对话框从底部弹出
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
+            dialog.getWindow().setWindowAnimations(com.google.android.material.R.style.Animation_Design_BottomSheetDialog);
+        }
+        
+        // 标题
+        TextView tvTitle = contentView.findViewById(R.id.tv_preview_title);
+        tvTitle.setText(setting.getTitle());
+        
+        // 分类
+        TextView tvCategory = contentView.findViewById(R.id.tv_preview_category);
+        String categoryText = setting.getCategory();
+        if (!android.text.TextUtils.isEmpty(setting.getSubCategory())) {
+            categoryText += " · " + setting.getSubCategory();
+        }
+        tvCategory.setText(categoryText);
+        
+        // 摘要
+        TextView tvSummary = contentView.findViewById(R.id.tv_preview_summary);
+        if (!android.text.TextUtils.isEmpty(setting.getSummary())) {
+            tvSummary.setText(setting.getSummary());
+        } else {
+            tvSummary.setText("暂无摘要");
+            tvSummary.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        }
+        
+        // 关联数量
+        TextView tvRelationCount = contentView.findViewById(R.id.tv_preview_relation_count);
+        tvRelationCount.setText("· " + relationCount + " 个关联");
+        tvRelationCount.setVisibility(View.VISIBLE);
+        
+        // 标签
+        LinearLayout layoutTags = contentView.findViewById(R.id.layout_preview_tags);
+        if (!android.text.TextUtils.isEmpty(setting.getTags())) {
+            try {
+                List<String> tags = new Gson().fromJson(setting.getTags(),
+                    new TypeToken<List<String>>(){}.getType());
+                if (tags != null && !tags.isEmpty()) {
+                    int maxShow = Math.min(tags.size(), 5);
+                    for (int i = 0; i < maxShow; i++) {
+                        com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(requireContext());
+                        chip.setText(tags.get(i));
+                        chip.setChipBackgroundColorResource(android.R.color.transparent);
+                        chip.setChipStrokeWidth(1f);
+                        chip.setChipStrokeColorResource(android.R.color.darker_gray);
+                        chip.setTextSize(12);
+                        chip.setClickable(false);
+                        chip.setCheckable(false);
+                        layoutTags.addView(chip);
+                    }
+                    if (tags.size() > maxShow) {
+                        com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(requireContext());
+                        chip.setText("+ " + (tags.size() - maxShow));
+                        chip.setChipBackgroundColorResource(android.R.color.transparent);
+                        chip.setChipStrokeWidth(1f);
+                        chip.setChipStrokeColorResource(android.R.color.darker_gray);
+                        chip.setTextSize(12);
+                        chip.setClickable(false);
+                        chip.setCheckable(false);
+                        layoutTags.addView(chip);
+                    }
+                    layoutTags.setVisibility(View.VISIBLE);
+                }
+            } catch (Exception ignored) {}
+        }
+        
+        // 关闭按钮
+        contentView.findViewById(R.id.btn_preview_close).setOnClickListener(v -> dialog.dismiss());
+        
+        // 查看详情按钮
+        contentView.findViewById(R.id.btn_preview_detail).setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
+            intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, setting.getId());
+            intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
+            startActivity(intent);
+        });
+        
+        dialog.show();
     }
 
     @Override
