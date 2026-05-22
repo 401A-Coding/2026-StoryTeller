@@ -42,6 +42,10 @@
             android:windowLayoutInDisplayCutoutMode="shortEdges"
             android:label="AI记忆管理" />
         <activity
+            android:name=".ui.activity.MemoryDetailActivity"
+            android:windowLayoutInDisplayCutoutMode="shortEdges"
+            android:label="记忆详情" />
+        <activity
             android:name=".ui.activity.NovelDetailActivity"
             android:windowLayoutInDisplayCutoutMode="shortEdges" />
         <activity

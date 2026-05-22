@@ -72,6 +72,13 @@ public class AiMemoryManager {
     }
     
     /**
+     * 根据ID获取记忆（别名方法）
+     */
+    public AiMemory getMemoryById(int id) {
+        return memoryDao.getById((long) id);
+    }
+    
+    /**
      * 获取某小说的所有记忆（包含全局记忆）
      */
     public List<AiMemory> getMemories(int storyId) {

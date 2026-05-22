@@ -57,10 +57,14 @@ public class AiMemoryActivity extends BaseActivity {
     private RecyclerView rvMemories;
     private MaterialButton btnExtract;
     private MaterialButton btnClear;
+    private MaterialButton btnMultiSelect;
+    private MaterialButton btnSelectAll;
+    private MaterialButton btnBatchDelete;
     private View layoutBottomActions;
     private ChipGroup chipGroupMainCategory;
     private ChipGroup chipGroupSubCategory;
     private View layoutSubCategory;
+    private com.google.android.material.textfield.TextInputEditText etSearch;
 
     private AiMemoryManager memoryManager;
     private AiMemoryAdapter adapter;
@@ -88,10 +92,14 @@ public class AiMemoryActivity extends BaseActivity {
         rvMemories = findViewById(R.id.rv_memories);
         btnExtract = findViewById(R.id.btn_extract);
         btnClear = findViewById(R.id.btn_clear);
+        btnMultiSelect = findViewById(R.id.btn_multi_select);
+        btnSelectAll = findViewById(R.id.btn_select_all);
+        btnBatchDelete = findViewById(R.id.btn_batch_delete);
         layoutBottomActions = findViewById(R.id.layout_bottom_actions);
         chipGroupMainCategory = findViewById(R.id.chip_group_main_category);
         chipGroupSubCategory = findViewById(R.id.chip_group_sub_category);
         layoutSubCategory = findViewById(R.id.layout_sub_category);
+        etSearch = findViewById(R.id.et_search);
 
         // 返回按钮
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
@@ -101,11 +109,42 @@ public class AiMemoryActivity extends BaseActivity {
 
         // 清空按钮
         btnClear.setOnClickListener(v -> showClearConfirmDialog());
+        
+        // 多选按钮
+        btnMultiSelect.setOnClickListener(v -> toggleMultiSelectMode());
+        
+        // 全选按钮
+        btnSelectAll.setOnClickListener(v -> {
+            if (adapter.getSelectedCount() == adapter.getItemCount()) {
+                adapter.deselectAll();
+            } else {
+                adapter.selectAll();
+            }
+            updateUI(adapter.getItemCount());
+        });
+        
+        // 批量删除按钮
+        btnBatchDelete.setOnClickListener(v -> showBatchDeleteConfirmDialog());
+        
+        // 搜索框
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                applyFilter();
+            }
+            
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
 
         // 设置RecyclerView
         rvMemories.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AiMemoryAdapter();
         adapter.setOnMemoryDeleteListener(this::deleteMemory);
+        adapter.setOnMemoryClickListener(this::openMemoryDetail);
         rvMemories.setAdapter(adapter);
 
         // 设置分类筛选器
@@ -169,6 +208,20 @@ public class AiMemoryActivity extends BaseActivity {
                 }
             }
         }
+        
+        // 应用搜索过滤
+        String searchText = etSearch.getText().toString().trim();
+        if (searchText != null && !searchText.isEmpty()) {
+            List<AiMemory> searchFiltered = new ArrayList<>();
+            String lowerSearch = searchText.toLowerCase();
+            for (AiMemory memory : filtered) {
+                if (memory.getTitle().toLowerCase().contains(lowerSearch) ||
+                    (memory.getContent() != null && memory.getContent().toLowerCase().contains(lowerSearch))) {
+                    searchFiltered.add(memory);
+                }
+            }
+            filtered = searchFiltered;
+        }
 
         adapter.setMemories(filtered);
         updateUI(filtered.size());
@@ -187,6 +240,67 @@ public class AiMemoryActivity extends BaseActivity {
             tvEmpty.setVisibility(View.GONE);
             layoutBottomActions.setVisibility(View.VISIBLE);
         }
+        
+        // 更新多选模式按钮状态
+        if (adapter.isMultiSelectMode()) {
+            btnMultiSelect.setText("退出多选");
+            btnSelectAll.setVisibility(View.VISIBLE);
+            btnBatchDelete.setVisibility(View.VISIBLE);
+            btnClear.setVisibility(View.GONE);
+            
+            int selectedCount = adapter.getSelectedCount();
+            if (selectedCount > 0) {
+                btnSelectAll.setText(selectedCount == count ? "取消全选" : "全选");
+                btnBatchDelete.setEnabled(true);
+            } else {
+                btnSelectAll.setText("全选");
+                btnBatchDelete.setEnabled(false);
+            }
+        } else {
+            btnMultiSelect.setText("多选");
+            btnSelectAll.setVisibility(View.GONE);
+            btnBatchDelete.setVisibility(View.GONE);
+            btnClear.setVisibility(View.VISIBLE);
+        }
+    }
+    
+    /**
+     * 切换多选模式
+     */
+    private void toggleMultiSelectMode() {
+        boolean newMode = !adapter.isMultiSelectMode();
+        adapter.setMultiSelectMode(newMode);
+        updateUI(adapter.getItemCount());
+    }
+    
+    /**
+     * 显示批量删除确认对话框
+     */
+    private void showBatchDeleteConfirmDialog() {
+        List<AiMemory> selectedMemories = adapter.getSelectedMemories();
+        if (selectedMemories.isEmpty()) {
+            Toast.makeText(this, "请先选择要删除的记忆", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        new AlertDialog.Builder(this)
+            .setTitle("批量删除")
+            .setMessage("确定要删除选中的 " + selectedMemories.size() + " 条记忆吗？")
+            .setPositiveButton("删除", (dialog, which) -> {
+                int deletedCount = 0;
+                for (AiMemory memory : selectedMemories) {
+                    if (memoryManager.deleteMemory(memory.getId())) {
+                        deletedCount++;
+                    }
+                }
+                Toast.makeText(this, "已删除 " + deletedCount + " 条记忆", Toast.LENGTH_SHORT).show();
+                
+                // 退出多选模式
+                adapter.setMultiSelectMode(false);
+                loadMemories();
+            })
+            .setNegativeButton("取消", null)
+            .show();
     }
 
     /**
@@ -261,6 +375,20 @@ public class AiMemoryActivity extends BaseActivity {
             })
             .setNegativeButton("取消", null)
             .show();
+    }
+    
+    /**
+     * 打开记忆详情页（编辑）
+     */
+    private void openMemoryDetail(AiMemory memory) {
+        // 如果处于多选模式，不响应点击
+        if (adapter.isMultiSelectMode()) {
+            return;
+        }
+        
+        Intent intent = new Intent(this, MemoryDetailActivity.class);
+        intent.putExtra(MemoryDetailActivity.EXTRA_MEMORY_ID, (long) memory.getId());
+        startActivity(intent);
     }
 
     /**
