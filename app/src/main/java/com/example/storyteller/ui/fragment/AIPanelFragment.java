@@ -500,11 +500,13 @@ public class AIPanelFragment extends BaseFragment {
             rvChat.smoothScrollToPosition(messages.size() - 1);
         });
         
-        // 使用 processAgentCommand 获取回答
-        apiClient.processAgentCommand(
+        // 使用自定义 System Prompt（consultant）获取回答
+        String systemPrompt = getSystemPromptForMode("ask");
+        apiClient.processAgentCommandWithSystemPrompt(
             userMessage,
             storyContext,
             currentModel,
+            systemPrompt,
             requireContext(),
             new ApiClient.AgentCallback() {
                 @Override
