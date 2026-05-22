@@ -3,6 +3,7 @@ package com.example.storyteller.ui.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -19,13 +20,81 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
     
     private final List<AiMemory> memories = new ArrayList<>();
     private OnMemoryDeleteListener deleteListener;
+    private OnMemoryClickListener clickListener;
+    private boolean isMultiSelectMode = false; // 多选模式
+    private final java.util.Set<Integer> selectedPositions = new java.util.HashSet<>();
     
     public interface OnMemoryDeleteListener {
         void onDelete(AiMemory memory);
     }
     
+    public interface OnMemoryClickListener {
+        void onClick(AiMemory memory);
+    }
+    
     public void setOnMemoryDeleteListener(OnMemoryDeleteListener listener) {
         this.deleteListener = listener;
+    }
+    
+    public void setOnMemoryClickListener(OnMemoryClickListener listener) {
+        this.clickListener = listener;
+    }
+    
+    /**
+     * 设置多选模式
+     */
+    public void setMultiSelectMode(boolean enabled) {
+        this.isMultiSelectMode = enabled;
+        if (!enabled) {
+            selectedPositions.clear();
+        }
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 是否处于多选模式
+     */
+    public boolean isMultiSelectMode() {
+        return isMultiSelectMode;
+    }
+    
+    /**
+     * 全选
+     */
+    public void selectAll() {
+        selectedPositions.clear();
+        for (int i = 0; i < memories.size(); i++) {
+            selectedPositions.add(i);
+        }
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 取消全选
+     */
+    public void deselectAll() {
+        selectedPositions.clear();
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 获取选中的记忆
+     */
+    public List<AiMemory> getSelectedMemories() {
+        List<AiMemory> selected = new ArrayList<>();
+        for (int position : selectedPositions) {
+            if (position >= 0 && position < memories.size()) {
+                selected.add(memories.get(position));
+            }
+        }
+        return selected;
+    }
+    
+    /**
+     * 获取选中数量
+     */
+    public int getSelectedCount() {
+        return selectedPositions.size();
     }
     
     public void setMemories(List<AiMemory> newMemories) {
@@ -47,7 +116,7 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AiMemory memory = memories.get(position);
-        holder.bind(memory);
+        holder.bind(memory, position);
     }
     
     @Override
@@ -56,6 +125,7 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
     }
     
     class ViewHolder extends RecyclerView.ViewHolder {
+        private final CheckBox cbSelect;
         private final TextView tvTitle;
         private final TextView tvContent;
         private final TextView tvMemoryType;
@@ -65,6 +135,7 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
         
         ViewHolder(View itemView) {
             super(itemView);
+            cbSelect = itemView.findViewById(R.id.cb_select);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvContent = itemView.findViewById(R.id.tv_content);
             tvMemoryType = itemView.findViewById(R.id.tv_memory_type);
@@ -73,7 +144,7 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
             btnDelete = itemView.findViewById(R.id.btn_delete);
         }
         
-        void bind(AiMemory memory) {
+        void bind(AiMemory memory, int position) {
             tvTitle.setText(memory.getTitle());
             
             // 设置记忆类型标签
@@ -100,20 +171,59 @@ public class AiMemoryAdapter extends RecyclerView.Adapter<AiMemoryAdapter.ViewHo
                 tvContent.setVisibility(View.GONE);
             }
             
-            // 点击卡片展开/收起详情
-            itemView.setOnClickListener(v -> {
-                if (tvContent.getVisibility() == View.VISIBLE) {
-                    tvContent.setVisibility(View.GONE);
-                } else {
-                    tvContent.setVisibility(View.VISIBLE);
-                }
-            });
-            
-            btnDelete.setOnClickListener(v -> {
-                if (deleteListener != null) {
-                    deleteListener.onDelete(memory);
-                }
-            });
+            // 多选模式
+            if (isMultiSelectMode) {
+                cbSelect.setVisibility(View.VISIBLE);
+                btnDelete.setVisibility(View.GONE);
+                
+                boolean isSelected = selectedPositions.contains(position);
+                cbSelect.setChecked(isSelected);
+                
+                // 点击CheckBox
+                cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (buttonView.isPressed()) {
+                        if (isChecked) {
+                            selectedPositions.add(position);
+                        } else {
+                            selectedPositions.remove(position);
+                        }
+                    }
+                });
+                
+                // 点击卡片也可以切换选中状态
+                itemView.setOnClickListener(v -> {
+                    if (selectedPositions.contains(position)) {
+                        selectedPositions.remove(position);
+                    } else {
+                        selectedPositions.add(position);
+                    }
+                    cbSelect.setChecked(selectedPositions.contains(position));
+                });
+            } else {
+                cbSelect.setVisibility(View.GONE);
+                btnDelete.setVisibility(View.VISIBLE);
+                
+                // 点击卡片展开/收起详情或进入编辑
+                itemView.setOnClickListener(v -> {
+                    // 优先触发编辑页面
+                    if (clickListener != null) {
+                        clickListener.onClick(memory);
+                    } else {
+                        // 如果没有设置点击监听，则展开/收起
+                        if (tvContent.getVisibility() == View.VISIBLE) {
+                            tvContent.setVisibility(View.GONE);
+                        } else {
+                            tvContent.setVisibility(View.VISIBLE);
+                        }
+                    }
+                });
+                
+                btnDelete.setOnClickListener(v -> {
+                    if (deleteListener != null) {
+                        deleteListener.onDelete(memory);
+                    }
+                });
+            }
         }
         
         private String getTypeLabel(String type) {
