@@ -18,8 +18,7 @@
     <string name="plot_status_no_story">还没有可梳理的小说，请先新增或选择一篇故事</string>
     <string name="plot_status_failed">剧情梳理失败：%1$s</string>
     <string name="plot_status_partial_failed">第%1$d章梳理失败，已跳过并继续后续章节</string>
-    <string name="plot_model_switched_flash">已切换到 Flash 模型</string>
-    <string name="plot_model_switched_pro">已切换到 Pro 模型</string>
+    <string name="plot_model_switched">已切换到 %1$s</string>
     <string name="plot_model_dialog_title">选择本次梳理模型</string>
     <string name="plot_detail_switched_brief">已切换到极简模式</string>
     <string name="plot_detail_switched_standard">已切换到标准模式</string>
@@ -68,8 +67,7 @@
     <string name="action_regenerate_one_character">重新生成该人物</string>
     <string name="action_edit_character">编辑人物</string>
     <string name="character_model_selector">人物画像模型</string>
-    <string name="character_model_switched_flash">已切换到 Flash 模型</string>
-    <string name="character_model_switched_pro">已切换到 Pro 模型</string>
+    <string name="character_model_switched">已切换到 %1$s</string>
     <string name="character_model_dialog_title">选择本次画像模型</string>
     <string name="title_character_regenerate">重新生成画像</string>
     <string name="title_character_regenerate_one">重新生成「%1$s」画像</string>
@@ -180,8 +178,8 @@
     <string name="story_description_empty">简介：暂无简介</string>
     <string name="story_series_default">未设置系列</string>
     <string name="story_description_default">暂无简介</string>
-    <string name="api_key">API Key:</string>
-    <string name="enter_your_deepseek_api_key">输入 DeepSeek API Key</string>
+    <string name="api_key">API Key：</string>
+    <string name="enter_api_key_hint">输入 API Key</string>
     <string name="save_api_key">保存 API Key</string>
     <string name="ask">Ask</string>
     <string name="agent">Agent</string>

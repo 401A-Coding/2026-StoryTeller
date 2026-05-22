@@ -23,7 +23,7 @@ public class ApiClient {
         // 初始化OkHttpClient，设置超时时间
         okHttpClient = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)  // AI响应可能较慢，增加超时
+                .readTimeout(120, TimeUnit.SECONDS)  // AI响应可能较慢，增加超时
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .build();
     }
@@ -40,12 +40,16 @@ public class ApiClient {
         return okHttpClient;
     }
 
-    // DeepSeek API请求模型
-    public static class DeepSeekRequest {
-        public String model = "deepseek-v4-flash";  // 根据文档调整模型名称
+    // 通用请求模型
+    public static class ChatRequest {
+        public String model;
         public List<Message> messages;
-        public int max_tokens = 1000;  // 控制故事长度
-        public double temperature = 0.7;  // 创意度，0-1之间
+        public int max_tokens = 1000;
+        public double temperature = 0.7;
+    }
+
+    // DeepSeek请求模型（向后兼容）
+    public static class DeepSeekRequest extends ChatRequest {
     }
 
     public static class RequestOptions {
@@ -73,8 +77,8 @@ public class ApiClient {
         }
     }
 
-    // DeepSeek API响应模型（简化版）
-    public static class DeepSeekResponse {
+    // 通用响应模型
+    public static class ChatResponse {
         public List<Choice> choices;
 
         public static class Choice {
@@ -82,37 +86,50 @@ public class ApiClient {
         }
     }
 
-    // 生成故事的方法（默认使用 flash 模型）
-    public void generateStory(String prompt, Context context, Callback callback) {
-        generateStory(prompt, "flash", context, callback);
+    // DeepSeek响应模型（向后兼容）
+    public static class DeepSeekResponse extends ChatResponse {
+    }
+
+    // 回调接口
+    public interface Callback {
+        void onSuccess(String story);
+        void onFailure(Exception e);
     }
 
     /**
-     * 生成故事的方法（支持模型选择）
+     * 生成故事的方法（使用默认模型）
+     */
+    public void generateStory(String prompt, Context context, Callback callback) {
+        generateStory(prompt, ModelConfig.DEFAULT_MODEL, context, callback);
+    }
+
+    /**
+     * 生成故事的方法（支持 modelId 选择模型）
      * @param prompt 提示词
-     * @param model 模型类型："flash" 或 "pro"
+     * @param modelId 内部模型ID（如 "deepseek-flash", "minimax-m2.7"）
      * @param context Android Context
      * @param callback 回调
      */
-    public void generateStory(String prompt, String model, Context context, Callback callback) {
-        generateStory(prompt, model, context, null, callback);
+    public void generateStory(String prompt, String modelId, Context context, Callback callback) {
+        generateStory(prompt, modelId, context, null, callback);
     }
 
-    public void generateStory(String prompt, String model, Context context, RequestOptions options, Callback callback) {
-        String apiKey = ApiKeyManager.getApiKey(context);
+    public void generateStory(String prompt, String modelId, Context context, RequestOptions options, Callback callback) {
+        ModelConfig.ModelInfo modelInfo = ModelConfig.getModelInfo(modelId);
+        if (modelInfo == null) {
+            modelInfo = ModelConfig.getDefaultModelInfo();
+        }
+        
+        String apiKey = ApiKeyManager.getApiKey(context, modelInfo.provider);
         if (apiKey.isEmpty()) {
-            callback.onFailure(new Exception("API key not set"));
+            callback.onFailure(new Exception("API key not set for " + modelInfo.provider.getDisplayName()));
             return;
         }
-        // 构建请求体
-        DeepSeekRequest request = new DeepSeekRequest();
-        // 根据选择的模型设置不同的模型名称
-        if ("pro".equals(model)) {
-            request.model = "deepseek-v4-pro";  // Pro 模型
-        } else {
-            request.model = "deepseek-v4-flash";  // Flash 模型（默认）
-        }
-        request.messages = List.of(new Message("user", prompt));  // 用户提示作为消息
+        
+        // 构建请求
+        ChatRequest request = new ChatRequest();
+        request.model = modelInfo.apiModelName;
+        request.messages = List.of(new Message("user", prompt));
         if (options != null) {
             if (options.maxTokens != null && options.maxTokens > 0) {
                 request.max_tokens = options.maxTokens;
@@ -126,23 +143,101 @@ public class ApiClient {
         RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
 
         Request req = new Request.Builder()
-                .url("https://api.deepseek.com/chat/completions")
-                .addHeader("Authorization", "Bearer " + apiKey)  // 替换为你的API密钥
+                .url(modelInfo.provider.getBaseUrl())
+                .addHeader("Authorization", "Bearer " + apiKey)
                 .addHeader("Content-Type", "application/json")
                 .post(body)
                 .build();
 
         // 异步执行请求
+        executeRequest(req, callback);
+    }
+
+    // ==================== 智能体功能 ====================
+
+    /**
+     * 智能体模式：分析用户意图并返回结构化命令（使用默认模型）
+     */
+    public void processAgentCommand(String userMessage, String currentStoryContext, 
+                                     Context context, AgentCallback callback) {
+        processAgentCommand(userMessage, currentStoryContext, ModelConfig.DEFAULT_MODEL, context, callback);
+    }
+
+    /**
+     * 智能体模式：分析用户意图并返回结构化命令
+     * @param userMessage 用户消息
+     * @param currentStoryContext 当前小说上下文
+     * @param modelId 内部模型ID
+     * @param context Android Context
+     * @param callback 回调
+     */
+    public void processAgentCommand(String userMessage, String currentStoryContext, String modelId,
+                                     Context context, AgentCallback callback) {
+        // 使用默认的编辑助手 System Prompt
+        PromptManager promptManager = new PromptManager(context);
+        String defaultSystemPrompt = promptManager.getAgentSystemPrompt("editor", null);
+        if (defaultSystemPrompt == null || defaultSystemPrompt.isEmpty()) {
+            callback.onFailure(new Exception("Failed to load agent system prompt"));
+            return;
+        }
+        processAgentCommandWithSystemPrompt(userMessage, currentStoryContext, modelId, defaultSystemPrompt, context, callback);
+    }
+    
+    /**
+     * 智能体模式：使用自定义 System Prompt
+     */
+    public void processAgentCommandWithSystemPrompt(String userMessage, String currentStoryContext, 
+                                                     String modelId, String systemPrompt,
+                                                     Context context, AgentCallback callback) {
+        ModelConfig.ModelInfo modelInfo = ModelConfig.getModelInfo(modelId);
+        if (modelInfo == null) {
+            modelInfo = ModelConfig.getDefaultModelInfo();
+        }
+        
+        String apiKey = ApiKeyManager.getApiKey(context, modelInfo.provider);
+        if (apiKey.isEmpty()) {
+            callback.onFailure(new Exception("API key not set for " + modelInfo.provider.getDisplayName()));
+            return;
+        }
+
+        // 构建请求
+        ChatRequest request = new ChatRequest();
+        request.model = modelInfo.apiModelName;
+        request.messages = Arrays.asList(
+                new Message("system", systemPrompt),
+                new Message("user", "当前小说上下文：\n" + currentStoryContext + "\n\n用户消息：" + userMessage)
+        );
+        request.max_tokens = 2000;
+        request.temperature = 0.3;
+
+        String json = gson.toJson(request);
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+
+        Request req = new Request.Builder()
+                .url(modelInfo.provider.getBaseUrl())
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        // 异步执行
+        executeAgentRequest(req, callback);
+    }
+
+    /**
+     * 执行通用HTTP请求
+     */
+    private void executeRequest(Request req, Callback callback) {
         new Thread(() -> {
             try (Response response = okHttpClient.newCall(req).execute()) {
                 if (response.isSuccessful()) {
                     String responseJson = response.body().string();
-                    DeepSeekResponse apiResponse = gson.fromJson(responseJson, DeepSeekResponse.class);
+                    ChatResponse apiResponse = gson.fromJson(responseJson, ChatResponse.class);
                     if (apiResponse.choices != null && !apiResponse.choices.isEmpty()) {
-                        String story = apiResponse.choices.get(0).message.content;
-                        callback.onSuccess(story);
+                        String content = apiResponse.choices.get(0).message.content;
+                        callback.onSuccess(content);
                     } else {
-                        callback.onFailure(new Exception("No story generated"));
+                        callback.onFailure(new Exception("No content generated"));
                     }
                 } else {
                     callback.onFailure(new Exception("API Error: " + response.code() + " - " + response.message()));
@@ -153,95 +248,15 @@ public class ApiClient {
         }).start();
     }
 
-    // 回调接口
-    public interface Callback {
-        void onSuccess(String story);
-        void onFailure(Exception e);
-    }
-
-    // ==================== 智能体功能 ====================
-
     /**
-     * 智能体模式：分析用户意图并返回结构化命令（默认使用 flash 模型）
-     * @param userMessage 用户消息
-     * @param currentStoryContext 当前小说上下文（卷章结构、最近内容等）
-     * @param context Android Context
-     * @param callback 回调
+     * 执行智能体HTTP请求
      */
-    public void processAgentCommand(String userMessage, String currentStoryContext, 
-                                     Context context, AgentCallback callback) {
-        processAgentCommand(userMessage, currentStoryContext, "flash", context, callback);
-    }
-
-    /**
-     * 智能体模式：分析用户意图并返回结构化命令（支持模型选择）
-     * @param userMessage 用户消息
-     * @param currentStoryContext 当前小说上下文（卷章结构、最近内容等）
-     * @param model 模型类型："flash" 或 "pro"
-     * @param context Android Context
-     * @param callback 回调
-     */
-    public void processAgentCommand(String userMessage, String currentStoryContext, String model,
-                                     Context context, AgentCallback callback) {
-        // 使用默认的编辑助手 System Prompt
-        PromptManager promptManager = new PromptManager(context);
-        String defaultSystemPrompt = promptManager.getAgentSystemPrompt("editor", null);
-        if (defaultSystemPrompt == null || defaultSystemPrompt.isEmpty()) {
-            callback.onFailure(new Exception("Failed to load agent system prompt"));
-            return;
-        }
-        processAgentCommandWithSystemPrompt(userMessage, currentStoryContext, model, defaultSystemPrompt, context, callback);
-    }
-    
-    /**
-     * 智能体模式：使用自定义 System Prompt
-     * @param userMessage 用户消息
-     * @param currentStoryContext 当前小说上下文
-     * @param model 模型类型
-     * @param systemPrompt 自定义的系统提示词
-     * @param context Android Context
-     * @param callback 回调
-     */
-    public void processAgentCommandWithSystemPrompt(String userMessage, String currentStoryContext, 
-                                                     String model, String systemPrompt,
-                                                     Context context, AgentCallback callback) {
-        String apiKey = ApiKeyManager.getApiKey(context);
-        if (apiKey.isEmpty()) {
-            callback.onFailure(new Exception("API key not set"));
-            return;
-        }
-
-        // 构建请求
-        DeepSeekRequest request = new DeepSeekRequest();
-        // 根据选择的模型设置不同的模型名称
-        if ("pro".equals(model)) {
-            request.model = "deepseek-v4-pro";  // Pro 模型
-        } else {
-            request.model = "deepseek-v4-flash";  // Flash 模型（默认）
-        }
-        request.messages = Arrays.asList(
-                new Message("system", systemPrompt),
-                new Message("user", "当前小说上下文：\n" + currentStoryContext + "\n\n用户消息：" + userMessage)
-        );
-        request.max_tokens = 2000;  // 增加到 2000，避免 JSON 被截断
-        request.temperature = 0.3;  // 降低温度，提高结构化输出的准确性
-
-        String json = gson.toJson(request);
-        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
-
-        Request req = new Request.Builder()
-                .url("https://api.deepseek.com/chat/completions")
-                .addHeader("Authorization", "Bearer " + apiKey)
-                .addHeader("Content-Type", "application/json")
-                .post(body)
-                .build();
-
-        // 异步执行
+    private void executeAgentRequest(Request req, AgentCallback callback) {
         new Thread(() -> {
             try (Response response = okHttpClient.newCall(req).execute()) {
                 if (response.isSuccessful()) {
                     String responseJson = response.body().string();
-                    DeepSeekResponse apiResponse = gson.fromJson(responseJson, DeepSeekResponse.class);
+                    ChatResponse apiResponse = gson.fromJson(responseJson, ChatResponse.class);
                     if (apiResponse.choices != null && !apiResponse.choices.isEmpty()) {
                         String aiResponse = apiResponse.choices.get(0).message.content;
                         
@@ -287,7 +302,6 @@ public class ApiClient {
     
     /**
      * 清理AI返回内容中的Markdown代码块标记
-     * 例如：```json {...} ``` → {...}
      */
     private String cleanMarkdownCodeBlock(String content) {
         if (content == null || content.isEmpty()) {
@@ -298,9 +312,9 @@ public class ApiClient {
         
         // 去除开头的 ```json 或 ```
         if (cleaned.startsWith("```json")) {
-            cleaned = cleaned.substring(7); // 去除 "```json"
+            cleaned = cleaned.substring(7);
         } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.substring(3); // 去除 "```"
+            cleaned = cleaned.substring(3);
         }
         
         // 去除结尾的 ```

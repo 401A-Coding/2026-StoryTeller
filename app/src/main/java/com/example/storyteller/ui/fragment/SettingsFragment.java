@@ -1,20 +1,37 @@
 package com.example.storyteller.ui.fragment;
 
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
+import com.example.storyteller.ui.adapter.ModelAdapter;
 import com.example.storyteller.ui.dialog.WritingPreferenceDialog;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 设置Fragment
- * 从SettingsActivity改造而来，作为底部导航的"设置"Tab
  */
 public class SettingsFragment extends BaseFragment {
+
+    private RecyclerView rvModels;
+    private ModelAdapter modelAdapter;
+    private List<ModelConfig.Provider> addedProviders = new ArrayList<>();
 
     @Override
     protected int getLayoutId() {
@@ -23,23 +40,31 @@ public class SettingsFragment extends BaseFragment {
 
     @Override
     protected void initView(View view) {
-        EditText etApiKey = view.findViewById(R.id.et_api_key);
-        Button btnSave = view.findViewById(R.id.btn_save_api_key);
-
-        btnSave.setOnClickListener(v -> {
-            String apiKey = etApiKey.getText().toString().trim();
-            if (!apiKey.isEmpty()) {
-                ApiKeyManager.saveApiKey(requireContext(), apiKey);
-                Toast.makeText(requireContext(), "API Key已保存", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(requireContext(), "请输入API Key", Toast.LENGTH_SHORT).show();
+        rvModels = view.findViewById(R.id.rv_models);
+        
+        // 设置模型列表
+        modelAdapter = new ModelAdapter();
+        rvModels.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvModels.setAdapter(modelAdapter);
+        modelAdapter.setOnModelActionListener(new ModelAdapter.OnModelActionListener() {
+            @Override
+            public void onEnabledChanged(ModelConfig.Provider provider, boolean enabled) {
+                ModelConfig.setProviderEnabled(requireContext(), provider, enabled);
+            }
+            
+            @Override
+            public void onDeleteProvider(ModelConfig.Provider provider) {
+                showDeleteConfirmDialog(provider);
             }
         });
-        
+
+        // 添加模型按钮
+        Button btnAddModel = view.findViewById(R.id.btn_add_model);
+        btnAddModel.setOnClickListener(v -> showAddModelDialog());
+
         // 全局写作偏好设置入口
         Button btnGlobalPreference = view.findViewById(R.id.btn_global_writing_preference);
         btnGlobalPreference.setOnClickListener(v -> {
-            // 打开全局偏好对话框（storyId为null表示全局）
             WritingPreferenceDialog dialog = WritingPreferenceDialog.newInstance();
             dialog.show(getChildFragmentManager(), "global_writing_preference");
         });
@@ -47,12 +72,91 @@ public class SettingsFragment extends BaseFragment {
 
     @Override
     protected void initData() {
-        // 加载已保存的API Key
-        View view = getView();
-        if (view != null) {
-            EditText etApiKey = view.findViewById(R.id.et_api_key);
-            String existingKey = ApiKeyManager.getApiKey(requireContext());
-            etApiKey.setText(existingKey);
+        loadAddedProviders();
+    }
+
+    private void loadAddedProviders() {
+        addedProviders.clear();
+        // 检查每个提供商是否已有 API Key
+        for (ModelConfig.Provider provider : ModelConfig.getAllProviders()) {
+            String apiKey = ApiKeyManager.getApiKey(requireContext(), provider);
+            if (apiKey != null && !apiKey.isEmpty()) {
+                addedProviders.add(provider);
+            }
         }
+        updateModelsUI();
+    }
+
+    private void updateModelsUI() {
+        modelAdapter.setProviders(addedProviders);
+    }
+
+    private void showAddModelDialog() {
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_add_model, null);
+        
+        Spinner spinnerProvider = dialogView.findViewById(R.id.spinner_provider);
+        EditText etApiKey = dialogView.findViewById(R.id.et_api_key);
+        
+        // 设置 Spinner 数据
+        ModelConfig.Provider[] providers = ModelConfig.getAllProviders();
+        String[] providerNames = new String[providers.length];
+        for (int i = 0; i < providers.length; i++) {
+            providerNames[i] = providers[i].getDisplayName();
+        }
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_dropdown_item, providerNames);
+        spinnerProvider.setAdapter(adapter);
+        
+        // 检查已添加的提供商，禁用选择
+        spinnerProvider.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                ModelConfig.Provider selectedProvider = providers[position];
+                String existingKey = ApiKeyManager.getApiKey(requireContext(), selectedProvider);
+                if (existingKey != null && !existingKey.isEmpty()) {
+                    etApiKey.setText(existingKey);
+                    etApiKey.setEnabled(false);
+                } else {
+                    etApiKey.setText("");
+                    etApiKey.setEnabled(true);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("添加模型")
+                .setView(dialogView)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.action_save, (dialog, which) -> {
+                    ModelConfig.Provider selectedProvider = providers[spinnerProvider.getSelectedItemPosition()];
+                    String apiKey = etApiKey.getText().toString().trim();
+                    
+                    if (apiKey.isEmpty()) {
+                        Toast.makeText(requireContext(), "请输入 API Key", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    
+                    ApiKeyManager.saveApiKey(requireContext(), selectedProvider, apiKey);
+                    Toast.makeText(requireContext(), selectedProvider.getDisplayName() + " API Key 已保存", Toast.LENGTH_SHORT).show();
+                    loadAddedProviders();
+                })
+                .show();
+    }
+
+    private void showDeleteConfirmDialog(ModelConfig.Provider provider) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("删除模型")
+                .setMessage("确认删除 " + provider.getDisplayName() + " 的 API Key 吗？")
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.action_delete, (dialog, which) -> {
+                    ApiKeyManager.saveApiKey(requireContext(), provider, "");
+                    Toast.makeText(requireContext(), provider.getDisplayName() + " 已删除", Toast.LENGTH_SHORT).show();
+                    loadAddedProviders();
+                })
+                .show();
     }
 }
