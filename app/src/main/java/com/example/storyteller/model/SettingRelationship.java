@@ -34,6 +34,8 @@ public class SettingRelationship {
     private String targetSettingCategory;    // 目标设定分类
     private String sourceSettingSubCategory; // 源设定子分类
     private String targetSettingSubCategory; // 目标设定子分类
+    private boolean sourceSettingDeleted = false;  // 源设定是否已删除
+    private boolean targetSettingDeleted = false;   // 目标设定是否已删除
     
     // === 来源类型常量 ===
     public static final String SOURCE_TYPE_MANUAL = "manual";           // 用户手动添加
@@ -185,6 +187,22 @@ public class SettingRelationship {
     
     public void setSourceSettingSubCategory(String sourceSettingSubCategory) {
         this.sourceSettingSubCategory = sourceSettingSubCategory;
+    }
+    
+    public boolean isSourceSettingDeleted() {
+        return sourceSettingDeleted;
+    }
+    
+    public void setSourceSettingDeleted(boolean sourceSettingDeleted) {
+        this.sourceSettingDeleted = sourceSettingDeleted;
+    }
+    
+    public boolean isTargetSettingDeleted() {
+        return targetSettingDeleted;
+    }
+    
+    public void setTargetSettingDeleted(boolean targetSettingDeleted) {
+        this.targetSettingDeleted = targetSettingDeleted;
     }
     
     public String getTargetSettingSubCategory() {

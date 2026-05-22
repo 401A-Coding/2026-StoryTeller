@@ -815,6 +815,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         }
         
         if (result > 0) {
+            // 保存关系描述的修改
+            saveRelations();
+            
             Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show();
             
             if (currentSetting.getId() == 0) {
@@ -827,6 +830,18 @@ public class SettingDetailActivity extends AppCompatActivity {
             }
         } else {
             Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * 保存所有关系的修改（描述等）
+     */
+    private void saveRelations() {
+        if (relationsList == null || relationsList.isEmpty()) {
+            return;
+        }
+        for (SettingRelationship rel : relationsList) {
+            relationshipDao.update(rel);
         }
     }
     
@@ -2056,11 +2071,25 @@ public class SettingDetailActivity extends AppCompatActivity {
         itemLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
         itemLayout.setPadding(0, 4, 0, 4);
         
-        // 源设定名称（始终蓝色）
+        // 源设定名称
         TextView tvSource = new TextView(this);
         tvSource.setText(rel.getSourceSettingTitle() != null ? rel.getSourceSettingTitle() : "设定" + rel.getSourceSettingId());
         tvSource.setTextSize(14);
-        tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+        if (rel.isSourceSettingDeleted()) {
+            // 已删除的设定显示为灰色，不可点击
+            tvSource.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvSource.setText(tvSource.getText() + " [已删除]");
+        } else {
+            tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            // 点击事件
+            View.OnClickListener sourceClickListener = v -> {
+                Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
+                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getSourceSettingId());
+                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
+                startActivity(intent);
+            };
+            tvSource.setOnClickListener(sourceClickListener);
+        }
         tvSource.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -2075,32 +2104,28 @@ public class SettingDetailActivity extends AppCompatActivity {
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
         
-        // 目标设定名称（始终蓝色）
+        // 目标设定名称
         TextView tvTarget = new TextView(this);
         tvTarget.setText(rel.getTargetSettingTitle() != null ? rel.getTargetSettingTitle() : "设定" + rel.getTargetSettingId());
         tvTarget.setTextSize(14);
-        tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+        if (rel.isTargetSettingDeleted()) {
+            // 已删除的设定显示为灰色，不可点击
+            tvTarget.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvTarget.setText(tvTarget.getText() + " [已删除]");
+        } else {
+            tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            // 点击事件
+            View.OnClickListener targetClickListener = v -> {
+                Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
+                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getTargetSettingId());
+                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
+                startActivity(intent);
+            };
+            tvTarget.setOnClickListener(targetClickListener);
+        }
         tvTarget.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        
-        // A 点击事件
-        View.OnClickListener sourceClickListener = v -> {
-            Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
-            intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getSourceSettingId());
-            intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
-            startActivity(intent);
-        };
-        tvSource.setOnClickListener(sourceClickListener);
-        
-        // B 点击事件
-        View.OnClickListener targetClickListener = v -> {
-            Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
-            intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getTargetSettingId());
-            intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
-            startActivity(intent);
-        };
-        tvTarget.setOnClickListener(targetClickListener);
         
         itemLayout.addView(tvSource);
         itemLayout.addView(tvArrow);
@@ -2120,7 +2145,7 @@ public class SettingDetailActivity extends AppCompatActivity {
     }
     
     /**
-     * 添加编辑模式的关联项视图（有删除按钮）
+     * 添加编辑模式的关联项视图（有删除按钮，可编辑描述）
      */
     private void addEditModeRelationItemView(LinearLayout container, SettingRelationship rel) {
         // 主行：A → [关系] → B ×
@@ -2129,11 +2154,22 @@ public class SettingDetailActivity extends AppCompatActivity {
         itemLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
         itemLayout.setPadding(0, 4, 0, 4);
         
-        // 源设定名称（始终蓝色）
+        // 源设定名称
         TextView tvSource = new TextView(this);
         tvSource.setText(rel.getSourceSettingTitle() != null ? rel.getSourceSettingTitle() : "设定" + rel.getSourceSettingId());
         tvSource.setTextSize(14);
-        tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+        if (rel.isSourceSettingDeleted()) {
+            tvSource.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvSource.setText(tvSource.getText() + " [已删除]");
+        } else {
+            tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvSource.setOnClickListener(v -> {
+                Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
+                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getSourceSettingId());
+                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
+                startActivity(intent);
+            });
+        }
         tvSource.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -2148,41 +2184,43 @@ public class SettingDetailActivity extends AppCompatActivity {
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
         
-        // 目标设定名称（始终蓝色）
+        // 目标设定名称
         TextView tvTarget = new TextView(this);
         tvTarget.setText(rel.getTargetSettingTitle() != null ? rel.getTargetSettingTitle() : "设定" + rel.getTargetSettingId());
         tvTarget.setTextSize(14);
-        tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+        if (rel.isTargetSettingDeleted()) {
+            tvTarget.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvTarget.setText(tvTarget.getText() + " [已删除]");
+        } else {
+            tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvTarget.setOnClickListener(v -> {
+                Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
+                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getTargetSettingId());
+                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
+                startActivity(intent);
+            });
+        }
         tvTarget.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         
-        // A 点击事件
-        View.OnClickListener sourceClickListener = v -> {
-            Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
-            intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getSourceSettingId());
-            intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
-            startActivity(intent);
-        };
-        tvSource.setOnClickListener(sourceClickListener);
-        
-        // B 点击事件
-        View.OnClickListener targetClickListener = v -> {
-            Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
-            intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getTargetSettingId());
-            intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
-            startActivity(intent);
-        };
-        tvTarget.setOnClickListener(targetClickListener);
-        
-        // 删除按钮
+        // 删除按钮（对于涉及已删除设定的关系，显示删除按钮便于清理历史遗留）
         Button btnDelete = new Button(this);
         btnDelete.setText("×");
         btnDelete.setTextSize(16);
         btnDelete.setMinWidth(48);
         btnDelete.setMinHeight(48);
         btnDelete.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-        btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
+        // 只有两端设定都存在时才可删除；已删除设定的关联可以删除
+        if (!rel.isSourceSettingDeleted() && !rel.isTargetSettingDeleted()) {
+            // 正常关系，正常删除
+            btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
+        } else {
+            // 已删除设定关联的关系，显示删除按钮（便于清理历史遗留）
+            btnDelete.setVisibility(View.VISIBLE);
+            btnDelete.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
+        }
         
         itemLayout.addView(tvSource);
         itemLayout.addView(tvArrow);
@@ -2191,15 +2229,45 @@ public class SettingDetailActivity extends AppCompatActivity {
         
         container.addView(itemLayout);
         
-        // 如果有描述，添加描述行
-        if (rel.getDescription() != null && !rel.getDescription().isEmpty()) {
-            TextView tvDesc = new TextView(this);
-            tvDesc.setText(rel.getDescription());
-            tvDesc.setTextSize(12);
-            tvDesc.setTextColor(getResources().getColor(android.R.color.darker_gray));
-            tvDesc.setPadding(0, 0, 0, 8);
-            container.addView(tvDesc);
+        // 描述行：可编辑的 EditText
+        LinearLayout descLayout = new LinearLayout(this);
+        descLayout.setOrientation(LinearLayout.HORIZONTAL);
+        descLayout.setPadding(24, 0, 0, 8);
+        
+        EditText etDesc = new EditText(this);
+        etDesc.setText(rel.getDescription() != null ? rel.getDescription() : "");
+        etDesc.setHint("添加关系描述...");
+        etDesc.setTextSize(12);
+        etDesc.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        etDesc.setBackground(getResources().getDrawable(android.R.drawable.edit_text));
+        etDesc.setPadding(8, 4, 8, 4);
+        // 已删除设定关联的关系，描述不可编辑
+        if (rel.isSourceSettingDeleted() || rel.isTargetSettingDeleted()) {
+            etDesc.setEnabled(false);
+            etDesc.setHint("已删除设定关联");
+        } else {
+            // 正常关系，保存描述变化
+            etDesc.addTextChangedListener(new android.text.TextWatcher() {
+                private String originalText = rel.getDescription() != null ? rel.getDescription() : "";
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    String newText = s.toString();
+                    if (!newText.equals(originalText)) {
+                        // 更新内存中的关系描述
+                        rel.setDescription(newText.isEmpty() ? null : newText);
+                    }
+                }
+            });
         }
+        etDesc.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        descLayout.addView(etDesc);
+        container.addView(descLayout);
     }
     
     /**

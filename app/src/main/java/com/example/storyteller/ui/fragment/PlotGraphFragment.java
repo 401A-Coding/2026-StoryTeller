@@ -227,29 +227,41 @@ public class PlotGraphFragment extends BaseFragment {
             StorySetting sourceSetting = settingMap.get(rel.getSourceSettingId());
             StorySetting targetSetting = settingMap.get(rel.getTargetSettingId());
             
-            if (sourceSetting == null || targetSetting == null) continue;
+            boolean sourceDeleted = rel.isSourceSettingDeleted();
+            boolean targetDeleted = rel.isTargetSettingDeleted();
             
-            // 添加源节点（如果尚未添加）
-            if (!addedNodes.contains(sourceSetting.getId())) {
+            // 添加源节点
+            if (sourceSetting != null && !addedNodes.contains(sourceSetting.getId())) {
                 Map<String, Object> node = new HashMap<>();
                 node.put("id", sourceSetting.getId());
                 node.put("label", truncateText(sourceSetting.getTitle(), 10));
                 node.put("title", sourceSetting.getTitle());
                 node.put("isCenter", false);
+                if (sourceDeleted) {
+                    node.put("isDeleted", true);
+                    node.put("title", sourceSetting.getTitle() + " [已删除]");
+                }
                 nodes.add(node);
                 addedNodes.add(sourceSetting.getId());
             }
             
-            // 添加目标节点（如果尚未添加）
-            if (!addedNodes.contains(targetSetting.getId())) {
+            // 添加目标节点
+            if (targetSetting != null && !addedNodes.contains(targetSetting.getId())) {
                 Map<String, Object> node = new HashMap<>();
                 node.put("id", targetSetting.getId());
                 node.put("label", truncateText(targetSetting.getTitle(), 10));
                 node.put("title", targetSetting.getTitle());
                 node.put("isCenter", false);
+                if (targetDeleted) {
+                    node.put("isDeleted", true);
+                    node.put("title", targetSetting.getTitle() + " [已删除]");
+                }
                 nodes.add(node);
                 addedNodes.add(targetSetting.getId());
             }
+            
+            // 如果两个设定都不存在（都已删除），跳过这条边
+            if (sourceSetting == null && targetSetting == null) continue;
             
             // 添加边
             Map<String, Object> edge = new HashMap<>();
@@ -259,6 +271,9 @@ public class PlotGraphFragment extends BaseFragment {
             edge.put("title", buildEdgeTitle(rel));
             edge.put("category", rel.getTypeCategory());
             edge.put("isDirected", rel.isDirected());
+            if (sourceDeleted || targetDeleted) {
+                edge.put("isDeleted", true);
+            }
             edges.add(edge);
         }
         

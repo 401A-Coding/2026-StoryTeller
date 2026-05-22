@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.GenericContentExtractor;
 import com.example.storyteller.data.remote.MaterialCandidateExtractor;
@@ -245,6 +246,11 @@ public class MaterialLibraryFragment extends BaseFragment {
      * 删除设定
      */
     private void deleteSetting(StorySetting setting, int position) {
+        // 先删除关联关系
+        SettingRelationshipDao relationshipDao = new SettingRelationshipDao(requireContext());
+        relationshipDao.deleteBySettingId(setting.getId());
+        
+        // 再删除设定本身
         int result = settingDao.delete(setting.getId());
         if (result > 0) {
             android.widget.Toast.makeText(requireContext(), "已删除", android.widget.Toast.LENGTH_SHORT).show();
@@ -687,8 +693,12 @@ public class MaterialLibraryFragment extends BaseFragment {
      * 批量删除
      */
     private void batchDeleteSettings(List<StorySetting> settings) {
+        SettingRelationshipDao relationshipDao = new SettingRelationshipDao(requireContext());
         int successCount = 0;
         for (StorySetting setting : settings) {
+            // 先删除关联关系
+            relationshipDao.deleteBySettingId(setting.getId());
+            // 再删除设定本身
             int result = settingDao.delete(setting.getId());
             if (result > 0) {
                 successCount++;

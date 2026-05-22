@@ -169,31 +169,54 @@
             
             // 创建节点
             var nodes = new vis.DataSet(nodesArray.map(function(node) {
+                var nodeColor, fontColor, nodeSize;
+                if (node.isDeleted) {
+                    // 已删除的节点：灰色
+                    nodeColor = { background: '#E0E0E0', border: '#9E9E9E', highlight: { background: '#BDBDBD', border: '#757575' } };
+                    fontColor = '#9E9E9E';
+                    nodeSize = 22;
+                } else if (node.isCenter) {
+                    nodeColor = { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } };
+                    fontColor = 'white';
+                    nodeSize = 40;
+                } else if (node.isIsolated) {
+                    nodeColor = { background: '#F5F5F5', border: '#BDBDBD', highlight: { background: '#E0E0E0', border: '#9E9E9E' } };
+                    fontColor = '#757575';
+                    nodeSize = 25;
+                } else {
+                    nodeColor = { background: '#E3F2FD', border: '#90CAF9', highlight: { background: '#BBDEFB', border: '#2196F3' } };
+                    fontColor = '#333';
+                    nodeSize = 30;
+                }
                 return {
                     id: node.id,
                     label: node.label,
                     title: node.title || node.label,
-                    color: node.isCenter ? 
-                        { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } } :
-                        node.isIsolated ?
-                        { background: '#F5F5F5', border: '#BDBDBD', highlight: { background: '#E0E0E0', border: '#9E9E9E' } } :
-                        { background: '#E3F2FD', border: '#90CAF9', highlight: { background: '#BBDEFB', border: '#2196F3' } },
+                    color: nodeColor,
                     font: {
-                        color: node.isCenter ? 'white' : (node.isIsolated ? '#757575' : '#333'),
-                        size: node.isCenter ? 16 : 14,
+                        color: fontColor,
+                        size: node.isDeleted ? 12 : (node.isCenter ? 16 : 14),
                         bold: node.isCenter
                     },
-                    borderWidth: 2,
+                    borderWidth: node.isDeleted ? 1 : 2,
                     borderWidthSelected: 3,
                     shape: 'circle',
-                    size: node.isCenter ? 40 : (node.isIsolated ? 25 : 30),
+                    size: nodeSize,
                     margin: 10
                 };
             }));
             
             // 创建边
             var edges = new vis.DataSet(edgesArray.map(function(edge) {
-                var color = COLORS[edge.category] || COLORS.other;
+                var color, edgeStyle;
+                if (edge.isDeleted) {
+                    // 涉及已删除设定的边：灰色虚线
+                    color = '#BDBDBD';
+                    edgeStyle = { type: 'continuous', dash: { enabled: true, lengthFactor: 5, gapFactor: 3 } };
+                } else {
+                    color = COLORS[edge.category] || COLORS.other;
+                    edgeStyle = { type: 'continuous' };
+                }
                 return {
                     from: edge.from,
                     to: edge.to,
@@ -201,9 +224,9 @@
                     title: edge.title || edge.label,
                     arrows: edge.isDirected ? ARROW_DIRECTED : ARROW_BIDIRECTIONAL,
                     color: { color: color, highlight: color, hover: color },
-                    font: { color: '#666', size: 11, strokeWidth: 0 },
-                    smooth: { type: 'continuous' },
-                    width: 1.5
+                    font: { color: edge.isDeleted ? '#9E9E9E' : '#666', size: edge.isDeleted ? 10 : 11, strokeWidth: 0 },
+                    smooth: edgeStyle,
+                    width: edge.isDeleted ? 1 : 1.5
                 };
             }));
             

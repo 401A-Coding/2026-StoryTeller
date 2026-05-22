@@ -682,6 +682,10 @@ public class SettingRelationshipDao {
                 relationship.setSourceSettingTitle(getColumnString(cursor, DBHelper.COL_STORY_SETTING_TITLE));
                 relationship.setSourceSettingCategory(getColumnString(cursor, DBHelper.COL_STORY_SETTING_CATEGORY));
                 relationship.setSourceSettingSubCategory(getColumnString(cursor, DBHelper.COL_STORY_SETTING_SUB_CATEGORY));
+                relationship.setSourceSettingDeleted(false);
+            } else {
+                // 设定不存在（已被删除但关联关系残留）
+                relationship.setSourceSettingDeleted(true);
             }
         } finally {
             cursor.close();
@@ -710,6 +714,10 @@ public class SettingRelationshipDao {
                 relationship.setTargetSettingTitle(getColumnString(cursor, DBHelper.COL_STORY_SETTING_TITLE));
                 relationship.setTargetSettingCategory(getColumnString(cursor, DBHelper.COL_STORY_SETTING_CATEGORY));
                 relationship.setTargetSettingSubCategory(getColumnString(cursor, DBHelper.COL_STORY_SETTING_SUB_CATEGORY));
+                relationship.setTargetSettingDeleted(false);
+            } else {
+                // 设定不存在（已被删除但关联关系残留）
+                relationship.setTargetSettingDeleted(true);
             }
         } finally {
             cursor.close();
@@ -725,6 +733,17 @@ public class SettingRelationshipDao {
             return null;
         }
         return cursor.getString(index);
+    }
+    
+    /**
+     * 获取列的int值
+     */
+    private int getColumnInt(Cursor cursor, String column, int defaultValue) {
+        int index = cursor.getColumnIndex(column);
+        if (index < 0 || cursor.isNull(index)) {
+            return defaultValue;
+        }
+        return cursor.getInt(index);
     }
     
     /**
