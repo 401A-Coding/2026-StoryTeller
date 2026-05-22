@@ -43,7 +43,7 @@
                     android:src="@android:drawable/ic_menu_close_clear_cancel"
                     android:contentDescription="关闭"
                     android:scaleType="center"
-                    android:tint="@android:color/darker_gray" />
+                    app:tint="@android:color/darker_gray" />
             </LinearLayout>
 
             <!-- 分类 -->
