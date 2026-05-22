@@ -4,9 +4,10 @@ package com.example.storyteller.model;
  * 设定关系类型枚举
  * 用于定义两个设定之间的关联关系
  * 
- * 包含六大类：
+ * 包含七大类：
  * - hierarchy: 层级关系（属于、包含等）
  * - association: 关联关系（位于、拥有、朋友等）
+ * - family: 家人关系（父母子女、兄弟姐妹等）
  * - opposition: 对立关系（敌对、竞争等）
  * - causality: 因果关系（导致、先于等）
  * - derivation: 衍生关系（衍生自、相似等）
@@ -46,12 +47,15 @@ public enum RelationshipType {
     BLOCKS("阻止", "阻止关系，如障碍阻止前进", true, "causality"),
     TRIGGERS("触发", "触发关系，如事件A触发了事件B", true, "causality"),
     
+    // ========== 家人关系（Family）==========
+    FAMILY("家人", "家人关系，如A与B是一家人", false, "family"),
+    
     // ========== 衍生关系（Derivation）==========
     DERIVED_FROM("衍生自", "从某设定衍生，如B角色衍生自A角色", true, "derivation"),
     SIMILAR_TO("相似于", "相似关系，如设定A与设定B相似", false, "derivation"),
     INSPIRES("启发", "灵感关系，如B的创作灵感来自A", true, "derivation"),
-    PARENT_OF("父母", "亲子关系，如A是B的父母", false, "derivation"),
-    CHILD_OF("子女", "子女关系，如A是B的子女", false, "derivation"),
+    PARENT_OF("父母", "亲子关系，如A是B的父母", true, "derivation"),
+    CHILD_OF("子女", "子女关系，如A是B的子女", true, "derivation"),
     
     // ========== 其他关系 ==========
     CUSTOM("自定义", "用户自定义关系，需要额外描述", true, "other"),
@@ -130,7 +134,7 @@ public enum RelationshipType {
      * 获取所有分类
      */
     public static String[] getCategories() {
-        return new String[]{"hierarchy", "association", "opposition", "causality", "derivation", "other"};
+        return new String[]{"hierarchy", "association", "family", "opposition", "causality", "derivation", "other"};
     }
     
     /**
@@ -140,6 +144,7 @@ public enum RelationshipType {
         switch (category) {
             case "hierarchy": return "层级关系";
             case "association": return "关联关系";
+            case "family": return "家人关系";
             case "opposition": return "对立关系";
             case "causality": return "因果关系";
             case "derivation": return "衍生关系";
