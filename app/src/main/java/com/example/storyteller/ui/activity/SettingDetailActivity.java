@@ -83,6 +83,8 @@ public class SettingDetailActivity extends AppCompatActivity {
     private Map<String, SeekBar> editSpecificAttrSliders;
     // 存储Spinner的选项值数组
     private Map<String, String[]> editSpecificAttrSpinnerOptions;
+    // 存储自定义属性编辑控件
+    private Map<String, EditText> editCustomAttrFields;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +103,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         editSpecificAttrChipGroups = new HashMap<>();
         editSpecificAttrSliders = new HashMap<>();
         editSpecificAttrSpinnerOptions = new HashMap<>();
+        editCustomAttrFields = new HashMap<>();
         initView();
         
         if (settingId == -1) {
@@ -249,6 +252,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         
         // 专属属性（结构化展示）
         displaySpecificAttributes();
+        
+        // 自定义属性（查看模式）
+        displayCustomAttributes();
         
         // 溯源信息
         View layoutSourceInfo = findViewById(R.id.layout_source_info);
@@ -736,6 +742,10 @@ public class SettingDetailActivity extends AppCompatActivity {
         String specificAttrsJson = collectSpecificAttributes();
         currentSetting.setSpecificAttributes(specificAttrsJson);
         
+        // 获取自定义属性
+        String customAttrsJson = collectCustomAttributes();
+        currentSetting.setAttributes(customAttrsJson);
+        
         // 更新数据
         currentSetting.setTitle(title);
         currentSetting.setSummary(summary);
@@ -1073,6 +1083,191 @@ public class SettingDetailActivity extends AppCompatActivity {
         for (AttributeField field : fields) {
             Object value = existingData.get(field.getKey());
             createEditField(layoutEditAttrs, field, value);
+        }
+        
+        // 填充自定义属性编辑控件
+        fillCustomAttrEditFields();
+    }
+    
+    /**
+     * 填充自定义属性编辑控件
+     */
+    private void fillCustomAttrEditFields() {
+        LinearLayout layoutEditCustomAttrs = findViewById(R.id.layout_edit_custom_attrs);
+        layoutEditCustomAttrs.removeAllViews();
+        editCustomAttrFields.clear();
+        
+        // 解析现有数据
+        Map<String, Object> existingData = new HashMap<>();
+        if (!TextUtils.isEmpty(currentSetting.getAttributes())) {
+            try {
+                com.google.gson.JsonObject jsonObj = JsonParser.parseString(
+                    currentSetting.getAttributes()).getAsJsonObject();
+                for (Map.Entry<String, com.google.gson.JsonElement> entry : jsonObj.entrySet()) {
+                    existingData.put(entry.getKey(), jsonToDisplayValue(entry.getValue()));
+                }
+            } catch (Exception e) {
+                // 解析失败，使用空数据
+            }
+        }
+        
+        // 添加"+ 添加属性"按钮
+        addCustomAttrAddButton(layoutEditCustomAttrs);
+        
+        // 如果有现有数据，生成编辑控件
+        for (Map.Entry<String, Object> entry : existingData.entrySet()) {
+            addCustomAttrEditRow(layoutEditCustomAttrs, entry.getKey(), entry.getValue());
+        }
+    }
+    
+    /**
+     * 添加自定义属性编辑行
+     */
+    private void addCustomAttrEditRow(LinearLayout container, String key, Object value) {
+        // 键值对容器
+        LinearLayout rowLayout = new LinearLayout(this);
+        rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+        rowLayout.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        rowLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        
+        // 键输入框
+        EditText etKey = new EditText(this);
+        etKey.setLayoutParams(new LinearLayout.LayoutParams(0,
+            LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        etKey.setHint("属性名");
+        etKey.setTextSize(14);
+        etKey.setPadding(12, 10, 12, 10);
+        etKey.setBackgroundResource(R.drawable.bg_outline_edittext);
+        etKey.setText(key);
+        etKey.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        
+        // 值输入框
+        EditText etValue = new EditText(this);
+        etValue.setLayoutParams(new LinearLayout.LayoutParams(0,
+            LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
+        etValue.setHint("属性值");
+        etValue.setTextSize(14);
+        etValue.setPadding(12, 10, 12, 10);
+        etValue.setBackgroundResource(R.drawable.bg_outline_edittext);
+        etValue.setText(value != null ? value.toString() : "");
+        etValue.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        
+        // 删除按钮（使用Chip风格）
+        Chip chipDelete = new Chip(this);
+        chipDelete.setChipIconResource(android.R.drawable.ic_menu_close_clear_cancel);
+        chipDelete.setChipIconVisible(true);
+        chipDelete.setClickable(true);
+        chipDelete.setCheckable(false);
+        chipDelete.setOnClickListener(v -> {
+            container.removeView(rowLayout);
+        });
+        
+        rowLayout.addView(etKey);
+        rowLayout.addView(etValue);
+        rowLayout.addView(chipDelete);
+        
+        LinearLayout.MarginLayoutParams params = new LinearLayout.MarginLayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.bottomMargin = 8;
+        rowLayout.setLayoutParams(params);
+        
+        // 在添加按钮之前插入
+        int addButtonIndex = container.getChildCount() - 1;
+        if (addButtonIndex >= 0) {
+            container.addView(rowLayout, addButtonIndex);
+        } else {
+            container.addView(rowLayout);
+        }
+        
+        // 存储引用
+        String uniqueKey = key + "_" + System.currentTimeMillis();
+        editCustomAttrFields.put(uniqueKey, etKey);
+        editCustomAttrFields.put(uniqueKey + "_value", etValue);
+    }
+    
+    /**
+     * 添加自定义属性添加按钮
+     */
+    private void addCustomAttrAddButton(LinearLayout container) {
+        Chip chipAdd = new Chip(this);
+        chipAdd.setText("添加属性");
+        chipAdd.setChipIconResource(android.R.drawable.ic_menu_add);
+        chipAdd.setChipIconVisible(true);
+        chipAdd.setClickable(true);
+        chipAdd.setCheckable(false);
+        chipAdd.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        chipAdd.setOnClickListener(v -> {
+            addCustomAttrEditRow(container, "", "");
+        });
+        container.addView(chipAdd);
+    }
+    
+    /**
+     * 收集自定义属性
+     */
+    private String collectCustomAttributes() {
+        Map<String, String> data = new HashMap<>();
+        
+        LinearLayout container = findViewById(R.id.layout_edit_custom_attrs);
+        for (int i = 0; i < container.getChildCount(); i++) {
+            View child = container.getChildAt(i);
+            if (child instanceof LinearLayout) {
+                LinearLayout row = (LinearLayout) child;
+                if (row.getChildCount() >= 2) {
+                    View keyView = row.getChildAt(0);
+                    View valueView = row.getChildAt(1);
+                    if (keyView instanceof EditText && valueView instanceof EditText) {
+                        String key = ((EditText) keyView).getText().toString().trim();
+                        String value = ((EditText) valueView).getText().toString().trim();
+                        if (!TextUtils.isEmpty(key) && !TextUtils.isEmpty(value)) {
+                            data.put(key, value);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (data.isEmpty()) {
+            return null;
+        }
+        return new Gson().toJson(data);
+    }
+    
+    /**
+     * 结构化显示自定义属性
+     */
+    private void displayCustomAttributes() {
+        View layoutCustomAttrs = findViewById(R.id.layout_custom_attrs);
+        LinearLayout layoutContent = findViewById(R.id.layout_custom_attrs_content);
+        
+        if (TextUtils.isEmpty(currentSetting.getAttributes())) {
+            layoutCustomAttrs.setVisibility(View.GONE);
+            return;
+        }
+        
+        try {
+            layoutContent.removeAllViews();
+            com.google.gson.JsonObject jsonObj = JsonParser.parseString(
+                currentSetting.getAttributes()).getAsJsonObject();
+            
+            for (Map.Entry<String, com.google.gson.JsonElement> entry : jsonObj.entrySet()) {
+                String key = entry.getKey();
+                String value = jsonToDisplayValue(entry.getValue()).toString();
+                addSpecificAttrView(layoutContent, key, value);
+            }
+            
+            if (jsonObj.size() > 0) {
+                layoutCustomAttrs.setVisibility(View.VISIBLE);
+            } else {
+                layoutCustomAttrs.setVisibility(View.GONE);
+            }
+        } catch (Exception e) {
+            layoutCustomAttrs.setVisibility(View.GONE);
         }
     }
     
