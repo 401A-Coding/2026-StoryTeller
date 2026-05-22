@@ -18,6 +18,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.SettingRelationshipDao;
@@ -127,6 +129,16 @@ public class SettingDetailActivity extends AppCompatActivity {
     }
 
     private void initView() {
+        // 刘海屏适配
+        View rootView = findViewById(android.R.id.content);
+        rootView.setOnApplyWindowInsetsListener((v, insets) -> {
+            androidx.core.graphics.Insets systemBars = androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(insets, v)
+                .getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, systemBars.top, 0, 0);
+            return insets;
+        });
+        rootView.requestApplyInsets();
+        
         // 查看模式视图
         tvTitle = findViewById(R.id.tv_detail_title);
         tvCategory = findViewById(R.id.tv_detail_category);

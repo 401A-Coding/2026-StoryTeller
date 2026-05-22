@@ -7,7 +7,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.storyteller.ui.fragment.ArchitectureFragment;
 import com.example.storyteller.ui.fragment.CharactersFragment;
-import com.example.storyteller.ui.fragment.MaterialsFragment;
+import com.example.storyteller.ui.fragment.PlotGraphFragment;
 import com.example.storyteller.ui.fragment.MoreFragment;
 import com.example.storyteller.ui.fragment.WritingFragment;
 
@@ -24,7 +24,7 @@ public class WorkspacePagerAdapter extends FragmentStateAdapter {
     public static final int TAB_WRITING = 0;
     public static final int TAB_ARCHITECTURE = 1;
     public static final int TAB_CHARACTERS = 2;
-    public static final int TAB_MATERIALS = 3;
+    public static final int TAB_GRAPH = 3;
     public static final int TAB_MORE = 4;
     
     public static final int TAB_COUNT = 5;
@@ -62,8 +62,8 @@ public class WorkspacePagerAdapter extends FragmentStateAdapter {
                 return ArchitectureFragment.newInstance(storyId);
             case TAB_CHARACTERS:
                 return CharactersFragment.newInstance(storyId);
-            case TAB_MATERIALS:
-                return MaterialsFragment.newInstance(storyId);
+            case TAB_GRAPH:
+                return PlotGraphFragment.newInstance(storyId);
             case TAB_MORE:
                 return MoreFragment.newInstance(storyId);
             default:
@@ -87,8 +87,8 @@ public class WorkspacePagerAdapter extends FragmentStateAdapter {
                 return "架构";
             case TAB_CHARACTERS:
                 return "人物";
-            case TAB_MATERIALS:
-                return "素材";
+            case TAB_GRAPH:
+                return "关系图";
             case TAB_MORE:
                 return "更多 ⋯";
             default:

@@ -269,6 +269,16 @@
             var legendContent = document.getElementById('legendContent');
             legendContent.innerHTML = '';
             
+            // 检查是否真的有边
+            if (edgesArray.length === 0) {
+                var item = document.createElement('div');
+                item.className = 'legend-item';
+                item.style.color = '#999';
+                item.textContent = '暂无关联关系';
+                legendContent.appendChild(item);
+                return;
+            }
+            
             Object.keys(categories).forEach(function(cat) {
                 var color = COLORS[cat] || COLORS.other;
                 var name = getCategoryDisplayName(cat);
