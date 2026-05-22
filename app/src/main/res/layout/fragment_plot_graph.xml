@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF">
@@ -8,5 +9,19 @@
         android:id="@+id/webview_graph"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_refresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="100dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="刷新关系图"
+        android:src="@drawable/ic_refresh"
+        app:backgroundTint="#2196F3"
+        app:fabSize="mini"
+        app:tint="#FFFFFF" />
 
 </FrameLayout>

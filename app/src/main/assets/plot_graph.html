@@ -128,6 +128,18 @@
         var nodesArray = [];
         var edgesArray = [];
         
+        // 清除关系图
+        function clearGraph() {
+            nodesArray = [];
+            edgesArray = [];
+            if (network) {
+                network.destroy();
+                network = null;
+            }
+            document.getElementById('emptyHint').style.display = 'none';
+            document.getElementById('legend').style.display = 'none';
+        }
+        
         // 初始化关系图
         function initGraph(data) {
             nodesArray = data.nodes || [];
@@ -137,17 +149,23 @@
             document.getElementById('centerTitle').textContent = centerName + ' - 关系图';
             
             // 检查是否有数据
-            if (nodesArray.length === 0 || edgesArray.length === 0) {
+            if (nodesArray.length === 0 && edgesArray.length === 0) {
                 document.getElementById('emptyHint').style.display = 'block';
                 document.getElementById('legend').style.display = 'none';
                 return;
             }
             
-            document.getElementById('emptyHint').style.display = 'none';
-            document.getElementById('legend').style.display = 'block';
-            
-            // 生成图例
-            generateLegend();
+            // 如果只有孤立节点，没有边
+            var hasEdges = edgesArray.length > 0;
+            if (!hasEdges) {
+                document.getElementById('emptyHint').style.display = 'none';
+                document.getElementById('legend').style.display = 'block';
+                generateLegend();
+            } else {
+                document.getElementById('emptyHint').style.display = 'none';
+                document.getElementById('legend').style.display = 'block';
+                generateLegend();
+            }
             
             // 创建节点
             var nodes = new vis.DataSet(nodesArray.map(function(node) {
@@ -157,16 +175,18 @@
                     title: node.title || node.label,
                     color: node.isCenter ? 
                         { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } } :
+                        node.isIsolated ?
+                        { background: '#F5F5F5', border: '#BDBDBD', highlight: { background: '#E0E0E0', border: '#9E9E9E' } } :
                         { background: '#E3F2FD', border: '#90CAF9', highlight: { background: '#BBDEFB', border: '#2196F3' } },
                     font: {
-                        color: node.isCenter ? 'white' : '#333',
+                        color: node.isCenter ? 'white' : (node.isIsolated ? '#757575' : '#333'),
                         size: node.isCenter ? 16 : 14,
                         bold: node.isCenter
                     },
                     borderWidth: 2,
                     borderWidthSelected: 3,
                     shape: 'circle',
-                    size: node.isCenter ? 40 : 30,
+                    size: node.isCenter ? 40 : (node.isIsolated ? 25 : 30),
                     margin: 10
                 };
             }));

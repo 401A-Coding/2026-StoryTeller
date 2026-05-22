@@ -12,6 +12,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -68,6 +69,13 @@ public class PlotGraphFragment extends BaseFragment {
     protected void initView(View view) {
         webView = view.findViewById(R.id.webview_graph);
         
+        // 刷新按钮
+        com.google.android.material.floatingactionbutton.FloatingActionButton fabRefresh = 
+            view.findViewById(R.id.fab_refresh);
+        if (fabRefresh != null) {
+            fabRefresh.setOnClickListener(v -> refreshGraph());
+        }
+        
         // 初始化 DAO
         settingDao = new StorySettingDao(requireContext());
         relationshipDao = new SettingRelationshipDao(requireContext());
@@ -113,6 +121,16 @@ public class PlotGraphFragment extends BaseFragment {
         webView.loadUrl("file:///android_asset/plot_graph.html");
     }
 
+    /**
+     * 刷新关系图
+     */
+    private void refreshGraph() {
+        if (webView != null) {
+            webView.evaluateJavascript("clearGraph()", null);
+            loadGraphData();
+        }
+    }
+    
     private void loadGraphData() {
         if (storyId == -1) {
             showEmptyHint("无法加载数据");
@@ -244,6 +262,20 @@ public class PlotGraphFragment extends BaseFragment {
             edges.add(edge);
         }
         
+        // 添加孤立节点（没有参与任何关系的设定）
+        for (StorySetting setting : settings) {
+            if (!addedNodes.contains(setting.getId())) {
+                Map<String, Object> node = new HashMap<>();
+                node.put("id", setting.getId());
+                node.put("label", truncateText(setting.getTitle(), 10));
+                node.put("title", setting.getTitle());
+                node.put("isCenter", false);
+                node.put("isIsolated", true);  // 标记为孤立节点
+                nodes.add(node);
+                addedNodes.add(setting.getId());
+            }
+        }
+        
         graphData.put("nodes", nodes);
         graphData.put("edges", edges);
         
@@ -294,6 +326,9 @@ public class PlotGraphFragment extends BaseFragment {
         super.onResume();
         if (webView != null) {
             webView.onResume();
+            // 刷新关系图数据（可能删除了设定）
+            webView.evaluateJavascript("clearGraph()", null);
+            loadGraphData();
         }
     }
 
