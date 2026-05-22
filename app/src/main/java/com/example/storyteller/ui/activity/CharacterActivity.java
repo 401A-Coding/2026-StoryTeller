@@ -18,6 +18,7 @@ import com.example.storyteller.data.local.db.CharacterDao;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.Character;
 import com.example.storyteller.model.PlotChapterSummary;
@@ -62,7 +63,7 @@ public class CharacterActivity extends BaseActivity {
     private CharacterDao characterDao;
     private PromptManager promptManager;
     private final Gson gson = new Gson();
-    private String currentModel = "pro";
+    private String currentModel = ModelConfig.DEFAULT_MODEL;
 
     private int generationToken = 0;
 
@@ -87,7 +88,7 @@ public class CharacterActivity extends BaseActivity {
         tvStatus = findViewById(R.id.tv_character_status);
         btnRegenerate = findViewById(R.id.btn_regenerate_character);
 
-        currentModel = PrefsUtils.getInstance(this).getString(PREF_CHARACTER_MODEL, "pro");
+        currentModel = PrefsUtils.getInstance(this).getString(PREF_CHARACTER_MODEL, ModelConfig.DEFAULT_MODEL);
 
         rvCharacterList.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CharacterAdapter(this, new ArrayList<>());
@@ -291,11 +292,24 @@ public class CharacterActivity extends BaseActivity {
         if (action == null || isCharacterGenerationInProgress()) {
             return;
         }
-        String[] modelLabels = new String[] {
-                getString(R.string.model_flash),
-                getString(R.string.model_pro)
-        };
-        int checkedItem = "pro".equals(currentModel) ? 1 : 0;
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        java.util.List<ModelConfig.ModelInfo> enabledModels = new java.util.ArrayList<>();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(this, model.provider)) {
+                enabledModels.add(model);
+            }
+        }
+        String[] modelLabels = new String[enabledModels.size()];
+        for (int i = 0; i < enabledModels.size(); i++) {
+            modelLabels[i] = enabledModels.get(i).fullName;
+        }
+        int checkedItem = 0;
+        for (int i = 0; i < enabledModels.size(); i++) {
+            if (enabledModels.get(i).modelId.equals(currentModel)) {
+                checkedItem = i;
+                break;
+            }
+        }
         final int[] selectedItem = {checkedItem};
 
         new AlertDialog.Builder(this)
@@ -303,10 +317,11 @@ public class CharacterActivity extends BaseActivity {
                 .setSingleChoiceItems(modelLabels, checkedItem, (dialog, which) -> selectedItem[0] = which)
                 .setNegativeButton(R.string.action_cancel, null)
                 .setPositiveButton(btnRegenerate.getText(), (dialog, which) -> {
-                    currentModel = selectedItem[0] == 1 ? "pro" : "flash";
+                    currentModel = enabledModels.get(selectedItem[0]).modelId;
                     PrefsUtils.getInstance(this).putString(PREF_CHARACTER_MODEL, currentModel);
+                    ModelConfig.ModelInfo model = ModelConfig.getModelInfo(currentModel);
                     Toast.makeText(this,
-                            selectedItem[0] == 1 ? R.string.character_model_switched_pro : R.string.character_model_switched_flash,
+                            getString(R.string.character_model_switched, model != null ? model.displayName : currentModel),
                             Toast.LENGTH_SHORT).show();
                     action.run();
                 })
@@ -457,7 +472,8 @@ public class CharacterActivity extends BaseActivity {
 
 
     private String getModelDisplayName() {
-        return "flash".equals(currentModel) ? getString(R.string.model_flash) : getString(R.string.model_pro);
+        ModelConfig.ModelInfo model = ModelConfig.getModelInfo(currentModel);
+        return model != null ? model.displayName : currentModel;
     }
 
     private List<Character> parseCharacters(Story story, String responseText) {

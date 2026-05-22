@@ -23,6 +23,7 @@ import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDocumentDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.model.Chapter;
@@ -74,7 +75,7 @@ public class AIPanelFragment extends BaseFragment {
     
     private int storyId;
     private String currentMode = "editor"; // editor/setting/outline/document/ask/review
-    private String currentModel = "flash"; // flash 或 pro
+    private String currentModel = ModelConfig.DEFAULT_MODEL;
     private String prefillMessage;
     private boolean hasStartedConversation = false;
     
@@ -844,27 +845,40 @@ public class AIPanelFragment extends BaseFragment {
      */
     private void showModelSelectorPopup() {
         android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), btnModelSelector);
-        popupMenu.getMenu().add(0, 1, 0, "Flash");
-        popupMenu.getMenu().add(0, 2, 1, "Pro");
+        
+        // 获取所有可用模型（仅已启用的提供商）
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        java.util.List<ModelConfig.ModelInfo> enabledModels = new java.util.ArrayList<>();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(requireContext(), model.provider)) {
+                enabledModels.add(model);
+            }
+        }
+        
+        final java.util.Map<Integer, String> itemIdToModelId = new java.util.HashMap<>();
+        
+        for (int i = 0; i < enabledModels.size(); i++) {
+            ModelConfig.ModelInfo model = enabledModels.get(i);
+            popupMenu.getMenu().add(0, i + 1, i, model.fullName); // 显示全称
+            itemIdToModelId.put(i + 1, model.modelId);
+        }
         
         // 标记当前选中的模型
-        if ("flash".equals(currentModel)) {
-            popupMenu.getMenu().getItem(0).setChecked(true);
-        } else {
-            popupMenu.getMenu().getItem(1).setChecked(true);
+        for (int i = 0; i < enabledModels.size(); i++) {
+            if (enabledModels.get(i).modelId.equals(currentModel)) {
+                popupMenu.getMenu().getItem(i).setChecked(true);
+                break;
+            }
         }
         
         popupMenu.setOnMenuItemClickListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == 1) {
-                currentModel = "flash";
-                btnModelSelector.setText("Flash");
-                Toast.makeText(requireContext(), "已切换到 Flash 模型", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == 2) {
-                currentModel = "pro";
-                btnModelSelector.setText("Pro");
-                Toast.makeText(requireContext(), "已切换到 Pro 模型", Toast.LENGTH_SHORT).show();
+            String modelId = itemIdToModelId.get(item.getItemId());
+            if (modelId != null) {
+                currentModel = modelId;
+                ModelConfig.ModelInfo model = ModelConfig.getModelInfo(modelId);
+                String displayName = model != null ? model.displayName : modelId; // 按钮显示简称
+                btnModelSelector.setText(displayName);
+                Toast.makeText(requireContext(), "已切换到 " + displayName, Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;

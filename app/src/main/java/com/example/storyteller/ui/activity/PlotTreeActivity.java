@@ -19,6 +19,7 @@ import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Chapter;
 import com.example.storyteller.model.PlotChapterSummary;
 import com.example.storyteller.model.PlotOverviewSummary;
@@ -82,7 +83,7 @@ public class PlotTreeActivity extends BaseActivity {
 
     private PromptManager promptManager;
 
-    private String currentModel = "flash";
+    private String currentModel = ModelConfig.DEFAULT_MODEL;
     private String currentDetail = "standard";
     private int generationToken = 0;
 
@@ -701,22 +702,35 @@ public class PlotTreeActivity extends BaseActivity {
         if (isPlotGenerationInProgress()) {
             return;
         }
-        String[] modelLabels = new String[] {
-                getString(R.string.model_flash),
-                getString(R.string.model_pro)
-        };
-        int checkedItem = "pro".equals(currentModel) ? 1 : 0;
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        java.util.List<ModelConfig.ModelInfo> enabledModels = new java.util.ArrayList<>();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(this, model.provider)) {
+                enabledModels.add(model);
+            }
+        }
+        String[] modelLabels = new String[enabledModels.size()];
+        for (int i = 0; i < enabledModels.size(); i++) {
+            modelLabels[i] = enabledModels.get(i).fullName;
+        }
+        int checkedItem = 0;
+        for (int i = 0; i < enabledModels.size(); i++) {
+            if (enabledModels.get(i).modelId.equals(currentModel)) {
+                checkedItem = i;
+                break;
+            }
+        }
         final int[] selectedItem = {checkedItem};
-
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.plot_model_dialog_title)
                 .setSingleChoiceItems(modelLabels, checkedItem, (d, which) -> selectedItem[0] = which)
                 .setNegativeButton(R.string.action_cancel, null)
                 .setPositiveButton(btnGenerate.getText(), (d, which) -> {
-                    currentModel = selectedItem[0] == 1 ? "pro" : "flash";
+                    currentModel = enabledModels.get(selectedItem[0]).modelId;
                     PrefsUtils.getInstance(this).putString(PREF_PLOT_MODEL, currentModel);
+                    ModelConfig.ModelInfo model = ModelConfig.getModelInfo(currentModel);
                     Toast.makeText(this,
-                            selectedItem[0] == 1 ? R.string.plot_model_switched_pro : R.string.plot_model_switched_flash,
+                            getString(R.string.plot_model_switched, model != null ? model.displayName : currentModel),
                             Toast.LENGTH_SHORT).show();
                     startPlotSummaryGeneration();
                 })
@@ -760,7 +774,8 @@ public class PlotTreeActivity extends BaseActivity {
     }
 
     private String getModelDisplayName() {
-        return "flash".equals(currentModel) ? getString(R.string.model_flash) : getString(R.string.model_pro);
+        ModelConfig.ModelInfo model = ModelConfig.getModelInfo(currentModel);
+        return model != null ? model.displayName : currentModel;
     }
 
     private String getDetailDisplayName() {
