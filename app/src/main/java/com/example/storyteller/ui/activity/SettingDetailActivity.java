@@ -2031,6 +2031,12 @@ public class SettingDetailActivity extends AppCompatActivity {
             return;
         }
         
+        if (storyId == 0) {
+            // 全局素材不显示关联设定
+            findViewById(R.id.layout_relations).setVisibility(View.GONE);
+            return;
+        }
+        
         // 获取关联关系
         relationsList = relationshipDao.getBySettingId(currentSetting.getId());
         
@@ -2447,6 +2453,13 @@ public class SettingDetailActivity extends AppCompatActivity {
      */
     private void displayEditModeRelations() {
         if (currentSetting.getId() == 0) {
+            return;
+        }
+        
+        if (storyId == 0) {
+            // 全局素材不显示关联设定
+            com.google.android.material.card.MaterialCardView cardEditRelations = findViewById(R.id.card_edit_relations);
+            cardEditRelations.setVisibility(View.GONE);
             return;
         }
         
