@@ -11,12 +11,14 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.model.ChatMessage;
+import io.noties.markwon.Markwon;
 import java.util.List;
 
 public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.ChatMessageViewHolder> {
 
     private final Context context;
     private final List<ChatMessage> messages;
+    private final Markwon markwon;
     private OnRetryListener retryListener;
     private boolean showWelcomeCard = true;
     
@@ -32,6 +34,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     public ChatMessageAdapter(Context context, List<ChatMessage> messages) {
         this.context = context;
         this.messages = messages;
+        this.markwon = Markwon.create(context);
     }
     
     public void setOnRetryListener(OnRetryListener listener) {
@@ -101,22 +104,21 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         }
         holder.tvFinalResult.setVisibility(View.GONE);
         
-        // 显示普通消息内容
+        // 显示普通消息内容（使用Markdown渲染）
         holder.tvMessage.setVisibility(View.VISIBLE);
-        holder.tvMessage.setText(message.getDisplayContent());
+        markwon.setMarkdown(holder.tvMessage, message.getDisplayContent());
         
         ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) holder.tvMessage.getLayoutParams();
         if (message.isFromUser()) {
+            // 用户消息：气泡靠右，文本左对齐
             params.startToStart = ConstraintLayout.LayoutParams.UNSET;
             params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-            holder.tvMessage.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_END);
-            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_user);
         } else {
-            params.endToEnd = ConstraintLayout.LayoutParams.UNSET;
+            // AI消息：气泡靠左，文本左对齐
             params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-            holder.tvMessage.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_bot);
+            params.endToEnd = ConstraintLayout.LayoutParams.UNSET;
         }
+        holder.tvMessage.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
         holder.tvMessage.setLayoutParams(params);
     }
     
@@ -174,9 +176,9 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         if (message.getMessageType() == ChatMessage.MessageType.COMPLETED && 
             !message.getResultContent().isEmpty()) {
             holder.tvFinalResult.setVisibility(View.VISIBLE);
-            // 如果启用打字机效果，使用 displayContent；否则使用完整内容
+            // 使用Markdown渲染最终结果
             String displayText = message.isTyping() ? message.getDisplayContent() : message.getResultContent();
-            holder.tvFinalResult.setText("\n" + displayText);
+            markwon.setMarkdown(holder.tvFinalResult, "\n" + displayText);
         } else {
             holder.tvFinalResult.setVisibility(View.GONE);
         }
