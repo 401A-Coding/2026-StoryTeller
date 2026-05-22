@@ -268,6 +268,28 @@ public class StorySettingDao {
         }
         return list;
     }
+    
+    /**
+     * 根据标题查询设定
+     */
+    public StorySetting getByTitle(String title) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DBHelper.TABLE_STORY_SETTING,
+                null,
+                DBHelper.COL_STORY_SETTING_TITLE + "=?",
+                new String[]{title},
+                null, null, null
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                return mapCursor(cursor);
+            }
+            return null;
+        } finally {
+            cursor.close();
+        }
+    }
 
     /**
      * 增加使用次数

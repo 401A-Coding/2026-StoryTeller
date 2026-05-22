@@ -235,6 +235,8 @@ public class ApiClient {
                     ChatResponse apiResponse = gson.fromJson(responseJson, ChatResponse.class);
                     if (apiResponse.choices != null && !apiResponse.choices.isEmpty()) {
                         String content = apiResponse.choices.get(0).message.content;
+                        // 清理Markdown代码块标记
+                        content = cleanMarkdownCodeBlock(content);
                         callback.onSuccess(content);
                     } else {
                         callback.onFailure(new Exception("No content generated"));
@@ -303,7 +305,7 @@ public class ApiClient {
     /**
      * 清理AI返回内容中的Markdown代码块标记和思考过程标签
      */
-    private String cleanMarkdownCodeBlock(String content) {
+    public String cleanMarkdownCodeBlock(String content) {
         if (content == null || content.isEmpty()) {
             return content;
         }
