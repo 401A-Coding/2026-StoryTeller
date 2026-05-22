@@ -168,6 +168,17 @@ public class SettingDetailActivity extends AppCompatActivity {
         if (btnEditAddRelation != null) {
             btnEditAddRelation.setOnClickListener(v -> showAddRelationDialog());
         }
+        
+        // 关系图按钮
+        Button btnViewGraph = findViewById(R.id.btn_view_graph);
+        if (btnViewGraph != null) {
+            btnViewGraph.setOnClickListener(v -> {
+                Intent intent = new Intent(SettingDetailActivity.this, PlotGraphActivity.class);
+                intent.putExtra(PlotGraphActivity.EXTRA_SETTING_ID, currentSetting.getId());
+                intent.putExtra(PlotGraphActivity.EXTRA_STORY_ID, storyId);
+                startActivity(intent);
+            });
+        }
     }
 
     /**

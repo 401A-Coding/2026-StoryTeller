@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>设定关系图</title>
+    <!-- 引入 vis.js -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #network {
+            width: 100%;
+            height: 100%;
+            background: #fafafa;
+        }
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .legend {
+            position: fixed;
+            bottom: 100px;
+            left: 16px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 200px;
+        }
+        .legend-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #666;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .empty-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #999;
+            z-index: 999;
+        }
+        .empty-hint-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .empty-hint-text {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="header-title" id="centerTitle">设定关系图</span>
+    </div>
+    
+    <div id="network"></div>
+    
+    <div class="legend" id="legend" style="display: none;">
+        <div class="legend-title">关系分类</div>
+        <div id="legendContent"></div>
+    </div>
+    
+    <div class="empty-hint" id="emptyHint" style="display: none;">
+        <div class="empty-hint-icon">🔗</div>
+        <div class="empty-hint-text">暂无关联设定</div>
+    </div>
+
+    <script>
+        // 颜色配置
+        const COLORS = {
+            center: '#FF5722',      // 中心节点（橙色）
+            hierarchy: '#4CAF50',  // 层级关系（绿色）
+            association: '#2196F3', // 关联关系（蓝色）
+            family: '#E91E63',      // 家人关系（粉色）
+            opposition: '#F44336', // 对立关系（红色）
+            causality: '#FF9800',   // 因果关系（橙色）
+            derivation: '#9C27B0', // 衍生关系（紫色）
+            other: '#607D8B',       // 其他关系（灰色）
+            current: '#2196F3'      // 当前设定（蓝色）
+        };
+        
+        const ARROW_DIRECTED = 'to';  // 有向箭头
+        const ARROW_BIDIRECTIONAL = 'both';  // 双向箭头
+        
+        // 全局变量
+        var network = null;
+        var nodesArray = [];
+        var edgesArray = [];
+        
+        // 初始化关系图
+        function initGraph(data) {
+            nodesArray = data.nodes || [];
+            edgesArray = data.edges || [];
+            
+            var centerName = data.centerName || '设定';
+            document.getElementById('centerTitle').textContent = centerName + ' - 关系图';
+            
+            // 检查是否有数据
+            if (nodesArray.length === 0 || edgesArray.length === 0) {
+                document.getElementById('emptyHint').style.display = 'block';
+                document.getElementById('legend').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('emptyHint').style.display = 'none';
+            document.getElementById('legend').style.display = 'block';
+            
+            // 生成图例
+            generateLegend();
+            
+            // 创建节点
+            var nodes = new vis.DataSet(nodesArray.map(function(node) {
+                return {
+                    id: node.id,
+                    label: node.label,
+                    title: node.title || node.label,
+                    color: node.isCenter ? 
+                        { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } } :
+                        { background: '#E3F2FD', border: '#90CAF9', highlight: { background: '#BBDEFB', border: '#2196F3' } },
+                    font: {
+                        color: node.isCenter ? 'white' : '#333',
+                        size: node.isCenter ? 16 : 14,
+                        bold: node.isCenter
+                    },
+                    borderWidth: 2,
+                    borderWidthSelected: 3,
+                    shape: 'circle',
+                    size: node.isCenter ? 40 : 30,
+                    margin: 10
+                };
+            }));
+            
+            // 创建边
+            var edges = new vis.DataSet(edgesArray.map(function(edge) {
+                var color = COLORS[edge.category] || COLORS.other;
+                return {
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label,
+                    title: edge.title || edge.label,
+                    arrows: edge.isDirected ? ARROW_DIRECTED : ARROW_BIDIRECTIONAL,
+                    color: { color: color, highlight: color, hover: color },
+                    font: { color: '#666', size: 11, strokeWidth: 0 },
+                    smooth: { type: 'continuous' },
+                    width: 1.5
+                };
+            }));
+            
+            // 创建网络
+            var container = document.getElementById('network');
+            var options = {
+                physics: {
+                    enabled: true,
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        centralGravity: 0.3,
+                        springLength: 150,
+                        springConstant: 0.04,
+                        damping: 0.09
+                    },
+                    stabilization: {
+                        enabled: true,
+                        iterations: 200,
+                        updateInterval: 25
+                    }
+                },
+                nodes: {
+                    shadow: true,
+                    shadowColor: 'rgba(0,0,0,0.2)',
+                    shadowSize: 6,
+                    shadowX: 2,
+                    shadowY: 2
+                },
+                edges: {
+                    shadow: true,
+                    shadowColor: 'rgba(0,0,0,0.1)',
+                    shadowSize: 4,
+                    shadowX: 1,
+                    shadowY: 1
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 200,
+                    zoomView: true,
+                    dragView: true,
+                    navigationButtons: true,
+                    keyboard: true
+                }
+            };
+            
+            network = new vis.Network(container, { nodes: nodes, edges: edges }, options);
+            
+            // 双击节点跳转到设定详情
+            network.on('doubleClick', function(params) {
+                if (params.nodes.length > 0) {
+                    var nodeId = params.nodes[0];
+                    // 通过 Android 回调
+                    if (window.Android && window.Android.onNodeClicked) {
+                        window.Android.onNodeClicked(nodeId);
+                    }
+                }
+            });
+            
+            // 点击节点显示高亮
+            network.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    var nodeId = params.nodes[0];
+                    // Android 回调
+                    if (window.Android && window.Android.onNodeSelected) {
+                        window.Android.onNodeSelected(nodeId);
+                    }
+                }
+            });
+            
+            // 聚焦中心节点
+            focusOnCenter();
+        }
+        
+        // 生成图例
+        function generateLegend() {
+            var categories = {};
+            edgesArray.forEach(function(edge) {
+                if (edge.category && !categories[edge.category]) {
+                    categories[edge.category] = true;
+                }
+            });
+            
+            var legendContent = document.getElementById('legendContent');
+            legendContent.innerHTML = '';
+            
+            Object.keys(categories).forEach(function(cat) {
+                var color = COLORS[cat] || COLORS.other;
+                var name = getCategoryDisplayName(cat);
+                var item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = '<div class="legend-color" style="background:' + color + '"></div>' + name;
+                legendContent.appendChild(item);
+            });
+        }
+        
+        // 获取分类显示名称
+        function getCategoryDisplayName(category) {
+            var names = {
+                'hierarchy': '层级关系',
+                'association': '关联关系',
+                'family': '家人关系',
+                'opposition': '对立关系',
+                'causality': '因果关系',
+                'derivation': '衍生关系',
+                'other': '其他关系'
+            };
+            return names[category] || category;
+        }
+        
+        // 聚焦中心节点
+        function focusOnCenter() {
+            if (network && nodesArray.length > 0) {
+                var centerNode = nodesArray.find(function(n) { return n.isCenter; });
+                if (centerNode) {
+                    network.focus(centerNode.id, {
+                        scale: 1.0,
+                        animation: true
+                    });
+                }
+            }
+        }
+        
+        // 导出当前视图为图片（供 Android 调用）
+        function exportAsImage() {
+            // vis.js 不直接支持导出图片，需要配合 canvas
+            var canvas = document.getElementById('network').querySelector('canvas');
+            if (canvas) {
+                return canvas.toDataURL('image/png');
+            }
+            return null;
+        }
+        
+        // 获取当前节点位置信息（供 Android 调用）
+        function getNodePositions() {
+            if (!network) return null;
+            var positions = network.getPositions();
+            return JSON.stringify(positions);
+        }
+    </script>
+</body>
+</html>
