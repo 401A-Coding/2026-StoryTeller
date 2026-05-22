@@ -85,6 +85,8 @@ public class SettingDetailActivity extends AppCompatActivity {
     private Map<String, String[]> editSpecificAttrSpinnerOptions;
     // 存储自定义属性编辑控件
     private Map<String, EditText> editCustomAttrFields;
+    // 存储结构化列表的编辑数据（每项是一个包含各字段的列表）
+    private Map<String, List<List<String>>> editStructuredListItems;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +106,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         editSpecificAttrSliders = new HashMap<>();
         editSpecificAttrSpinnerOptions = new HashMap<>();
         editCustomAttrFields = new HashMap<>();
+        editStructuredListItems = new HashMap<>();
         initView();
         
         if (settingId == -1) {
@@ -1036,6 +1039,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         editSpecificAttrFields.clear();
         editSpecificAttrChipGroups.clear();
         editSpecificAttrSliders.clear();
+        editStructuredListItems.clear();
         
         String subCategory = currentSetting.getSubCategory();
         
@@ -1294,6 +1298,9 @@ public class SettingDetailActivity extends AppCompatActivity {
             case TAG_LIST:
                 createTagListField(container, field, value);
                 break;
+            case STRUCTURED_LIST:
+                createStructuredListField(container, field, value);
+                break;
         }
     }
     
@@ -1537,6 +1544,222 @@ public class SettingDetailActivity extends AppCompatActivity {
     }
     
     /**
+     * 创建结构化列表输入控件
+     * 每条记录包含多个字段，按指定格式分隔
+     */
+    private void createStructuredListField(LinearLayout container, AttributeField field, Object value) {
+        addFieldLabel(container, field.getLabel());
+        
+        // 获取模板字段
+        String template = field.getInputTemplate();
+        String fieldDelimiter = field.getFieldDelimiter();
+        String[] fieldNames = template != null ? template.split(",") : new String[]{"值"};
+        
+        // 创建容器存储所有行的数据
+        List<List<String>> allItems = new ArrayList<>();
+        editStructuredListItems.put(field.getKey(), allItems);
+        
+        // 主容器
+        LinearLayout mainContainer = new LinearLayout(this);
+        mainContainer.setOrientation(LinearLayout.VERTICAL);
+        mainContainer.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        
+        // 添加格式提示
+        TextView formatHint = new TextView(this);
+        formatHint.setText("格式：" + template.replace(",", fieldDelimiter) + "（回车分隔多条）");
+        formatHint.setTextSize(12);
+        formatHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        formatHint.setPadding(0, 4, 0, 8);
+        mainContainer.addView(formatHint);
+        
+        // 解析现有数据
+        List<List<String>> existingItems = parseStructuredListValue(value, fieldDelimiter);
+        
+        // 添加现有项
+        for (List<String> item : existingItems) {
+            addStructuredListRow(mainContainer, field, fieldNames, fieldDelimiter, allItems, item);
+        }
+        
+        // 添加按钮
+        Chip addChip = new Chip(this);
+        addChip.setText("+ 添加");
+        addChip.setCloseIconVisible(false);
+        addChip.setClickable(true);
+        addChip.setCheckable(false);
+        addChip.setChipBackgroundColorResource(android.R.color.transparent);
+        addChip.setOnClickListener(v -> {
+            // 添加空行
+            List<String> newItem = new ArrayList<>();
+            for (String name : fieldNames) {
+                newItem.add("");
+            }
+            addStructuredListRow(mainContainer, field, fieldNames, fieldDelimiter, allItems, newItem);
+        });
+        mainContainer.addView(addChip);
+        
+        LinearLayout.MarginLayoutParams params = new LinearLayout.MarginLayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.bottomMargin = 16;
+        mainContainer.setLayoutParams(params);
+        
+        container.addView(mainContainer);
+    }
+    
+    /**
+     * 添加结构化列表的一行
+     */
+    private void addStructuredListRow(LinearLayout container, AttributeField field, String[] fieldNames, 
+                                      String fieldDelimiter, List<List<String>> allItems, List<String> itemData) {
+        // 每行是一个水平布局
+        LinearLayout rowLayout = new LinearLayout(this);
+        rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+        rowLayout.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        rowLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        
+        // 初始化空数据
+        if (itemData == null || itemData.isEmpty()) {
+            itemData = new ArrayList<>();
+            for (String name : fieldNames) {
+                itemData.add("");
+            }
+        }
+        
+        // 存储此行的引用
+        final int rowIndex = allItems.size();
+        allItems.add(itemData);
+        
+        // 添加每个字段的输入框
+        final List<EditText> rowEditTexts = new ArrayList<>();
+        for (int i = 0; i < fieldNames.length; i++) {
+            EditText editText = new EditText(this);
+            editText.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            editText.setHint(fieldNames[i]);
+            editText.setTextSize(14);
+            editText.setPadding(8, 8, 8, 8);
+            editText.setBackgroundResource(R.drawable.bg_outline_edittext);
+            if (i < itemData.size() && itemData.get(i) != null) {
+                editText.setText(itemData.get(i));
+            }
+            editText.setGravity(android.view.Gravity.CENTER);
+            
+            // 监听文本变化
+            final int fieldIndex = i;
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                
+                @Override
+                public void afterTextChanged(Editable s) {
+                    // 更新数据
+                    List<List<String>> items = editStructuredListItems.get(field.getKey());
+                    if (items != null && rowIndex < items.size()) {
+                        List<String> row = items.get(rowIndex);
+                        if (fieldIndex < row.size()) {
+                            row.set(fieldIndex, s.toString());
+                        }
+                    }
+                }
+            });
+            
+            rowEditTexts.add(editText);
+            rowLayout.addView(editText);
+            
+            // 添加分隔符标签（除了最后一个字段）
+            if (i < fieldNames.length - 1) {
+                TextView delimiterLabel = new TextView(this);
+                delimiterLabel.setText(fieldDelimiter);
+                delimiterLabel.setTextSize(14);
+                delimiterLabel.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                rowLayout.addView(delimiterLabel);
+            }
+        }
+        
+        // 添加删除按钮
+        Chip deleteChip = new Chip(this);
+        deleteChip.setChipIconResource(android.R.drawable.ic_menu_close_clear_cancel);
+        deleteChip.setChipIconVisible(true);
+        deleteChip.setClickable(true);
+        deleteChip.setCheckable(false);
+        deleteChip.setOnClickListener(v -> {
+            container.removeView(rowLayout);
+            // 从数据中移除
+            allItems.remove(rowIndex);
+        });
+        rowLayout.addView(deleteChip);
+        
+        // 设置行间距
+        LinearLayout.MarginLayoutParams rowParams = new LinearLayout.MarginLayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.bottomMargin = 8;
+        rowLayout.setLayoutParams(rowParams);
+        
+        // 在添加按钮之前插入
+        int addButtonIndex = container.getChildCount() - 1;
+        if (addButtonIndex >= 0) {
+            container.addView(rowLayout, addButtonIndex);
+        } else {
+            container.addView(rowLayout);
+        }
+    }
+    
+    /**
+     * 解析结构化列表值
+     */
+    private List<List<String>> parseStructuredListValue(Object value, String fieldDelimiter) {
+        List<List<String>> result = new ArrayList<>();
+        if (value == null) {
+            return result;
+        }
+        
+        if (value instanceof List) {
+            // 如果是嵌套列表
+            List<?> listValue = (List<?>) value;
+            for (Object item : listValue) {
+                if (item instanceof List) {
+                    List<?> subList = (List<?>) item;
+                    List<String> row = new ArrayList<>();
+                    for (Object subItem : subList) {
+                        row.add(subItem != null ? subItem.toString() : "");
+                    }
+                    result.add(row);
+                } else if (item != null) {
+                    // 如果是字符串，按分隔符解析
+                    List<String> row = new ArrayList<>();
+                    String[] parts = item.toString().split(fieldDelimiter);
+                    for (String part : parts) {
+                        row.add(part.trim());
+                    }
+                    result.add(row);
+                }
+            }
+        } else if (value instanceof String) {
+            // 如果是字符串，按换行和分隔符解析
+            String[] lines = value.toString().split("\n");
+            for (String line : lines) {
+                if (!line.trim().isEmpty()) {
+                    List<String> row = new ArrayList<>();
+                    String[] parts = line.split(fieldDelimiter);
+                    for (String part : parts) {
+                        row.add(part.trim());
+                    }
+                    result.add(row);
+                }
+            }
+        }
+        return result;
+    }
+    
+    /**
      * 添加字段标签
      */
     private void addFieldLabel(LinearLayout container, String text) {
@@ -1716,6 +1939,13 @@ public class SettingDetailActivity extends AppCompatActivity {
                         if (!tags.isEmpty()) {
                             value = tags;
                         }
+                    }
+                    break;
+                    
+                case STRUCTURED_LIST:
+                    List<List<String>> structuredList = editStructuredListItems.get(field.getKey());
+                    if (structuredList != null && !structuredList.isEmpty()) {
+                        value = structuredList;
                     }
                     break;
             }

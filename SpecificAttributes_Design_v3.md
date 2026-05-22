@@ -1055,22 +1055,6 @@
 | SLIDER | 滑块 1-10 | SeekBar |
 | SELECT | 下拉选择 | Spinner |
 | TAG_LIST | 标签列表 | ChipGroup |
+| STRUCTURED_LIST | 结构化列表（按固定格式输入） | 多行EditText |
 
 ---
-
-## 特殊格式说明
-
-### 关系网 (relationships)
-格式：`角色名:关系:描述`
-示例：`林雪:妹妹:从小一起长大的妹妹，性格温婉`
-
-### 关键转折点 (keyTurningPoints)
-格式：`章节:事件:重要性(1-10)`
-示例：`10:主角觉醒:9`
-
-### 重大事件 (majorEvents)
-格式：`年份:事件:重要性`
-示例：`-500:创世:10`
-
-### 等级路径 (progressionPath)
-按顺序列出每个等级阶段
