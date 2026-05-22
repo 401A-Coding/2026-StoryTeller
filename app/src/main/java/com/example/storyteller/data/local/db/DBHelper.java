@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 18;  // 升级到版本18，添加AI分析偏好字段
+    private static final int DB_VERSION = 19;  // 升级到版本19，添加设定关系表
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -172,6 +172,19 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_MEMORY_CREATED_AT = "created_at";
     public static final String COL_MEMORY_UPDATED_AT = "updated_at";
 
+    // === 设定关系表字段 ===
+    public static final String TABLE_SETTING_RELATIONSHIPS = "setting_relationships";
+    public static final String COL_REL_ID = "id";
+    public static final String COL_REL_STORY_ID = "story_id";
+    public static final String COL_REL_SOURCE_SETTING_ID = "source_setting_id";
+    public static final String COL_REL_TARGET_SETTING_ID = "target_setting_id";
+    public static final String COL_REL_RELATIONSHIP_TYPE = "relationship_type";
+    public static final String COL_REL_DESCRIPTION = "description";
+    public static final String COL_REL_SOURCE_TYPE = "source_type";  // manual/ai_inferred/user_confirmed
+    public static final String COL_REL_CONFIDENCE = "confidence";  // 置信度 0-1
+    public static final String COL_REL_CREATE_TIME = "create_time";
+    public static final String COL_REL_UPDATE_TIME = "update_time";
+
     // 单例模式（全局只有一个数据库实例）
     private static DBHelper instance;
     // 私有构造函数，防止外部直接实例化
@@ -272,8 +285,8 @@ public class DBHelper extends SQLiteOpenHelper {
         // 创建AI记忆表
         createAiMemoryTable(db);
         
-        // 升级AI分析偏好字段（版本18）
-        addAiPreferenceColumns(db);
+        // 创建设定关系表
+        createSettingRelationshipsTable(db);
     }
     
     /**
@@ -392,10 +405,46 @@ public class DBHelper extends SQLiteOpenHelper {
             // 版本17：添加AI记忆表
             createAiMemoryTable(db);
         }
-        if (oldVersion < 18) {
-            // 版本18：添加AI分析偏好字段到user_preferences表
-            addAiPreferenceColumns(db);
+        if (oldVersion < 19) {
+            // 版本19：添加设定关系表
+            createSettingRelationshipsTable(db);
         }
+    }
+
+    /**
+     * 创建设定关系表
+     * 用于存储设定之间的关联关系，支持知识图谱构建
+     */
+    private void createSettingRelationshipsTable(SQLiteDatabase db) {
+        String createTable = "CREATE TABLE IF NOT EXISTS " + TABLE_SETTING_RELATIONSHIPS + " ("
+                + COL_REL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_REL_STORY_ID + " INTEGER NOT NULL, "
+                + COL_REL_SOURCE_SETTING_ID + " INTEGER NOT NULL, "
+                + COL_REL_TARGET_SETTING_ID + " INTEGER NOT NULL, "
+                + COL_REL_RELATIONSHIP_TYPE + " TEXT NOT NULL, "
+                + COL_REL_DESCRIPTION + " TEXT, "
+                + COL_REL_SOURCE_TYPE + " TEXT DEFAULT 'manual', "
+                + COL_REL_CONFIDENCE + " REAL DEFAULT 0.8, "
+                + COL_REL_CREATE_TIME + " INTEGER NOT NULL, "
+                + COL_REL_UPDATE_TIME + " INTEGER NOT NULL, "
+                + "FOREIGN KEY(" + COL_REL_SOURCE_SETTING_ID + ") REFERENCES " + 
+                  TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_ID + ") ON DELETE CASCADE, "
+                + "FOREIGN KEY(" + COL_REL_TARGET_SETTING_ID + ") REFERENCES " + 
+                  TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_ID + ") ON DELETE CASCADE, "
+                + "UNIQUE(" + COL_REL_SOURCE_SETTING_ID + ", " + COL_REL_TARGET_SETTING_ID + ", " + 
+                  COL_REL_RELATIONSHIP_TYPE + ")"
+                + ")";
+        db.execSQL(createTable);
+        
+        // 创建索引
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_rel_story_id ON " + 
+                   TABLE_SETTING_RELATIONSHIPS + "(" + COL_REL_STORY_ID + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_rel_source ON " + 
+                   TABLE_SETTING_RELATIONSHIPS + "(" + COL_REL_SOURCE_SETTING_ID + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_rel_target ON " + 
+                   TABLE_SETTING_RELATIONSHIPS + "(" + COL_REL_TARGET_SETTING_ID + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_rel_type ON " + 
+                   TABLE_SETTING_RELATIONSHIPS + "(" + COL_REL_RELATIONSHIP_TYPE + ")");
     }
 
     private void createImportedNovelTableIfNotExists(SQLiteDatabase db) {

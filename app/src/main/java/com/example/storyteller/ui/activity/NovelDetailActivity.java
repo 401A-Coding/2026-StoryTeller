@@ -7,6 +7,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -118,6 +120,16 @@ public class NovelDetailActivity extends AppCompatActivity {
      * 初始化视图
      */
     private void initViews() {
+        // 刘海屏适配
+        View rootView = findViewById(android.R.id.content);
+        rootView.setOnApplyWindowInsetsListener((v, insets) -> {
+            androidx.core.graphics.Insets systemBars = androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(insets, v)
+                .getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, systemBars.top, 0, 0);
+            return insets;
+        });
+        rootView.requestApplyInsets();
+        
         // 设置返回按钮
         findViewById(R.id.iv_cover).setOnClickListener(v -> finish());
     }

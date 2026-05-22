@@ -232,7 +232,7 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             case WorkspacePagerAdapter.TAB_CHARACTERS:
                 bottomActionBar.setupCharactersActions();
                 break;
-            case WorkspacePagerAdapter.TAB_MATERIALS:
+            case WorkspacePagerAdapter.TAB_GRAPH:
                 bottomActionBar.setupMaterialsActions();
                 break;
             case WorkspacePagerAdapter.TAB_MORE:
