@@ -301,7 +301,7 @@ public class ApiClient {
     }
     
     /**
-     * 清理AI返回内容中的Markdown代码块标记
+     * 清理AI返回内容中的Markdown代码块标记和思考过程标签
      */
     private String cleanMarkdownCodeBlock(String content) {
         if (content == null || content.isEmpty()) {
@@ -309,6 +309,14 @@ public class ApiClient {
         }
         
         String cleaned = content.trim();
+        
+        // 去除 <think> 标签及其内容
+        int thinkStart = cleaned.indexOf("<think>");
+        int thinkEnd = cleaned.indexOf("</think>");
+        if (thinkStart != -1 && thinkEnd != -1 && thinkEnd > thinkStart) {
+            cleaned = cleaned.substring(0, thinkStart) + cleaned.substring(thinkEnd + 8);
+            cleaned = cleaned.trim();
+        }
         
         // 去除开头的 ```json 或 ```
         if (cleaned.startsWith("```json")) {
