@@ -25,6 +25,17 @@
         android:textSize="13sp"
         android:textColor="@android:color/darker_gray" />
 
+    <!-- 阶段指示器 -->
+    <TextView
+        android:id="@+id/tv_stage_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:text="第一步：选择要创建的实体"
+        android:visibility="gone" />
+
     <!-- Tab 切换 -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout"
@@ -68,6 +79,16 @@
             android:layout_marginStart="8dp"
             android:text="取消"
             style="@style/Widget.Material3.Button.TextButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_next"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="下一步"
+            android:visibility="gone"
+            style="@style/Widget.Material3.Button.TonalButton" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_confirm"

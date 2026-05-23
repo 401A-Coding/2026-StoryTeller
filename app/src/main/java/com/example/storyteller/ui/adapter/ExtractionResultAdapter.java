@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.model.RelationExtractionResult;
+import com.example.storyteller.ui.dialog.ExtractionResultDialogFragment;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
@@ -21,12 +22,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 关系提取结果适配器（基于 MaterialCandidateReviewAdapter 模式）
+ * 关系提取结果适配器（支持两阶段模式）
  */
 public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResultAdapter.ViewHolder> {
 
-    private static final int TAB_CONFIRMED = 0;
-    private static final int TAB_PENDING = 1;
+    private static final int TAB_CONFIRMED = 0;    // 已确认关系
+    private static final int TAB_PENDING = 1;       // 待创建实体
+    private static final int TAB_CANDIDATE = 2;    // 候选关系
 
     private final RelationExtractionResult result;
     private int currentTab = TAB_CONFIRMED;
@@ -34,12 +36,16 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
     // 选择状态
     private final Set<Integer> selectedConfirmed = new HashSet<>();
     private final Set<Integer> selectedPending = new HashSet<>();
+    private final Set<Integer> selectedCandidate = new HashSet<>();
+
+    // 候选关系（从待创建实体中提取）
+    private List<ExtractionResultDialogFragment.CandidateRelation> candidateRelations = new ArrayList<>();
 
     public ExtractionResultAdapter(@NonNull RelationExtractionResult result) {
         this.result = result;
-        // 默认全选
-        if (result.getConfirmedRelations() != null) {
-            for (int i = 0; i < result.getConfirmedRelations().size(); i++) {
+        // 默认全选潜在关系
+        if (result.getPotentialRelations() != null) {
+            for (int i = 0; i < result.getPotentialRelations().size(); i++) {
                 selectedConfirmed.add(i);
             }
         }
@@ -47,6 +53,18 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
             for (int i = 0; i < result.getPendingEntities().size(); i++) {
                 selectedPending.add(i);
             }
+        }
+    }
+    
+    /**
+     * 设置候选关系列表
+     */
+    public void setCandidateRelations(List<ExtractionResultDialogFragment.CandidateRelation> candidates) {
+        this.candidateRelations = candidates != null ? candidates : new ArrayList<>();
+        // 默认全选候选关系
+        selectedCandidate.clear();
+        for (int i = 0; i < candidateRelations.size(); i++) {
+            selectedCandidate.add(i);
         }
     }
 
@@ -57,19 +75,23 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
     public void showPendingTab() {
         currentTab = TAB_PENDING;
     }
+    
+    public void showCandidateTab() {
+        currentTab = TAB_CANDIDATE;
+    }
 
     public void toggleAllSelection() {
         if (currentTab == TAB_CONFIRMED) {
             if (isAllSelected()) {
                 selectedConfirmed.clear();
             } else {
-                if (result.getConfirmedRelations() != null) {
-                    for (int i = 0; i < result.getConfirmedRelations().size(); i++) {
+                if (result.getPotentialRelations() != null) {
+                    for (int i = 0; i < result.getPotentialRelations().size(); i++) {
                         selectedConfirmed.add(i);
                     }
                 }
             }
-        } else {
+        } else if (currentTab == TAB_PENDING) {
             if (isAllSelected()) {
                 selectedPending.clear();
             } else {
@@ -79,20 +101,33 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
                     }
                 }
             }
+        } else if (currentTab == TAB_CANDIDATE) {
+            if (isAllSelected()) {
+                selectedCandidate.clear();
+            } else {
+                for (int i = 0; i < candidateRelations.size(); i++) {
+                    selectedCandidate.add(i);
+                }
+            }
         }
     }
 
     public boolean isAllSelected() {
         if (currentTab == TAB_CONFIRMED) {
-            if (result.getConfirmedRelations() == null || result.getConfirmedRelations().isEmpty()) {
+            if (result.getPotentialRelations() == null || result.getPotentialRelations().isEmpty()) {
                 return false;
             }
-            return selectedConfirmed.size() == result.getConfirmedRelations().size();
-        } else {
+            return selectedConfirmed.size() == result.getPotentialRelations().size();
+        } else if (currentTab == TAB_PENDING) {
             if (result.getPendingEntities() == null || result.getPendingEntities().isEmpty()) {
                 return false;
             }
             return selectedPending.size() == result.getPendingEntities().size();
+        } else {
+            if (candidateRelations.isEmpty()) {
+                return false;
+            }
+            return selectedCandidate.size() == candidateRelations.size();
         }
     }
 
@@ -102,6 +137,10 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
 
     public List<Integer> getSelectedPendingPositions() {
         return new ArrayList<>(selectedPending);
+    }
+    
+    public List<Integer> getSelectedCandidatePositions() {
+        return new ArrayList<>(selectedCandidate);
     }
 
     @NonNull
@@ -115,13 +154,44 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         if (currentTab == TAB_CONFIRMED) {
             bindConfirmedRelation(holder, position);
-        } else {
+        } else if (currentTab == TAB_PENDING) {
             bindPendingEntity(holder, position);
+        } else {
+            bindCandidateRelation(holder, position);
         }
+    }
+    
+    private void bindCandidateRelation(ViewHolder holder, int position) {
+        ExtractionResultDialogFragment.CandidateRelation rel = candidateRelations.get(position);
+        
+        holder.tvTitle.setText(rel.sourceName + " → " + rel.targetName);
+        holder.tvCategory.setText(getRelationTypeName(rel.relationshipType));
+        
+        // 描述
+        String description = rel.description;
+        if (!TextUtils.isEmpty(description)) {
+            holder.tvSummary.setVisibility(View.VISIBLE);
+            holder.tvSummary.setText(description);
+        } else {
+            holder.tvSummary.setVisibility(View.GONE);
+        }
+        holder.chipGroupTags.setVisibility(View.GONE);
+
+        holder.cbSelected.setOnCheckedChangeListener(null);
+        holder.cbSelected.setChecked(selectedCandidate.contains(position));
+        holder.cbSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                selectedCandidate.add(position);
+            } else {
+                selectedCandidate.remove(position);
+            }
+        });
+
+        holder.itemView.setOnClickListener(v -> holder.cbSelected.setChecked(!holder.cbSelected.isChecked()));
     }
 
     private void bindConfirmedRelation(ViewHolder holder, int position) {
-        RelationExtractionResult.ConfirmedRelation rel = result.getConfirmedRelations().get(position);
+        RelationExtractionResult.PotentialRelation rel = result.getPotentialRelations().get(position);
 
         holder.tvTitle.setText(rel.getSourceName() + " → " + rel.getTargetName());
         holder.tvCategory.setText(getRelationTypeName(rel.getRelationshipType()));
@@ -221,29 +291,17 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
     @Override
     public int getItemCount() {
         if (currentTab == TAB_CONFIRMED) {
-            return result.getConfirmedRelations() != null ? result.getConfirmedRelations().size() : 0;
-        } else {
+            return result.getPotentialRelations() != null ? result.getPotentialRelations().size() : 0;
+        } else if (currentTab == TAB_PENDING) {
             return result.getPendingEntities() != null ? result.getPendingEntities().size() : 0;
+        } else {
+            return candidateRelations.size();
         }
     }
 
     private String getRelationTypeName(String type) {
-        if (type == null) return "未知";
-        switch (type) {
-            case "BELONGS_TO": return "属于";
-            case "CONTAINS": return "包含";
-            case "FRIEND": return "朋友";
-            case "ALLY": return "盟友";
-            case "MENTOR": return "师徒";
-            case "LOVER": return "恋人";
-            case "PARENT": return "父母";
-            case "CHILD": return "子女";
-            case "ENEMY": return "敌人";
-            case "LOCATED_AT": return "位于";
-            case "USES": return "使用";
-            case "AFFECTS": return "影响";
-            default: return type;
-        }
+        // 自由文本模式下，直接返回关系类型文本
+        return type != null ? type : "未知";
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

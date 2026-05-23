@@ -22,10 +22,15 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import com.example.storyteller.data.local.db.SettingRelationshipDao;
+import com.example.storyteller.model.SettingRelationship;
+
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * AI 关系提取器
@@ -38,6 +43,7 @@ public class RelationExtractor {
     private final Context context;
     private final int storyId;
     private final StorySettingDao settingDao;
+    private final SettingRelationshipDao relationshipDao;
     private final StoryDao storyDao;
     private final Gson gson;
     private final ApiClient apiClient;
@@ -54,6 +60,7 @@ public class RelationExtractor {
         this.context = context;
         this.storyId = storyId;
         this.settingDao = new StorySettingDao(context);
+        this.relationshipDao = new SettingRelationshipDao(context);
         this.storyDao = new StoryDao(context);
         this.apiClient = ApiClient.getInstance();
         this.promptManager = new PromptManager(context);
@@ -147,6 +154,29 @@ public class RelationExtractor {
             }
         } else {
             sb.append("(暂无设定)\n");
+        }
+        sb.append("\n");
+        
+        // 现有关系（用于去重）
+        sb.append("# 现有关系列表\n");
+        List<SettingRelationship> existingRelations = relationshipDao.getByStoryId(storyId);
+        if (existingRelations != null && !existingRelations.isEmpty()) {
+            Set<String> shownRelations = new HashSet<>();
+            for (SettingRelationship rel : existingRelations) {
+                // 使用标题展示关系
+                String sourceTitle = rel.getSourceSettingTitle() != null ? rel.getSourceSettingTitle() : "ID:" + rel.getSourceSettingId();
+                String targetTitle = rel.getTargetSettingTitle() != null ? rel.getTargetSettingTitle() : "ID:" + rel.getTargetSettingId();
+                String key = sourceTitle + "||" + rel.getRelationshipType() + "||" + targetTitle;
+                if (!shownRelations.contains(key)) {
+                    String directed = rel.isDirected() ? " → " : " ↔ ";
+                    sb.append("- ").append(sourceTitle).append(directed).append(targetTitle)
+                      .append(" (").append(rel.getRelationshipType()).append(")")
+                      .append("\n");
+                    shownRelations.add(key);
+                }
+            }
+        } else {
+            sb.append("(暂无关系)\n");
         }
         sb.append("\n");
         
@@ -304,33 +334,17 @@ public class RelationExtractor {
             nameToSetting.put(setting.getTitle(), setting);
         }
 
-        // 解析 confirmed_relations
-        List<RelationExtractionResult.ConfirmedRelation> confirmedRelations = new ArrayList<>();
-        if (json.has("confirmed_relations")) {
-            JsonArray confirmedArray = json.getAsJsonArray("confirmed_relations");
-            for (JsonElement element : confirmedArray) {
-                JsonObject rel = element.getAsJsonObject();
-                String sourceName = getJsonString(rel, "source_name");
-                String targetName = getJsonString(rel, "target_name");
-                String relationType = getJsonString(rel, "relation_type");
-                String description = getJsonString(rel, "description");
-
-                // 只添加两端都存在的设定
-                if (nameToSetting.containsKey(sourceName) && nameToSetting.containsKey(targetName)) {
-                    RelationExtractionResult.ConfirmedRelation relObj = new RelationExtractionResult.ConfirmedRelation();
-                    relObj.setSourceName(sourceName);
-                    relObj.setTargetName(targetName);
-                    relObj.setRelationshipType(relationType);
-                    relObj.setDescription(description);
-                    confirmedRelations.add(relObj);
-                }
-            }
-        }
-
-        // 解析 pending_entities
+        // 解析待定实体（新格式：实体本身不包含关系）
         List<RelationExtractionResult.PendingEntity> pendingEntities = new ArrayList<>();
-        if (json.has("pending_entities")) {
-            JsonArray pendingArray = json.getAsJsonArray("pending_entities");
+        // 支持新格式 "待定实体" 和旧格式 "pending_entities"
+        JsonArray pendingArray = null;
+        if (json.has("待定实体")) {
+            pendingArray = json.getAsJsonArray("待定实体");
+        } else if (json.has("pending_entities")) {
+            pendingArray = json.getAsJsonArray("pending_entities");
+        }
+        
+        if (pendingArray != null) {
             for (JsonElement element : pendingArray) {
                 JsonObject entity = element.getAsJsonObject();
                 String name = getJsonString(entity, "name");
@@ -361,27 +375,6 @@ public class RelationExtractor {
                     }
                 }
 
-                List<RelationExtractionResult.EntityRelation> relations = new ArrayList<>();
-                if (entity.has("relations")) {
-                    JsonArray relArray = entity.getAsJsonArray("relations");
-                    for (JsonElement relElement : relArray) {
-                        JsonObject rel = relElement.getAsJsonObject();
-                        String targetName = getJsonString(rel, "target_name");
-                        String relationType = getJsonString(rel, "relationship_type");
-                        // AI可能返回 description 或 evidence
-                        String relDesc = getJsonString(rel, "description");
-                        if (relDesc.isEmpty()) {
-                            relDesc = getJsonString(rel, "evidence");
-                        }
-
-                        RelationExtractionResult.EntityRelation relObj = new RelationExtractionResult.EntityRelation();
-                        relObj.setTargetName(targetName);
-                        relObj.setRelationshipType(relationType);
-                        relObj.setDescription(relDesc);
-                        relations.add(relObj);
-                    }
-                }
-
                 RelationExtractionResult.PendingEntity entityObj = new RelationExtractionResult.PendingEntity();
                 entityObj.setName(name);
                 entityObj.setSuggestedCategory(category);
@@ -389,13 +382,66 @@ public class RelationExtractor {
                 entityObj.setSummary(summary);
                 entityObj.setAliases(aliases);
                 entityObj.setTags(tags);
-                entityObj.setRelations(relations);
+                // 注意：新格式中实体不存储关系
                 pendingEntities.add(entityObj);
             }
         }
 
-        result.setConfirmedRelations(confirmedRelations);
+        // 解析潜在关系（新格式）或兼容旧格式的 confirmed_relations
+        List<RelationExtractionResult.PotentialRelation> potentialRelations = new ArrayList<>();
+        
+        // 先尝试新格式 "潜在关系"
+        if (json.has("潜在关系")) {
+            JsonArray relArray = json.getAsJsonArray("潜在关系");
+            for (JsonElement element : relArray) {
+                JsonObject rel = element.getAsJsonObject();
+                String sourceName = getJsonString(rel, "source_name");
+                String targetName = getJsonString(rel, "target_name");
+                String relationType = getJsonString(rel, "relationship_type");
+                if (relationType.isEmpty()) {
+                    relationType = getJsonString(rel, "relation_type");
+                }
+                boolean isDirected = true;
+                if (rel.has("is_directed") && !rel.get("is_directed").isJsonNull()) {
+                    isDirected = rel.get("is_directed").getAsBoolean();
+                }
+                String description = getJsonString(rel, "description");
+
+                RelationExtractionResult.PotentialRelation relObj = new RelationExtractionResult.PotentialRelation();
+                relObj.setSourceName(sourceName);
+                relObj.setTargetName(targetName);
+                relObj.setRelationshipType(relationType);
+                relObj.setDirected(isDirected);
+                relObj.setDescription(description);
+                potentialRelations.add(relObj);
+            }
+        }
+        // 兼容旧格式 confirmed_relations
+        else if (json.has("confirmed_relations")) {
+            JsonArray confirmedArray = json.getAsJsonArray("confirmed_relations");
+            for (JsonElement element : confirmedArray) {
+                JsonObject rel = element.getAsJsonObject();
+                String sourceName = getJsonString(rel, "source_name");
+                String targetName = getJsonString(rel, "target_name");
+                String relationType = getJsonString(rel, "relationship_type");
+                boolean isDirected = true;
+                if (rel.has("is_directed") && !rel.get("is_directed").isJsonNull()) {
+                    isDirected = rel.get("is_directed").getAsBoolean();
+                }
+                String description = getJsonString(rel, "description");
+
+                RelationExtractionResult.PotentialRelation relObj = new RelationExtractionResult.PotentialRelation();
+                relObj.setSourceName(sourceName);
+                relObj.setTargetName(targetName);
+                relObj.setRelationshipType(relationType);
+                relObj.setDirected(isDirected);
+                relObj.setDescription(description);
+                potentialRelations.add(relObj);
+            }
+        }
+
         result.setPendingEntities(pendingEntities);
+        result.setPotentialRelations(potentialRelations);
         
         return result;
     }

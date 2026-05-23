@@ -56,6 +56,7 @@ public class SettingRelationshipDao {
         values.put(DBHelper.COL_REL_DESCRIPTION, relationship.getDescription());
         values.put(DBHelper.COL_REL_SOURCE_TYPE, relationship.getSourceType());
         values.put(DBHelper.COL_REL_CONFIDENCE, relationship.getConfidence());
+        values.put(DBHelper.COL_REL_IS_DIRECTED, relationship.isDirected() ? 1 : 0);
         values.put(DBHelper.COL_REL_UPDATE_TIME, System.currentTimeMillis());
         
         return db.update(
@@ -627,6 +628,7 @@ public class SettingRelationshipDao {
         values.put(DBHelper.COL_REL_DESCRIPTION, relationship.getDescription());
         values.put(DBHelper.COL_REL_SOURCE_TYPE, relationship.getSourceType());
         values.put(DBHelper.COL_REL_CONFIDENCE, relationship.getConfidence());
+        values.put(DBHelper.COL_REL_IS_DIRECTED, relationship.isDirected() ? 1 : 0);
         values.put(DBHelper.COL_REL_CREATE_TIME, relationship.getCreateTime());
         values.put(DBHelper.COL_REL_UPDATE_TIME, relationship.getUpdateTime());
         return values;
@@ -645,6 +647,7 @@ public class SettingRelationshipDao {
         rel.setDescription(getColumnString(cursor, DBHelper.COL_REL_DESCRIPTION));
         rel.setSourceType(getColumnString(cursor, DBHelper.COL_REL_SOURCE_TYPE));
         rel.setConfidence(getColumnDouble(cursor, DBHelper.COL_REL_CONFIDENCE, 0.8));
+        rel.setDirected(getColumnInt(cursor, DBHelper.COL_REL_IS_DIRECTED, 1) == 1);
         rel.setCreateTime(cursor.getLong(cursor.getColumnIndexOrThrow(DBHelper.COL_REL_CREATE_TIME)));
         rel.setUpdateTime(cursor.getLong(cursor.getColumnIndexOrThrow(DBHelper.COL_REL_UPDATE_TIME)));
         return rel;

@@ -16,12 +16,13 @@ public class SettingRelationship {
     private int targetSettingId;             // 目标设定ID（关系接收方）
     
     // === 关系定义 ===
-    private String relationshipType;         // 关系类型（RelationshipType枚举值，如"BELONGS_TO"）
+    private String relationshipType;         // 关系类型（自由文本，如"师徒"、"位于"等）
     private String description;              // 关系描述（如"主角的武器"、"敌对关系"等）
     
     // === 来源与置信度 ===
     private String sourceType;               // 来源类型：manual/ai_inferred/user_confirmed
     private double confidence;               // 置信度(0-1)，用于AI推断的关系
+    private boolean isDirected = true;      // 是否为有向关系（true=有向A→B，false=无向A↔B）
     
     // === 元数据 ===
     private long createTime;
@@ -57,10 +58,6 @@ public class SettingRelationship {
         this.sourceSettingId = sourceId;
         this.targetSettingId = targetId;
         this.relationshipType = type;
-    }
-    
-    public SettingRelationship(int storyId, int sourceId, int targetId, RelationshipType type) {
-        this(storyId, sourceId, targetId, type.name());
     }
     
     // === Getter & Setter ===
@@ -105,10 +102,6 @@ public class SettingRelationship {
         this.relationshipType = relationshipType;
     }
     
-    public void setRelationshipType(RelationshipType type) {
-        this.relationshipType = type.name();
-    }
-    
     public String getDescription() {
         return description;
     }
@@ -131,6 +124,14 @@ public class SettingRelationship {
     
     public void setConfidence(double confidence) {
         this.confidence = confidence;
+    }
+    
+    public boolean isDirected() {
+        return isDirected;
+    }
+    
+    public void setDirected(boolean directed) {
+        isDirected = directed;
     }
     
     public long getCreateTime() {
@@ -217,54 +218,26 @@ public class SettingRelationship {
     
     /**
      * 获取关系类型的显示名称
+     * 自由文本模式下，直接返回关系类型文本
      */
     public String getTypeDisplayName() {
-        if (relationshipType == null) {
-            return "";
-        }
-        try {
-            RelationshipType type = RelationshipType.valueOf(relationshipType);
-            return type.getDisplayName();
-        } catch (IllegalArgumentException e) {
-            return relationshipType;
-        }
+        return relationshipType != null ? relationshipType : "";
     }
     
     /**
      * 获取关系类型的分类
+     * 自由文本模式下，返回空字符串
      */
     public String getTypeCategory() {
-        if (relationshipType == null) {
-            return "";
-        }
-        try {
-            RelationshipType type = RelationshipType.valueOf(relationshipType);
-            return type.getCategory();
-        } catch (IllegalArgumentException e) {
-            return "";
-        }
+        return "";
     }
     
     /**
      * 获取关系类型的分类显示名称
+     * 自由文本模式下，返回空字符串
      */
     public String getTypeCategoryDisplayName() {
-        return RelationshipType.getCategoryDisplayName(getTypeCategory());
-    }
-    
-    /**
-     * 判断是否为有向关系
-     */
-    public boolean isDirected() {
-        if (relationshipType == null) {
-            return true;
-        }
-        try {
-            RelationshipType type = RelationshipType.valueOf(relationshipType);
-            return type.isDirected();
-        } catch (IllegalArgumentException e) {
-            return true;
-        }
+        return "";
     }
     
     /**

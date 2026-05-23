@@ -4,36 +4,32 @@ import java.util.List;
 
 /**
  * AI关系提取结果模型
- * 用于存储AI从文本中提取的设定关系和待创建的实体
+ * 用于存储AI从文本中提取的待创建实体和潜在关系
+ * 
+ * 数据格式：
+ * - 待定实体：只包含实体本身的字段，不存储关系
+ * - 潜在关系：包含所有识别出的关系（统一在外部声明，方便AI去重）
  */
 public class RelationExtractionResult {
     
-    // === 已确认的关系（两端实体都存在） ===
-    private List<ConfirmedRelation> confirmedRelations;
-    
-    // === 待创建的实体及其关联关系 ===
+    // === 待创建的实体列表 ===
     private List<PendingEntity> pendingEntities;
+    
+    // === 所有潜在关系列表（包括已有实体间的 + 与待创建实体相关的）===
+    private List<PotentialRelation> potentialRelations;
     
     // === 构造方法 ===
     
     public RelationExtractionResult() {
     }
     
-    public RelationExtractionResult(List<ConfirmedRelation> confirmedRelations, 
-                                   List<PendingEntity> pendingEntities) {
-        this.confirmedRelations = confirmedRelations;
+    public RelationExtractionResult(List<PendingEntity> pendingEntities,
+                                    List<PotentialRelation> potentialRelations) {
         this.pendingEntities = pendingEntities;
+        this.potentialRelations = potentialRelations;
     }
     
     // === Getter & Setter ===
-    
-    public List<ConfirmedRelation> getConfirmedRelations() {
-        return confirmedRelations;
-    }
-    
-    public void setConfirmedRelations(List<ConfirmedRelation> confirmedRelations) {
-        this.confirmedRelations = confirmedRelations;
-    }
     
     public List<PendingEntity> getPendingEntities() {
         return pendingEntities;
@@ -43,75 +39,18 @@ public class RelationExtractionResult {
         this.pendingEntities = pendingEntities;
     }
     
-    // === 内部类：已确认的关系 ===
-    
-    /**
-     * 已确认的关系（源和目标实体都已存在）
-     */
-    public static class ConfirmedRelation {
-        private String sourceName;        // 源实体名称
-        private String targetName;        // 目标实体名称
-        private String relationshipType;  // 关系类型（枚举名）
-        private double confidence;        // 置信度 0.0-1.0
-        private String evidence;          // 文本证据
-        private String description;       // 关系描述（可选）
-        
-        public ConfirmedRelation() {
-        }
-        
-        public String getSourceName() {
-            return sourceName;
-        }
-        
-        public void setSourceName(String sourceName) {
-            this.sourceName = sourceName;
-        }
-        
-        public String getTargetName() {
-            return targetName;
-        }
-        
-        public void setTargetName(String targetName) {
-            this.targetName = targetName;
-        }
-        
-        public String getRelationshipType() {
-            return relationshipType;
-        }
-        
-        public void setRelationshipType(String relationshipType) {
-            this.relationshipType = relationshipType;
-        }
-        
-        public double getConfidence() {
-            return confidence;
-        }
-        
-        public void setConfidence(double confidence) {
-            this.confidence = confidence;
-        }
-        
-        public String getEvidence() {
-            return evidence;
-        }
-        
-        public void setEvidence(String evidence) {
-            this.evidence = evidence;
-        }
-        
-        public String getDescription() {
-            return description;
-        }
-        
-        public void setDescription(String description) {
-            this.description = description;
-        }
+    public List<PotentialRelation> getPotentialRelations() {
+        return potentialRelations;
     }
     
-    // === 内部类：待创建的实体 ===
+    public void setPotentialRelations(List<PotentialRelation> potentialRelations) {
+        this.potentialRelations = potentialRelations;
+    }
+    
+    // === 内部类：待创建实体 ===
     
     /**
-     * 待创建的实体（在现有设定库中不存在）
+     * 待创建的实体
      */
     public static class PendingEntity {
         private String name;                    // 实体名称
@@ -120,7 +59,7 @@ public class RelationExtractionResult {
         private String summary;                 // 简介
         private List<String> aliases;           // 别名列表
         private List<String> tags;              // 标签列表
-        private List<EntityRelation> relations; // 该实体涉及的关系
+        // 注意：实体本身不存储关系，所有关系统一在 potentialRelations 中声明
         
         public PendingEntity() {
         }
@@ -172,29 +111,29 @@ public class RelationExtractionResult {
         public void setTags(List<String> tags) {
             this.tags = tags;
         }
-        
-        public List<EntityRelation> getRelations() {
-            return relations;
-        }
-        
-        public void setRelations(List<EntityRelation> relations) {
-            this.relations = relations;
-        }
     }
     
-    // === 内部类：待创建实体的关系 ===
+    // === 内部类：潜在关系 ===
     
     /**
-     * 待创建实体涉及的关系
+     * 潜在关系（所有识别出的关系，统一声明方便AI去重）
      */
-    public static class EntityRelation {
-        private String targetName;         // 目标实体名称（可能是已有实体或其他待创建实体）
-        private String relationshipType;   // 关系类型
-        private double confidence;         // 置信度
-        private String evidence;           // 文本证据
+    public static class PotentialRelation {
+        private String sourceName;        // 源实体名称
+        private String targetName;        // 目标实体名称
+        private String relationshipType;   // 关系类型（自由文本）
+        private boolean isDirected = true; // 是否为有向关系
         private String description;        // 关系描述（可选）
         
-        public EntityRelation() {
+        public PotentialRelation() {
+        }
+        
+        public String getSourceName() {
+            return sourceName;
+        }
+        
+        public void setSourceName(String sourceName) {
+            this.sourceName = sourceName;
         }
         
         public String getTargetName() {
@@ -213,20 +152,12 @@ public class RelationExtractionResult {
             this.relationshipType = relationshipType;
         }
         
-        public double getConfidence() {
-            return confidence;
+        public boolean isDirected() {
+            return isDirected;
         }
         
-        public void setConfidence(double confidence) {
-            this.confidence = confidence;
-        }
-        
-        public String getEvidence() {
-            return evidence;
-        }
-        
-        public void setEvidence(String evidence) {
-            this.evidence = evidence;
+        public void setDirected(boolean directed) {
+            isDirected = directed;
         }
         
         public String getDescription() {

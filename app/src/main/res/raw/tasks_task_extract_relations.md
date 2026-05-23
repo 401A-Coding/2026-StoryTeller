@@ -14,8 +14,19 @@
 
 **无论现有设定列表是否为空，都必须从正文中提取实体和关系。**
 
-- **已存在的实体**：同时出现在正文和设定列表中 → 建立 `confirmed_relations`
-- **待创建的实体**：只出现在正文中，不在设定列表 → 建立 `pending_entities`，并在 relations 中建立关系
+- **待定实体**：从正文中识别的不在现有设定列表中的实体，放入 `待定实体` 数组
+- **潜在关系**：所有识别出的关系（可能涉及已有实体或待创建实体），统一放入 `潜在关系` 数组
+
+## 核心数据结构
+
+```json
+{
+  "待定实体": [...],  // 只包含实体本身，不存储关系
+  "潜在关系": [...]   // 所有关系统一在这里声明
+}
+```
+
+实体之间**不再在内部声明关系**，所有关系统一在 `潜在关系` 中声明，方便你检查重复。
 
 ## 分类规范（重要！）
 
@@ -31,13 +42,54 @@
 
 `suggested_subcategory` 应选择主分类下的具体子分类（如"主要角色"、"关键场景"等）。如果不熟悉，可省略此字段。
 
-## 支持的关系类型
-- 层级: BELONGS_TO, CONTAINS, PART_OF
-- 关联: FRIEND, ALLY, COLLEAGUE, MENTOR, LOVER, SIBLING
-- 家人: PARENT, CHILD, SPOUSE
-- 对立: ENEMY, RIVAL, CONFLICT
-- 因果: CAUSED_BY, LEADS_TO, AFFECTS
-- 其他: LOCATED_AT, OWNS, USES, VISITS
+## 关系类型说明
+
+关系类型使用**自由文本**描述，**不要局限于示例提到的关系类型**，根据小说内容和语义，结合你的知识自行判断关系类型。
+
+`is_directed` 表示关系是否有方向：
+- `true`：有向关系（A→B，如"守护"、"居住在"）
+- `false`：无向关系（A↔B，如"师徒"、"朋友"）
+
+常见判断参考：
+- **单向（有向）**：守护、居住在、位于、使用、教导、领导、统治、杀死
+- **双向（无向）**：师徒、父子、夫妻、朋友、盟友、同事、约定、相遇
+
+## 关系去重规则（重要！）
+
+**数据格式要求**：实体和关系分离存储，所有关系都在 `潜在关系` 中统一声明。
+
+**去重原则**：
+
+0. **与已有关系比较（最重要！）**
+   - 在输出前，检查每个潜在关系是否已存在于"现有关系列表"中
+   - 如果已有相同的关系（相同的实体对 + 相同的关系类型），**不要**输出到 `潜在关系`
+   - 示例：已有"阿灯 ↔ 师父 (师徒)"，则不要重复输出"阿灯 ↔ 师父 (师徒)"
+   - 对于有向关系，注意方向：如果已有"A → B (守护)"，不要输出"B → A (守护)"
+   - 对于无向关系，同一对实体的相同类型关系只保留一个
+
+1. **双向关系使用双向表示**
+   - 师徒、父子、兄弟、夫妻、朋友、敌对、盟友等关系天然是双向的，用 `is_directed: false`
+   - 示例："A和B是师徒" → 应表示为 `is_directed: false`，类型写"师徒"
+   - 示例："A是B的父亲" → 应表示为 `is_directed: false`，类型写"父子"，描述写"A是B的父亲"（说明谁是父谁是子）
+
+2. **单向关系只保留一个方向**
+   - 有些关系有明确的方向性（如守护、居住在、使用），用单向关系
+   - 示例："A守护B" → 应表示为 `is_directed: true`，类型写"守护"
+   - ❌ 错误：同时生成"守护"（A→B）和"被守护"（B→A）两个关系
+   - ✅ 正确：只保留一个方向（从主动方/主要角色指向被动方/次要角色）
+
+3. **同一实体对只保留一个核心关系**
+   - 两个实体之间只需一条关系，不要拆分（如"爱慕"和"暗恋"合并为"爱慕"）
+   - 同一对角色之间不要同时建立"恋人"和"夫妻"等多个关系，选择最核心的一个
+   - ❌ 错误：男女主角之间同时建立"爱慕"、"恋人"、"夫妻"等多个关系
+   - ✅ 正确：只保留最核心的那个关系（如"夫妻"），其他信息已在角色设定中体现
+
+4. **选择标准**：优先从**主角/较重要角色**指向**配角/次要角色**，或从**主动方**指向**被动方**
+
+5. **关系合并原则**：
+   - "守护"和"被守护"合并为"守护"（有向）
+   - "拥有"和"属于"合并为"拥有"（有向）
+   - 类似成对的关系，保留主动方作为关系类型
 
 ## 实体字段规范（重要！）
 
@@ -51,7 +103,8 @@
 | `summary` | 简介（50-150字） | "清微观的小道士，负责守护古殿中的琉璃灯" |
 | `aliases` | 别名列表（最多5个） | ["小道士", "守灯人"] |
 | `tags` | 标签列表（最多5个） | ["道教", "守灯", "徒弟"] |
-| `relations` | 与其他实体的关系 | [...] |
+
+**注意**：实体本身不存储关系，所有关系统一在"潜在关系"中声明。
 
 # 输出格式
 
@@ -59,33 +112,31 @@
 
 ```json
 {
-  "confirmed_relations": [
-    {"source_name": "实体A", "target_name": "实体B", "relationship_type": "FRIEND", "description": "关系描述"}
-  ],
-  "pending_entities": [
+  "待定实体": [
     {
       "name": "新实体名",
       "suggested_category": "角色",
       "suggested_subcategory": "主要角色",
       "summary": "简介描述，50-150字",
       "aliases": ["别名1", "别名2"],
-      "tags": ["标签1", "标签2"],
-      "relations": [
-        {"target_name": "其他实体", "relationship_type": "FRIEND", "description": "关系描述"}
-      ]
+      "tags": ["标签1", "标签2"]
     }
+  ],
+  "潜在关系": [
+    {"source_name": "实体A", "target_name": "实体B", "relationship_type": "师徒", "is_directed": false, "description": "A和B是师徒关系"},
+    {"source_name": "实体C", "target_name": "实体D", "relationship_type": "守护", "is_directed": true, "description": "C守护D"}
   ]
 }
 ```
 
 ## 关键说明
+- **待定实体**：只包含实体本身的字段，不存储关系
+- **潜在关系**：包含所有识别出的关系（已有实体间的 + 与待创建实体相关的），统一去重
+- `relationship_type` 使用自然语言描述，如"师徒"、"朋友"、"守护"等
+- `is_directed`：true表示有向关系（→），false表示无向关系（↔）
 - `summary` 应简洁有力，包含实体的核心特征
 - `aliases` 仅包含正文中有明确别称的实体
 - `tags` 用于归类和搜索，选择最能描述实体特征的标签
-- `pending_entities` 中的实体的 `relations` 可以指向其他待创建实体
-- `confirmed_relations` 只能包含已存在的实体（两端都必须在设定列表中）
-- 即使设定列表为空，所有关系都放在 `pending_entities` 中即可
-- 物品必须使用 `世界` 作为 `suggested_category`
 
 # 示例
 
@@ -94,25 +145,36 @@
 **输出**：
 ```json
 {
-  "confirmed_relations": [],
-  "pending_entities": [
-    {"name": "阿灯", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的小道士，负责守护古殿中的琉璃灯，沉默寡言但内心坚定。", "aliases": ["小道士"], "tags": ["道士", "守灯人"], "relations": [{"target_name": "师父", "relationship_type": "MENTOR", "description": "阿灯是师父的徒弟"}, {"target_name": "清微观", "relationship_type": "LOCATED_AT", "description": "阿灯在清微观守灯"}, {"target_name": "青琉璃灯", "relationship_type": "USES", "description": "阿灯守护青琉璃灯"}]},
-    {"name": "师父", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的长辈，已下山百年，行踪神秘莫测。", "aliases": ["老道士"], "tags": ["长辈", "神秘"], "relations": [{"target_name": "阿灯", "relationship_type": "MENTOR", "description": "师父是阿灯的师父"}]},
-    {"name": "清微观", "suggested_category": "地点", "suggested_subcategory": "关键场景", "summary": "隐藏在山中的古老道观，有一座供奉琉璃灯的古殿。", "aliases": [], "tags": ["道观", "古建筑"], "relations": []},
-    {"name": "青琉璃灯", "suggested_category": "世界", "suggested_subcategory": "物品资源", "summary": "清微观古殿中的神异灯具，灯芯常亮不灭。", "aliases": ["琉璃灯", "神灯"], "tags": ["神器", "照明"], "relations": []}
+  "待定实体": [
+    {"name": "阿灯", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的小道士，负责守护古殿中的琉璃灯，沉默寡言但内心坚定。", "aliases": ["小道士"], "tags": ["道士", "守灯人"]},
+    {"name": "师父", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的长辈，已下山百年，行踪神秘莫测。", "aliases": ["老道士"], "tags": ["长辈", "神秘"]},
+    {"name": "清微观", "suggested_category": "地点", "suggested_subcategory": "关键场景", "summary": "隐藏在山中的古老道观，有一座供奉琉璃灯的古殿。", "aliases": [], "tags": ["道观", "古建筑"]},
+    {"name": "青琉璃灯", "suggested_category": "世界", "suggested_subcategory": "物品资源", "summary": "清微观古殿中的神异灯具，灯芯常亮不灭。", "aliases": ["琉璃灯", "神灯"], "tags": ["神器", "照明"]}
+  ],
+  "潜在关系": [
+    {"source_name": "阿灯", "target_name": "师父", "relationship_type": "师徒", "is_directed": false, "description": "阿灯和师父是师徒关系"},
+    {"source_name": "阿灯", "target_name": "清微观", "relationship_type": "居住在", "is_directed": true, "description": "阿灯居住在清微观"},
+    {"source_name": "阿灯", "target_name": "青琉璃灯", "relationship_type": "守护", "is_directed": true, "description": "阿灯守护青琉璃灯"}
   ]
 }
 ```
+**注意**：
+- 实体不存储关系，所有关系都在"潜在关系"中统一声明
+- 所有关系都在"潜在关系"中统一声明，方便检查重复
+- "师徒"是双向关系（用 `is_directed: false`）
+- "守护"是单向关系（用 `is_directed: true`）
 
 ## 示例2：部分实体已存在
 **输入**：现有设定有"阿灯"（角色），正文提到"阿灯和师父在清微观守灯"。
 **输出**：
 ```json
 {
-  "confirmed_relations": [],
-  "pending_entities": [
-    {"name": "师父", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的长辈，阿灯的师父，百年未曾归山。", "aliases": ["老道士"], "tags": ["长辈"], "relations": [{"target_name": "阿灯", "relationship_type": "MENTOR", "description": "师父是阿灯的师父"}]},
-    {"name": "清微观", "suggested_category": "地点", "suggested_subcategory": "关键场景", "summary": "隐藏在山中的古老道观，古殿中有长明灯。", "aliases": [], "tags": ["道观"], "relations": []}
+  "待定实体": [
+    {"name": "师父", "suggested_category": "角色", "suggested_subcategory": "主要角色", "summary": "清微观的长辈，阿灯的师父，百年未曾归山。", "aliases": ["老道士"], "tags": ["长辈"]},
+    {"name": "清微观", "suggested_category": "地点", "suggested_subcategory": "关键场景", "summary": "隐藏在山中的古老道观，古殿中有长明灯。", "aliases": [], "tags": ["道观"]}
+  ],
+  "潜在关系": [
+    {"source_name": "阿灯", "target_name": "师父", "relationship_type": "师徒", "is_directed": false, "description": "阿灯和师父是师徒关系"}
   ]
 }
 ```

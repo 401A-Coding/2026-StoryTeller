@@ -518,10 +518,10 @@ public class PlotGraphFragment extends BaseFragment {
         dialog.setData(result);
         dialog.setListener(new ExtractionResultDialogFragment.Listener() {
             @Override
-            public void onConfirm(@NonNull RelationExtractionResult result,
-                                 @NonNull List<Integer> selectedConfirmedPositions,
-                                 @NonNull List<Integer> selectedPendingPositions) {
-                applyExtractionResults(result, selectedConfirmedPositions, selectedPendingPositions);
+            public void onConfirm(@NonNull List<Integer> entityPositions,
+                                  @NonNull List<Integer> relationPositions,
+                                  @NonNull List<Boolean> isFromPending) {
+                applyExtractionResultsTwoStage(result, entityPositions, relationPositions, isFromPending);
             }
 
             @Override
@@ -532,83 +532,112 @@ public class PlotGraphFragment extends BaseFragment {
         dialog.show(getParentFragmentManager(), "extraction_result");
     }
     
-    private void applyExtractionResults(RelationExtractionResult result,
-                                          List<Integer> selectedConfirmedPositions,
-                                          List<Integer> selectedPendingPositions) {
-        // 保存已确认关系
-        int savedRelations = 0;
-        if (result.getConfirmedRelations() != null) {
-            for (int pos : selectedConfirmedPositions) {
-                RelationExtractionResult.ConfirmedRelation rel = result.getConfirmedRelations().get(pos);
-                StorySetting source = settingDao.getByTitle(rel.getSourceName());
-                StorySetting target = settingDao.getByTitle(rel.getTargetName());
-                if (source != null && target != null) {
-                    if (!isRelationExistsByTitle(rel.getSourceName(), rel.getTargetName(), rel.getRelationshipType())) {
-                        SettingRelationship newRel = new SettingRelationship();
-                        newRel.setStoryId(storyId);
-                        newRel.setSourceSettingId(source.getId());
-                        newRel.setTargetSettingId(target.getId());
-                        newRel.setRelationshipType(rel.getRelationshipType());
-                        newRel.setDescription(rel.getDescription());
-                        relationshipDao.insert(newRel);
-                        savedRelations++;
+    /**
+     * 两阶段保存关系提取结果
+     * 第一阶段：创建选中的实体
+     * 第二阶段：建立选中的关系（从潜在关系中选择）
+     */
+    private void applyExtractionResultsTwoStage(RelationExtractionResult result,
+                                                 List<Integer> entityPositions,
+                                                 List<Integer> relationPositions,
+                                                 List<Boolean> isFromPending) {
+        // 第一阶段：创建所有选中的待创建实体，建立名称→ID映射
+        int savedEntities = 0;
+        java.util.Map<String, Long> entityIdMap = new java.util.HashMap<>();
+        
+        android.util.Log.d("PlotGraphFragment", "两阶段保存开始: entityPositions=" + entityPositions);
+        
+        if (result.getPendingEntities() != null) {
+            for (int pos : entityPositions) {
+                if (pos >= 0 && pos < result.getPendingEntities().size()) {
+                    RelationExtractionResult.PendingEntity entity = result.getPendingEntities().get(pos);
+                    android.util.Log.d("PlotGraphFragment", "  创建实体: " + entity.getName());
+                    
+                    StorySetting newSetting = new StorySetting();
+                    newSetting.setStoryId(storyId);
+                    newSetting.setTitle(entity.getName());
+                    // 直接使用AI返回的分类和子分类
+                    String mainCategory = entity.getSuggestedCategory();
+                    if (mainCategory == null || mainCategory.isEmpty()) {
+                        mainCategory = "角色";
+                    }
+                    String subCategory = entity.getSuggestedSubcategory();
+                    if (subCategory == null || subCategory.isEmpty()) {
+                        subCategory = getDefaultSubCategory(mainCategory);
+                    }
+                    newSetting.setCategory(mainCategory);
+                    newSetting.setSubCategory(subCategory);
+                    // 保存简介
+                    newSetting.setSummary(entity.getSummary());
+                    // 保存别名（转换为JSON）
+                    if (entity.getAliases() != null && !entity.getAliases().isEmpty()) {
+                        newSetting.setAliases(new com.google.gson.Gson().toJson(entity.getAliases()));
+                    }
+                    // 保存标签（转换为JSON）
+                    if (entity.getTags() != null && !entity.getTags().isEmpty()) {
+                        newSetting.setTags(new com.google.gson.Gson().toJson(entity.getTags()));
+                    }
+                    newSetting.setCreateTime(System.currentTimeMillis());
+                    newSetting.setUpdateTime(System.currentTimeMillis());
+                    
+                    long newSettingId = settingDao.insert(newSetting);
+                    if (newSettingId > 0) {
+                        entityIdMap.put(entity.getName(), newSettingId);
+                        savedEntities++;
                     }
                 }
             }
         }
         
-        // 创建待创建实体
-        int savedEntities = 0;
-        android.util.Log.d("PlotGraphFragment", "applyExtractionResults: selectedPending=" + selectedPendingPositions);
-        if (result.getPendingEntities() != null) {
-            android.util.Log.d("PlotGraphFragment", "  pendingEntities.size()=" + result.getPendingEntities().size());
-            for (int pos : selectedPendingPositions) {
-                android.util.Log.d("PlotGraphFragment", "  处理位置: " + pos);
-                RelationExtractionResult.PendingEntity entity = result.getPendingEntities().get(pos);
-                android.util.Log.d("PlotGraphFragment", "  实体名: " + entity.getName() + ", category=" + entity.getSuggestedCategory());
-                StorySetting newSetting = new StorySetting();
-                newSetting.setStoryId(storyId);
-                newSetting.setTitle(entity.getName());
-                // 直接使用AI返回的分类和子分类
-                String mainCategory = entity.getSuggestedCategory();
-                if (mainCategory == null || mainCategory.isEmpty()) {
-                    mainCategory = "角色";
+        android.util.Log.d("PlotGraphFragment", "第一阶段完成，已创建 " + savedEntities + " 个实体，映射表: " + entityIdMap);
+        
+        // 第二阶段：保存选中的关系
+        int savedRelations = 0;
+        
+        if (result.getPotentialRelations() != null) {
+            // 获取选中的关系位置（潜在关系Tab）
+            int selectedPotentialCount = 0;
+            for (int i = 0; i < isFromPending.size(); i++) {
+                if (!isFromPending.get(i)) {
+                    selectedPotentialCount++;
                 }
-                String subCategory = entity.getSuggestedSubcategory();
-                if (subCategory == null || subCategory.isEmpty()) {
-                    subCategory = getDefaultSubCategory(mainCategory);
-                }
-                newSetting.setCategory(mainCategory);
-                newSetting.setSubCategory(subCategory);
-                // 保存简介
-                newSetting.setSummary(entity.getSummary());
-                // 保存别名（转换为JSON）
-                if (entity.getAliases() != null && !entity.getAliases().isEmpty()) {
-                    newSetting.setAliases(new com.google.gson.Gson().toJson(entity.getAliases()));
-                }
-                // 保存标签（转换为JSON）
-                if (entity.getTags() != null && !entity.getTags().isEmpty()) {
-                    newSetting.setTags(new com.google.gson.Gson().toJson(entity.getTags()));
-                }
-                newSetting.setCreateTime(System.currentTimeMillis());
-                newSetting.setUpdateTime(System.currentTimeMillis());
-                android.util.Log.d("PlotGraphFragment", "  即将插入: storyId=" + newSetting.getStoryId() + ", title=" + newSetting.getTitle() + ", category=" + newSetting.getCategory() + ", subCategory=" + newSetting.getSubCategory());
-                long newSettingId = settingDao.insert(newSetting);
-                android.util.Log.d("PlotGraphFragment", "  insert返回ID: " + newSettingId);
-                savedEntities++;
+            }
+            
+            // 遍历所有潜在关系，只保存选中的
+            int relationIndex = 0;
+            for (int i = 0; i < result.getPotentialRelations().size() && i < relationPositions.size(); i++) {
+                int pos = relationPositions.get(i);
+                boolean fromPending = isFromPending.get(i);
                 
-                if (entity.getRelations() != null && newSettingId > 0) {
-                    for (RelationExtractionResult.EntityRelation entRel : entity.getRelations()) {
-                        StorySetting target = settingDao.getByTitle(entRel.getTargetName());
-                        android.util.Log.d("PlotGraphFragment", "  查找目标实体: " + entRel.getTargetName() + ", 结果=" + (target != null));
-                        if (target != null) {
+                if (!fromPending && pos >= 0 && pos < result.getPotentialRelations().size()) {
+                    RelationExtractionResult.PotentialRelation rel = result.getPotentialRelations().get(pos);
+                    
+                    // 查找源ID（可能是新建的实体或已有实体）
+                    Long sourceId = entityIdMap.get(rel.getSourceName());
+                    if (sourceId == null) {
+                        StorySetting source = settingDao.getByTitle(rel.getSourceName());
+                        if (source != null) sourceId = (long) source.getId();
+                    }
+                    
+                    // 查找目标ID（可能是新建的实体或已有实体）
+                    Long targetId = entityIdMap.get(rel.getTargetName());
+                    if (targetId == null) {
+                        StorySetting target = settingDao.getByTitle(rel.getTargetName());
+                        if (target != null) targetId = (long) target.getId();
+                    }
+                    
+                    if (sourceId != null && targetId != null) {
+                        // 检查关系是否已存在
+                        if (!isRelationExists(sourceId.intValue(), targetId.intValue(), rel.getRelationshipType())) {
                             SettingRelationship newRel = new SettingRelationship();
                             newRel.setStoryId(storyId);
-                            newRel.setSourceSettingId((int) newSettingId);
-                            newRel.setTargetSettingId(target.getId());
-                            newRel.setRelationshipType(entRel.getRelationshipType());
-                            newRel.setDescription(entRel.getDescription());
+                            newRel.setSourceSettingId(sourceId.intValue());
+                            newRel.setTargetSettingId(targetId.intValue());
+                            newRel.setRelationshipType(rel.getRelationshipType());
+                            newRel.setDescription(rel.getDescription());
+                            newRel.setDirected(rel.isDirected());
                             relationshipDao.insert(newRel);
+                            savedRelations++;
                         }
                     }
                 }
@@ -616,8 +645,8 @@ public class PlotGraphFragment extends BaseFragment {
         }
         
         String message = "";
-        if (savedRelations > 0) message += "添加了 " + savedRelations + " 条关系\n";
-        if (savedEntities > 0) message += "创建了 " + savedEntities + " 个新实体";
+        if (savedEntities > 0) message += "创建了 " + savedEntities + " 个新实体\n";
+        if (savedRelations > 0) message += "添加了 " + savedRelations + " 条关系";
         if (message.isEmpty()) {
             Toast.makeText(requireContext(), "没有需要保存的内容", Toast.LENGTH_SHORT).show();
         } else {
@@ -630,16 +659,11 @@ public class PlotGraphFragment extends BaseFragment {
         }
     }
     
-    private boolean isRelationExistsByTitle(String sourceName, String targetName, String type) {
-        StorySetting source = settingDao.getByTitle(sourceName);
-        if (source == null) return false;
-        
-        List<SettingRelationship> relations = relationshipDao.getBySettingId(source.getId());
+    private boolean isRelationExists(int sourceId, int targetId, String type) {
+        List<SettingRelationship> relations = relationshipDao.getBySettingId(sourceId);
         if (relations != null) {
-            StorySetting target = settingDao.getByTitle(targetName);
-            if (target == null) return false;
             for (SettingRelationship rel : relations) {
-                if (rel.getTargetSettingId() == target.getId() && rel.getRelationshipType().equals(type)) {
+                if (rel.getTargetSettingId() == targetId && rel.getRelationshipType().equals(type)) {
                     return true;
                 }
             }

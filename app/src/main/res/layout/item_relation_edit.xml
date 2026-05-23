@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <!-- 主行：实体A → 类型 → 实体B | 按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- 内容区（占据所有剩余空间） -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 源设定名称 -->
+            <TextView
+                android:id="@+id/tv_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@android:color/holo_blue_dark"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- 箭头和关系类型 -->
+            <TextView
+                android:id="@+id/tv_arrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:maxLines="1" />
+
+            <!-- 目标设定名称 -->
+            <TextView
+                android:id="@+id/tv_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@android:color/holo_blue_dark"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+        <!-- 按钮区（固定在右侧） -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 单/双向切换按钮 -->
+            <Button
+                android:id="@+id/btn_toggle_direction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="32dp"
+                android:minHeight="32dp"
+                android:textSize="16sp"
+                android:background="@android:color/transparent"
+                android:paddingHorizontal="4dp" />
+
+            <!-- 删除按钮 -->
+            <Button
+                android:id="@+id/btn_delete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="32dp"
+                android:minHeight="32dp"
+                android:text="×"
+                android:textSize="18sp"
+                android:background="@android:color/transparent"
+                android:paddingHorizontal="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 描述行 -->
+    <EditText
+        android:id="@+id/et_description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:background="@android:drawable/edit_text"
+        android:padding="8dp"
+        android:layout_marginStart="24dp"
+        android:hint="添加关系描述..."
+        android:maxLines="2"
+        android:inputType="textMultiLine" />
+
+</LinearLayout>
