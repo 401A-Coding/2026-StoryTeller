@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 19;  // 升级到版本19，添加设定关系表
+    private static final int DB_VERSION = 21;  // 版本21：移除关系表UNIQUE约束，支持同一实体间多种关系类型
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -182,6 +182,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_REL_DESCRIPTION = "description";
     public static final String COL_REL_SOURCE_TYPE = "source_type";  // manual/ai_inferred/user_confirmed
     public static final String COL_REL_CONFIDENCE = "confidence";  // 置信度 0-1
+    public static final String COL_REL_IS_DIRECTED = "is_directed";  // 是否为有向关系（1=有向，0=无向）
     public static final String COL_REL_CREATE_TIME = "create_time";
     public static final String COL_REL_UPDATE_TIME = "update_time";
 
@@ -409,6 +410,29 @@ public class DBHelper extends SQLiteOpenHelper {
             // 版本19：添加设定关系表
             createSettingRelationshipsTable(db);
         }
+        if (oldVersion < 20) {
+            // 版本20：添加 is_directed 字段到设定关系表
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_SETTING_RELATIONSHIPS + " ADD COLUMN " + COL_REL_IS_DIRECTED + " INTEGER DEFAULT 1");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+        }
+        if (oldVersion < 21) {
+            // 版本21：移除关系表UNIQUE约束（SQLite不支持删除约束，需要重建表）
+            // 检查并删除旧表，重建（仅删除UNIQUE约束）
+            try {
+                // SQLite不支持直接删除UNIQUE约束，需要重建表
+                // 先备份数据，然后重建表（不带UNIQUE）
+                db.execSQL("ALTER TABLE " + TABLE_SETTING_RELATIONSHIPS + " RENAME TO " + TABLE_SETTING_RELATIONSHIPS + "_old");
+                createSettingRelationshipsTable(db);
+                // 迁移数据
+                db.execSQL("INSERT INTO " + TABLE_SETTING_RELATIONSHIPS + " SELECT * FROM " + TABLE_SETTING_RELATIONSHIPS + "_old");
+                db.execSQL("DROP TABLE " + TABLE_SETTING_RELATIONSHIPS + "_old");
+            } catch (Exception e) {
+                // 可能表不存在或其他错误
+            }
+        }
     }
 
     /**
@@ -425,14 +449,13 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_REL_DESCRIPTION + " TEXT, "
                 + COL_REL_SOURCE_TYPE + " TEXT DEFAULT 'manual', "
                 + COL_REL_CONFIDENCE + " REAL DEFAULT 0.8, "
+                + COL_REL_IS_DIRECTED + " INTEGER DEFAULT 1, "
                 + COL_REL_CREATE_TIME + " INTEGER NOT NULL, "
                 + COL_REL_UPDATE_TIME + " INTEGER NOT NULL, "
                 + "FOREIGN KEY(" + COL_REL_SOURCE_SETTING_ID + ") REFERENCES " + 
                   TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_ID + ") ON DELETE CASCADE, "
                 + "FOREIGN KEY(" + COL_REL_TARGET_SETTING_ID + ") REFERENCES " + 
-                  TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_ID + ") ON DELETE CASCADE, "
-                + "UNIQUE(" + COL_REL_SOURCE_SETTING_ID + ", " + COL_REL_TARGET_SETTING_ID + ", " + 
-                  COL_REL_RELATIONSHIP_TYPE + ")"
+                  TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_ID + ") ON DELETE CASCADE"
                 + ")";
         db.execSQL(createTable);
         

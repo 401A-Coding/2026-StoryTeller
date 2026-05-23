@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -41,36 +41,6 @@
             font-size: 18px;
             font-weight: 500;
         }
-        .legend {
-            position: fixed;
-            bottom: 100px;
-            left: 16px;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            z-index: 1000;
-            max-width: 200px;
-        }
-        .legend-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #333;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-            font-size: 12px;
-            color: #666;
-        }
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
         .empty-hint {
             position: fixed;
             top: 50%;
@@ -95,11 +65,6 @@
     </div>
     
     <div id="network"></div>
-    
-    <div class="legend" id="legend" style="display: none;">
-        <div class="legend-title">关系分类</div>
-        <div id="legendContent"></div>
-    </div>
     
     <div class="empty-hint" id="emptyHint" style="display: none;">
         <div class="empty-hint-icon">🔗</div>
@@ -137,7 +102,6 @@
                 network = null;
             }
             document.getElementById('emptyHint').style.display = 'none';
-            document.getElementById('legend').style.display = 'none';
         }
         
         // 初始化关系图
@@ -151,21 +115,10 @@
             // 检查是否有数据
             if (nodesArray.length === 0 && edgesArray.length === 0) {
                 document.getElementById('emptyHint').style.display = 'block';
-                document.getElementById('legend').style.display = 'none';
                 return;
             }
             
-            // 如果只有孤立节点，没有边
-            var hasEdges = edgesArray.length > 0;
-            if (!hasEdges) {
-                document.getElementById('emptyHint').style.display = 'none';
-                document.getElementById('legend').style.display = 'block';
-                generateLegend();
-            } else {
-                document.getElementById('emptyHint').style.display = 'none';
-                document.getElementById('legend').style.display = 'block';
-                generateLegend();
-            }
+            document.getElementById('emptyHint').style.display = 'none';
             
             // 创建节点
             var nodes = new vis.DataSet(nodesArray.map(function(node) {
@@ -298,52 +251,6 @@
             
             // 聚焦中心节点
             focusOnCenter();
-        }
-        
-        // 生成图例
-        function generateLegend() {
-            var categories = {};
-            edgesArray.forEach(function(edge) {
-                if (edge.category && !categories[edge.category]) {
-                    categories[edge.category] = true;
-                }
-            });
-            
-            var legendContent = document.getElementById('legendContent');
-            legendContent.innerHTML = '';
-            
-            // 检查是否真的有边
-            if (edgesArray.length === 0) {
-                var item = document.createElement('div');
-                item.className = 'legend-item';
-                item.style.color = '#999';
-                item.textContent = '暂无关联关系';
-                legendContent.appendChild(item);
-                return;
-            }
-            
-            Object.keys(categories).forEach(function(cat) {
-                var color = COLORS[cat] || COLORS.other;
-                var name = getCategoryDisplayName(cat);
-                var item = document.createElement('div');
-                item.className = 'legend-item';
-                item.innerHTML = '<div class="legend-color" style="background:' + color + '"></div>' + name;
-                legendContent.appendChild(item);
-            });
-        }
-        
-        // 获取分类显示名称
-        function getCategoryDisplayName(category) {
-            var names = {
-                'hierarchy': '层级关系',
-                'association': '关联关系',
-                'family': '家人关系',
-                'opposition': '对立关系',
-                'causality': '因果关系',
-                'derivation': '衍生关系',
-                'other': '其他关系'
-            };
-            return names[category] || category;
         }
         
         // 聚焦中心节点

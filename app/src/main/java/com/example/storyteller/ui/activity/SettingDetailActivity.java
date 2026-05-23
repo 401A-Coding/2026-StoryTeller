@@ -25,7 +25,6 @@ import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.model.SettingRelationship;
-import com.example.storyteller.model.RelationshipType;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.example.storyteller.utils.SpecificAttributesParser;
@@ -2154,20 +2153,27 @@ public class SettingDetailActivity extends AppCompatActivity {
      * 添加编辑模式的关联项视图（有删除按钮，可编辑描述）
      */
     private void addEditModeRelationItemView(LinearLayout container, SettingRelationship rel) {
-        // 主行：A → [关系] → B ×
-        LinearLayout itemLayout = new LinearLayout(this);
-        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
-        itemLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        itemLayout.setPadding(0, 4, 0, 4);
+        // 使用布局文件
+        View view = getLayoutInflater().inflate(R.layout.item_relation_edit, container, false);
         
-        // 源设定名称
-        TextView tvSource = new TextView(this);
-        tvSource.setText(rel.getSourceSettingTitle() != null ? rel.getSourceSettingTitle() : "设定" + rel.getSourceSettingId());
-        tvSource.setTextSize(14);
+        // 获取控件
+        TextView tvSource = view.findViewById(R.id.tv_source);
+        TextView tvArrow = view.findViewById(R.id.tv_arrow);
+        TextView tvTarget = view.findViewById(R.id.tv_target);
+        Button btnToggleDirection = view.findViewById(R.id.btn_toggle_direction);
+        Button btnDelete = view.findViewById(R.id.btn_delete);
+        EditText etDesc = view.findViewById(R.id.et_description);
+        
+        // 设置内容
+        String sourceName = rel.getSourceSettingTitle() != null ? rel.getSourceSettingTitle() : "设定" + rel.getSourceSettingId();
+        String targetName = rel.getTargetSettingTitle() != null ? rel.getTargetSettingTitle() : "设定" + rel.getTargetSettingId();
+        
+        // 源设定
         if (rel.isSourceSettingDeleted()) {
+            tvSource.setText(sourceName + " [已删除]");
             tvSource.setTextColor(getResources().getColor(android.R.color.darker_gray));
-            tvSource.setText(tvSource.getText() + " [已删除]");
         } else {
+            tvSource.setText(sourceName);
             tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
             tvSource.setOnClickListener(v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
@@ -2176,28 +2182,17 @@ public class SettingDetailActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
-        tvSource.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT));
         
-        // 箭头和关系类型（灰色）
-        TextView tvArrow = new TextView(this);
+        // 箭头和关系类型
         String arrow = rel.isDirected() ? " → " : " ↔ ";
         tvArrow.setText(arrow + rel.getTypeDisplayName() + arrow);
-        tvArrow.setTextSize(12);
-        tvArrow.setTextColor(getResources().getColor(android.R.color.darker_gray));
-        tvArrow.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT));
         
-        // 目标设定名称
-        TextView tvTarget = new TextView(this);
-        tvTarget.setText(rel.getTargetSettingTitle() != null ? rel.getTargetSettingTitle() : "设定" + rel.getTargetSettingId());
-        tvTarget.setTextSize(14);
+        // 目标设定
         if (rel.isTargetSettingDeleted()) {
+            tvTarget.setText(targetName + " [已删除]");
             tvTarget.setTextColor(getResources().getColor(android.R.color.darker_gray));
-            tvTarget.setText(tvTarget.getText() + " [已删除]");
         } else {
+            tvTarget.setText(targetName);
             tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
             tvTarget.setOnClickListener(v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
@@ -2206,55 +2201,41 @@ public class SettingDetailActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
-        tvTarget.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         
-        // 删除按钮（对于涉及已删除设定的关系，显示删除按钮便于清理历史遗留）
-        Button btnDelete = new Button(this);
-        btnDelete.setText("×");
-        btnDelete.setTextSize(16);
-        btnDelete.setMinWidth(48);
-        btnDelete.setMinHeight(48);
-        btnDelete.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-        // 只有两端设定都存在时才可删除；已删除设定的关联可以删除
+        // 单/双向切换按钮
+        btnToggleDirection.setText(rel.isDirected() ? "→" : "↔");
+        if (rel.isSourceSettingDeleted() || rel.isTargetSettingDeleted()) {
+            btnToggleDirection.setEnabled(false);
+            btnToggleDirection.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        } else {
+            btnToggleDirection.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            btnToggleDirection.setOnClickListener(v -> {
+                rel.setDirected(!rel.isDirected());
+                String newArrow = rel.isDirected() ? " → " : " ↔ ";
+                tvArrow.setText(newArrow + rel.getTypeDisplayName() + newArrow);
+                btnToggleDirection.setText(rel.isDirected() ? "→" : "↔");
+                relationshipDao.update(rel);
+                Toast.makeText(this, rel.isDirected() ? "已切换为单向" : "已切换为双向", Toast.LENGTH_SHORT).show();
+            });
+        }
+        
+        // 删除按钮
         if (!rel.isSourceSettingDeleted() && !rel.isTargetSettingDeleted()) {
-            // 正常关系，正常删除
+            btnDelete.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
             btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
         } else {
-            // 已删除设定关联的关系，显示删除按钮（便于清理历史遗留）
-            btnDelete.setVisibility(View.VISIBLE);
             btnDelete.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
             btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
         }
         
-        itemLayout.addView(tvSource);
-        itemLayout.addView(tvArrow);
-        itemLayout.addView(tvTarget);
-        itemLayout.addView(btnDelete);
-        
-        container.addView(itemLayout);
-        
-        // 描述行：可编辑的 EditText
-        LinearLayout descLayout = new LinearLayout(this);
-        descLayout.setOrientation(LinearLayout.HORIZONTAL);
-        descLayout.setPadding(24, 0, 0, 8);
-        
-        EditText etDesc = new EditText(this);
+        // 描述输入框
         etDesc.setText(rel.getDescription() != null ? rel.getDescription() : "");
-        etDesc.setHint("添加关系描述...");
-        etDesc.setTextSize(12);
-        etDesc.setTextColor(getResources().getColor(android.R.color.darker_gray));
-        etDesc.setBackground(getResources().getDrawable(android.R.drawable.edit_text));
-        etDesc.setPadding(8, 4, 8, 4);
-        // 已删除设定关联的关系，描述不可编辑
         if (rel.isSourceSettingDeleted() || rel.isTargetSettingDeleted()) {
             etDesc.setEnabled(false);
             etDesc.setHint("已删除设定关联");
         } else {
-            // 正常关系，保存描述变化
+            final String originalText = rel.getDescription() != null ? rel.getDescription() : "";
             etDesc.addTextChangedListener(new android.text.TextWatcher() {
-                private String originalText = rel.getDescription() != null ? rel.getDescription() : "";
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                 @Override
@@ -2263,17 +2244,13 @@ public class SettingDetailActivity extends AppCompatActivity {
                 public void afterTextChanged(android.text.Editable s) {
                     String newText = s.toString();
                     if (!newText.equals(originalText)) {
-                        // 更新内存中的关系描述
                         rel.setDescription(newText.isEmpty() ? null : newText);
                     }
                 }
             });
         }
-        etDesc.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT));
-        descLayout.addView(etDesc);
-        container.addView(descLayout);
+        
+        container.addView(view);
     }
     
     /**
@@ -2318,34 +2295,42 @@ public class SettingDetailActivity extends AppCompatActivity {
     }
     
     /**
-     * 显示关系类型选择对话框
+     * 显示关系类型输入对话框
      */
     private void showRelationTypeDialog(StorySetting targetSetting) {
-        // 按分类展示关系类型
-        String[] categories = RelationshipType.getCategories();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("输入关系类型");
         
-        // 收集所有类型
-        java.util.List<String> typeList = new ArrayList<>();
-        java.util.List<String> typeNames = new ArrayList<>();
+        // 创建包含提示文本和输入框的布局
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(48, 16, 48, 0);
         
-        for (String category : categories) {
-            RelationshipType[] types = RelationshipType.getByCategory(category);
-            for (RelationshipType type : types) {
-                typeList.add(type.name());
-                typeNames.add("[" + RelationshipType.getCategoryDisplayName(category) + "] " + type.getDisplayName());
+        TextView tvHint = new TextView(this);
+        tvHint.setText("输入关系类型（如：师徒、位于、属于、朋友等）");
+        tvHint.setTextSize(13);
+        tvHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        container.addView(tvHint);
+        
+        final EditText input = new EditText(this);
+        input.setHint("输入关系类型");
+        input.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
+        input.setPadding(24, 16, 24, 16);
+        container.addView(input);
+        
+        builder.setView(container);
+        builder.setPositiveButton("下一步", (dialog, which) -> {
+            String relationType = input.getText().toString().trim();
+            if (!relationType.isEmpty()) {
+                showRelationDescriptionDialog(targetSetting, relationType);
+            } else {
+                Toast.makeText(this, "请输入关系类型", Toast.LENGTH_SHORT).show();
             }
-        }
-        
-        final String[] allTypeNames = typeNames.toArray(new String[0]);
-        final String[] allTypesArray = typeList.toArray(new String[0]);
-        
-        new AlertDialog.Builder(this)
-            .setTitle("选择关系类型")
-            .setItems(allTypeNames, (dialog, which) -> {
-                showRelationDescriptionDialog(targetSetting, allTypesArray[which]);
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
     }
     
     /**
