@@ -133,6 +133,9 @@ public class AgentCommandExecutor {
                 case "review_report":
                     return handleReviewReport(command.parameters, currentStoryId);
                 
+                case "review_aspect":
+                    return handleReviewAspect(command.parameters, currentStoryId);
+                
                 default:
                     return CommandResult.error("未知操作：" + command.action);
             }
@@ -1763,9 +1766,18 @@ public class AgentCommandExecutor {
                 return CommandResult.error("❌ 审核结果为空");
             }
             
+            // 打印原始 JSON
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String rawJson = gson.toJson(params);
+            android.util.Log.d("AgentCommandExecutor", "=== RAW JSON review_report ===");
+            android.util.Log.d("AgentCommandExecutor", rawJson);
+            
             // 提取评分
-            Number overallScore = (Number) params.get("overall_score");
-            int score = overallScore != null ? overallScore.intValue() : 0;
+            Object overallScoreObj = params.get("overall_score");
+            int score = 0;
+            if (overallScoreObj instanceof Number) {
+                score = ((Number) overallScoreObj).intValue();
+            }
             
             // 构建报告
             StringBuilder report = new StringBuilder();
@@ -1775,67 +1787,113 @@ public class AgentCommandExecutor {
             String scoreLevel = getScoreLevel(score);
             report.append("【总体评分】").append(score).append("/100 - ").append(scoreLevel).append("\n\n");
             
-            // 维度评分
-            @SuppressWarnings("unchecked")
-            Map<String, Object> dimensionScores = (Map<String, Object>) params.get("dimension_scores");
-            if (dimensionScores != null && !dimensionScores.isEmpty()) {
-                report.append("【维度评分】\n");
-                report.append("- 一致性: ").append(getDimensionScore(dimensionScores, "consistency")).append("/100\n");
-                report.append("- 情感冲击: ").append(getDimensionScore(dimensionScores, "emotional_impact")).append("/100\n");
-                report.append("- 冲突强度: ").append(getDimensionScore(dimensionScores, "conflict_strength")).append("/100\n");
-                report.append("- 悬念设置: ").append(getDimensionScore(dimensionScores, "suspense")).append("/100\n");
-                report.append("- 节奏把控: ").append(getDimensionScore(dimensionScores, "pacing")).append("/100\n\n");
+            // 维度评分（动态遍历所有维度）
+            Object dimensionScoresObj = params.get("dimension_scores");
+            if (dimensionScoresObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> dimensionScores = (Map<String, Object>) dimensionScoresObj;
+                if (!dimensionScores.isEmpty()) {
+                    report.append("【维度评分】\n");
+                    for (java.util.Map.Entry<String, Object> entry : dimensionScores.entrySet()) {
+                        String dimension = entry.getKey();
+                        Object scoreObj = entry.getValue();
+                        String scoreStr = "-";
+                        if (scoreObj instanceof Number) {
+                            scoreStr = String.valueOf(((Number) scoreObj).intValue());
+                        }
+                        String displayName = getDimensionDisplayName(dimension);
+                        report.append("- ").append(displayName).append(": ").append(scoreStr).append("/100\n");
+                    }
+                    report.append("\n");
+                }
             }
             
             // 关键问题
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> issues = (List<Map<String, Object>>) params.get("critical_issues");
-            if (issues != null && !issues.isEmpty()) {
-                report.append("⚠️ 【发现的问题】共").append(issues.size()).append("个\n\n");
-                for (int i = 0; i < issues.size(); i++) {
-                    Map<String, Object> issue = issues.get(i);
-                    String severity = (String) issue.get("severity");
-                    String description = (String) issue.get("description");
-                    String location = (String) issue.get("location");
-                    
-                    String severityIcon = "🔴";
-                    if ("medium".equals(severity)) {
-                        severityIcon = "🟡";
-                    } else if ("low".equals(severity)) {
-                        severityIcon = "🟢";
+            Object issuesObj = params.get("critical_issues");
+            if (issuesObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> issuesList = (List<Object>) issuesObj;
+                if (!issuesList.isEmpty()) {
+                    report.append("⚠️ 【发现的问题】共").append(issuesList.size()).append("个\n\n");
+                    for (int i = 0; i < issuesList.size(); i++) {
+                        Object issueObj = issuesList.get(i);
+                        
+                        String severity = "";
+                        String description = "";
+                        String location = "";
+                        
+                        if (issueObj instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> issue = (Map<String, Object>) issueObj;
+                            severity = objectToString(issue.get("severity"));
+                            description = objectToString(issue.get("description"));
+                            location = objectToString(issue.get("location"));
+                        } else if (issueObj != null) {
+                            description = issueObj.toString();
+                        }
+                        
+                        String severityIcon = "🔴";
+                        if ("medium".equals(severity) || "major".equals(severity)) {
+                            severityIcon = "🟡";
+                        } else if ("low".equals(severity) || "minor".equals(severity)) {
+                            severityIcon = "🟢";
+                        }
+                        
+                        if (!description.isEmpty()) {
+                            report.append(severityIcon).append(" **问题").append(i + 1).append("**");
+                            if (!location.isEmpty()) {
+                                report.append("（").append(location).append("）");
+                            }
+                            report.append("\n");
+                            report.append(description).append("\n\n");
+                        }
                     }
-                    
-                    report.append(severityIcon).append(" **问题").append(i + 1).append("**");
-                    if (location != null && !location.isEmpty()) {
-                        report.append("（").append(location).append("）");
-                    }
-                    report.append("\n");
-                    report.append(description).append("\n\n");
                 }
             } else {
                 report.append("✅ **未发现明显问题**\n\n");
             }
             
             // 改进建议
-            @SuppressWarnings("unchecked")
-            List<String> suggestions = (List<String>) params.get("suggestions");
-            if (suggestions != null && !suggestions.isEmpty()) {
-                report.append("💡 【改进建议】\n");
-                for (int i = 0; i < suggestions.size(); i++) {
-                    report.append((i + 1)).append(". ").append(suggestions.get(i)).append("\n");
+            Object suggestionsObj = params.get("suggestions");
+            if (suggestionsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> suggestionsList = (List<Object>) suggestionsObj;
+                if (!suggestionsList.isEmpty()) {
+                    report.append("💡 【改进建议】\n");
+                    for (int i = 0; i < suggestionsList.size(); i++) {
+                        Object item = suggestionsList.get(i);
+                        if (item instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> suggestion = (Map<String, Object>) item;
+                            String action = objectToString(suggestion.get("action"));
+                            String description = objectToString(suggestion.get("description"));
+                            String location = objectToString(suggestion.get("location"));
+                            
+                            report.append((i + 1)).append(". ");
+                            if (!action.isEmpty()) report.append("[").append(action).append("] ");
+                            if (!location.isEmpty()) report.append("位置：").append(location).append("\n");
+                            if (!description.isEmpty()) report.append("   ").append(description).append("\n");
+                        } else if (item != null) {
+                            report.append((i + 1)).append(". ").append(item.toString()).append("\n");
+                        }
+                    }
+                    report.append("\n");
                 }
-                report.append("\n");
             }
             
             // 优点
-            @SuppressWarnings("unchecked")
-            List<String> strengths = (List<String>) params.get("strengths");
-            if (strengths != null && !strengths.isEmpty()) {
-                report.append("✨ 【优点】\n");
-                for (int i = 0; i < strengths.size(); i++) {
-                    report.append("• ").append(strengths.get(i)).append("\n");
+            Object strengthsObj = params.get("strengths");
+            if (strengthsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> strengthsList = (List<Object>) strengthsObj;
+                if (!strengthsList.isEmpty()) {
+                    report.append("✨ 【优点】\n\n");
+                    for (int i = 0; i < strengthsList.size(); i++) {
+                        Object item = strengthsList.get(i);
+                        report.append("- ").append(item != null ? item.toString() : "").append("\n");
+                    }
+                    report.append("\n");
                 }
-                report.append("\n");
             }
             
             return CommandResult.success(report.toString(), "review_report", params);
@@ -1844,6 +1902,275 @@ public class AgentCommandExecutor {
             e.printStackTrace();
             return CommandResult.error("❌ 生成审核报告失败：" + e.getMessage());
         }
+    }
+    
+    /**
+     * 处理定向审核命令
+     * 针对特定方面进行分析，范围由AI自行判断
+     */
+    @SuppressWarnings("unchecked")
+    private CommandResult handleReviewAspect(Map<String, Object> params, int storyId) {
+        try {
+            if (params == null) {
+                return CommandResult.error("❌ 定向审核参数为空");
+            }
+            
+            // 打印原始 JSON（未处理的完整参数）
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String rawJson = gson.toJson(params);
+            android.util.Log.d("AgentCommandExecutor", "=== RAW JSON ===");
+            android.util.Log.d("AgentCommandExecutor", rawJson);
+            
+            // 提取基本参数（aspects 必需，target_scope 可选）
+            String targetScope = objectToString(params.get("target_scope"));
+            List<String> aspects = new ArrayList<>();
+            
+            if (params.containsKey("aspects") && params.get("aspects") != null) {
+                Object aspectsObj = params.get("aspects");
+                if (aspectsObj instanceof List) {
+                    // 安全遍历 aspects，处理可能的 LinkedTreeMap 元素
+                    for (Object item : (List<?>) aspectsObj) {
+                        if (item instanceof String) {
+                            aspects.add((String) item);
+                        } else if (item != null) {
+                            // 处理对象类型，提取第一个字段作为 aspect
+                            if (item instanceof Map) {
+                                Map<?, ?> map = (Map<?, ?>) item;
+                                if (!map.isEmpty()) {
+                                    Object firstValue = map.values().iterator().next();
+                                    if (firstValue != null) {
+                                        aspects.add(firstValue.toString());
+                                    }
+                                }
+                            } else {
+                                aspects.add(item.toString());
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 验证参数
+            if (aspects.isEmpty()) {
+                return CommandResult.error("❌ 请指定要审核的方面（如 pacing、conflict_strength）");
+            }
+            
+            // 构建报告
+            StringBuilder report = new StringBuilder();
+            report.append("📋 **定向审核报告**\n\n");
+            if (!targetScope.isEmpty()) {
+                report.append("📖 ").append(targetScope).append("\n\n");
+            }
+            report.append("🎯 审核维度：").append(String.join("、", aspects)).append("\n\n");
+            
+            // 评分
+            Map<String, Object> scores = (Map<String, Object>) params.get("scores");
+            if (scores != null && !scores.isEmpty()) {
+                report.append("【维度评分】\n\n");
+                for (String aspect : aspects) {
+                    // 安全获取评分（处理 LinkedTreeMap key 的情况）
+                    Object scoreValue = scores.get(aspect);
+                    if (scoreValue != null) {
+                        int score = 0;
+                        try {
+                            score = ((Number) scoreValue).intValue();
+                        } catch (Exception e) {
+                            // 忽略转换错误
+                        }
+                        String aspectName = getAspectDisplayName(aspect);
+                        String scoreEmoji = getScoreEmoji(score);
+                        report.append(scoreEmoji).append(" ")
+                              .append(aspectName).append(": ")
+                              .append(score).append("/100\n");
+                    }
+                }
+                report.append("\n");
+            }
+            
+            // 分析详情
+            Map<String, Object> analysis = (Map<String, Object>) params.get("analysis");
+            if (analysis != null && !analysis.isEmpty()) {
+                report.append("【分析详情】\n\n");
+                for (String aspect : aspects) {
+                    Object analysisObj = analysis.get(aspect);
+                    if (analysisObj != null) {
+                        String analysisText = analysisObj.toString();
+                        String aspectName = getAspectDisplayName(aspect);
+                        report.append("▶ ").append(aspectName).append("：\n");
+                        report.append("  ").append(analysisText).append("\n\n");
+                    }
+                }
+            }
+            
+            // 调试日志：打印原始 parameters
+            android.util.Log.d("AgentCommandExecutor", "=== handleReviewAspect params ===");
+            android.util.Log.d("AgentCommandExecutor", "aspects: " + aspects);
+            
+            // 详细发现
+            Object findingsObj = params.get("detailed_findings");
+            android.util.Log.d("AgentCommandExecutor", "detailed_findings type: " + (findingsObj != null ? findingsObj.getClass().getName() : "null"));
+            android.util.Log.d("AgentCommandExecutor", "detailed_findings value: " + findingsObj);
+            
+            if (findingsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> findingsList = (List<Object>) findingsObj;
+                
+                android.util.Log.d("AgentCommandExecutor", "findingsList size: " + findingsList.size());
+                
+                // 先统计有内容的问题数量
+                int validFindingsCount = 0;
+                for (int i = 0; i < findingsList.size(); i++) {
+                    Object findingObj = findingsList.get(i);
+                    android.util.Log.d("AgentCommandExecutor", "finding[" + i + "] type: " + (findingObj != null ? findingObj.getClass().getName() : "null"));
+                    android.util.Log.d("AgentCommandExecutor", "finding[" + i + "] value: " + findingObj);
+                    
+                    if (findingObj instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> finding = (Map<String, Object>) findingObj;
+                        // AI 返回的字段是 "finding"，不是 "issue"
+                        Object findingTextObj = finding.get("finding");
+                        Object dimensionObj = finding.get("dimension");
+                        String findingText = objectToString(findingTextObj);
+                        String dimension = objectToString(dimensionObj);
+                        android.util.Log.d("AgentCommandExecutor", "finding[" + i + "] dimension: '" + dimension + "', finding: '" + findingText + "'");
+                        if (!findingText.isEmpty()) {
+                            validFindingsCount++;
+                        }
+                    } else if (findingObj != null) {
+                        String issue = findingObj.toString();
+                        android.util.Log.d("AgentCommandExecutor", "finding[" + i + "] issue (non-Map): '" + issue + "'");
+                        if (!issue.isEmpty()) {
+                            validFindingsCount++;
+                        }
+                    }
+                }
+                
+                // 只有存在有效问题时才显示标题和内容
+                if (validFindingsCount > 0) {
+                    report.append("🔍 【具体发现】\n\n");
+                    int problemNum = 0;
+                    for (int i = 0; i < findingsList.size(); i++) {
+                        Object findingObj = findingsList.get(i);
+                                        
+                        String dimension = "";
+                        String findingText = "";
+                                        
+                        if (findingObj instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> finding = (Map<String, Object>) findingObj;
+                            Object dimensionObj = finding.get("dimension");
+                            Object findingTextObj = finding.get("finding");
+                                            
+                            dimension = objectToString(dimensionObj);
+                            findingText = objectToString(findingTextObj);
+                        } else if (findingObj != null) {
+                            findingText = findingObj.toString();
+                        }
+                                        
+                        // 只显示有内容的问题
+                        if (!findingText.isEmpty()) {
+                            problemNum++;
+                            report.append("问题").append(problemNum).append("：").append(findingText).append("\n\n");
+                            if (!dimension.isEmpty()) {
+                                report.append("  📌 维度：").append(dimension).append("\n");
+                            }
+                            report.append("\n");
+                        }
+                    }
+                }
+            }
+            
+            // 改进建议
+            Object suggestionsObj = params.get("suggestions");
+            android.util.Log.d("AgentCommandExecutor", "suggestions type: " + (suggestionsObj != null ? suggestionsObj.getClass().getName() : "null"));
+            android.util.Log.d("AgentCommandExecutor", "suggestions value: " + suggestionsObj);
+            
+            if (suggestionsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> suggestions = (List<Object>) suggestionsObj;
+                android.util.Log.d("AgentCommandExecutor", "suggestions size: " + suggestions.size());
+                
+                if (!suggestions.isEmpty()) {
+                    report.append("💡 【改进建议】\n");
+                    for (int i = 0; i < suggestions.size(); i++) {
+                        Object item = suggestions.get(i);
+                        android.util.Log.d("AgentCommandExecutor", "suggestion[" + i + "] type: " + (item != null ? item.getClass().getName() : "null"));
+                        android.util.Log.d("AgentCommandExecutor", "suggestion[" + i + "] value: " + item);
+                        
+                        if (item instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> suggestion = (Map<String, Object>) item;
+                            Object action = suggestion.get("action");
+                            Object location = suggestion.get("location");
+                            Object description = suggestion.get("description");
+                            Object expectedResult = suggestion.get("expected_result");
+                            
+                            android.util.Log.d("AgentCommandExecutor", "suggestion[" + i + "] action: " + action + ", location: " + location);
+                            
+                            report.append((i + 1)).append(". ");
+                            if (action != null) report.append("[").append(action).append("] ");
+                            if (location != null) report.append("位置：").append(location).append("\n");
+                            if (description != null) report.append("描述：").append(description).append("\n");
+                            if (expectedResult != null) report.append("预期：").append(expectedResult).append("\n\n");
+                        } else if (item != null) {
+                            report.append((i + 1)).append(". ").append(item.toString()).append("\n");
+                        }
+                    }
+                    report.append("\n");
+                }
+            }
+            
+            return CommandResult.success(report.toString(), "review_aspect", params);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CommandResult.error("❌ 生成定向审核报告失败：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取维度显示名称
+     */
+    private String getAspectDisplayName(String aspect) {
+        switch (aspect) {
+            case "pacing": return "节奏";
+            case "conflict_strength": return "冲突强度";
+            case "emotional_impact": return "情感冲击";
+            case "suspense": return "悬念";
+            case "consistency": return "一致性";
+            case "dialogue": return "对话质量";
+            case "description": return "描写质量";
+            case "character": return "人设一致性";
+            case "foreshadowing": return "伏笔处理";
+            case "foreshadowing_handling": return "伏笔处理";
+            case "character_arc": return "角色弧线";
+            default: return aspect;
+        }
+    }
+    
+    /**
+     * 获取维度显示名称（用于 review_report 的 dimension_scores）
+     */
+    private String getDimensionDisplayName(String dimension) {
+        switch (dimension) {
+            case "consistency": return "一致性";
+            case "emotional_impact": return "情感冲击";
+            case "conflict_strength": return "冲突强度";
+            case "suspense": return "悬念设置";
+            case "pacing": return "节奏把控";
+            case "foreshadowing_handling": return "伏笔处理";
+            case "character_arc": return "角色弧线";
+            default: return dimension;
+        }
+    }
+    
+    /**
+     * 获取评分表情符号
+     */
+    private String getScoreEmoji(int score) {
+        if (score >= 85) return "🟢";
+        if (score >= 70) return "🟡";
+        return "🔴";
     }
     
     /**
@@ -1863,5 +2190,23 @@ public class AgentCommandExecutor {
     private int getDimensionScore(Map<String, Object> scores, String key) {
         Number value = (Number) scores.get(key);
         return value != null ? value.intValue() : 0;
+    }
+
+    private String objectToString(Object obj) {
+        if (obj == null) return "";
+        if (obj instanceof String) return (String) obj;
+        if (obj instanceof Number) return obj.toString();
+        if (obj instanceof Map) {
+            StringBuilder sb = new StringBuilder();
+            Map<?, ?> map = (Map<?, ?>) obj;
+            boolean first = true;
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (!first) sb.append("；");
+                sb.append(entry.getKey()).append("：").append(entry.getValue());
+                first = false;
+            }
+            return sb.toString();
+        }
+        return obj.toString();
     }
 }
