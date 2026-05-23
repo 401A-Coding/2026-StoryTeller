@@ -376,6 +376,77 @@ public class AIPanelFragment extends BaseFragment {
                             
                             // 启动打字机效果
                             startTypewriterEffect(processingMsg, messagePosition[0]);
+                        } else if ("review_report".equals(command.action)) {
+                            // 全篇审核：走执行命令流程获取格式化结果，添加打字机效果
+                            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                "⚙️", "生成报告", "", ChatMessage.StepStatus.RUNNING
+                            ));
+                            adapter.notifyItemChanged(messagePosition[0]);
+                            
+                            rvChat.post(() -> {
+                                rvChat.smoothScrollToPosition(messages.size() - 1);
+                            });
+                            
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                                AgentCommandExecutor.CommandResult result = 
+                                    commandExecutor.executeCommand(command, storyId);
+                                
+                                // 更新最后添加的步骤（生成报告）
+                                processingMsg.updateStep(processingMsg.getSteps().size() - 1, 
+                                    ChatMessage.StepStatus.COMPLETED, "报告生成完成");
+                                
+                                // 标记为完成
+                                processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                                processingMsg.setResultContent(result.message);
+                                processingMsg.setDisplayContent("");
+                                processingMsg.setTyping(true);
+                                
+                                adapter.notifyItemChanged(messagePosition[0]);
+                                
+                                rvChat.post(() -> {
+                                    rvChat.smoothScrollToPosition(messages.size() - 1);
+                                });
+                                
+                                startTypewriterEffect(processingMsg, messagePosition[0]);
+                                
+                                // 如果执行成功，通知父Activity刷新UI
+                                if (result.success && commandExecutedListener != null) {
+                                    commandExecutedListener.onCommandExecuted();
+                                }
+                            }, 300);
+                        } else if ("review_aspect".equals(command.action)) {
+                            // 定向审核：走执行命令流程获取格式化结果，添加打字机效果
+                            processingMsg.addStep(new ChatMessage.ExecutionStep(
+                                "⚙️", "生成报告", "", ChatMessage.StepStatus.RUNNING
+                            ));
+                            adapter.notifyItemChanged(messagePosition[0]);
+                            
+                            rvChat.post(() -> {
+                                rvChat.smoothScrollToPosition(messages.size() - 1);
+                            });
+                            
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                                AgentCommandExecutor.CommandResult result = 
+                                    commandExecutor.executeCommand(command, storyId);
+                                
+                                // 更新最后添加的步骤（生成报告）
+                                processingMsg.updateStep(processingMsg.getSteps().size() - 1, 
+                                    ChatMessage.StepStatus.COMPLETED, "报告生成完成");
+                                
+                                // 标记为完成
+                                processingMsg.setMessageType(ChatMessage.MessageType.COMPLETED);
+                                processingMsg.setResultContent(result.message);
+                                processingMsg.setDisplayContent("");
+                                processingMsg.setTyping(true);
+                                
+                                adapter.notifyItemChanged(messagePosition[0]);
+                                
+                                rvChat.post(() -> {
+                                    rvChat.smoothScrollToPosition(messages.size() - 1);
+                                });
+                                
+                                startTypewriterEffect(processingMsg, messagePosition[0]);
+                            }, 300);
                         } else {
                             // 非问答操作：显示执行步骤
                             processingMsg.addStep(new ChatMessage.ExecutionStep(
@@ -618,8 +689,8 @@ public class AIPanelFragment extends BaseFragment {
                     // 通知适配器更新
                     adapter.notifyItemChanged(position);
                     
-                    // 滚动到底部（使用 smoothScrollToPosition）
-                    rvChat.smoothScrollToPosition(messages.size() - 1);
+                    // 禁用自动滚动，避免抖动
+                    // rvChat.smoothScrollToPosition(messages.size() - 1);
                     
                     currentIndex[0]++;
                     
@@ -627,8 +698,11 @@ public class AIPanelFragment extends BaseFragment {
                     if (currentIndex[0] <= fullText.length()) {
                         handler.postDelayed(this, delay);
                     } else {
-                        // 完成打字
+                        // 完成打字后滚动到底部
                         message.setTyping(false);
+                        rvChat.post(() -> {
+                            rvChat.smoothScrollToPosition(messages.size() - 1);
+                        });
                     }
                 }
             }
@@ -1356,7 +1430,7 @@ public class AIPanelFragment extends BaseFragment {
             context.append("【正文内容】暂无正文\n\n");
         }
     }
-    
+
     /**
      * 显示AI设置菜单
      */
