@@ -14,7 +14,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -83,6 +84,48 @@ public class PlotGraphFragment extends BaseFragment {
     @Override
     protected void initView(View view) {
         webView = view.findViewById(R.id.webview_graph);
+        
+        // 搜索框
+        EditText etSearch = view.findViewById(R.id.et_search);
+        ImageButton btnClearSearch = view.findViewById(R.id.btn_clear_search);
+        if (etSearch != null) {
+            etSearch.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    String keyword = s.toString();
+                    if (btnClearSearch != null) {
+                        btnClearSearch.setVisibility(keyword.isEmpty() ? View.GONE : View.VISIBLE);
+                    }
+                    if (webView != null) {
+                        webView.evaluateJavascript("searchNodes('" + keyword.replace("'", "\\'") + "')", null);
+                    }
+                }
+            });
+            etSearch.setOnEditorActionListener((v, actionId, event) -> {
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                    // 隐藏键盘
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) 
+                        requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+                    }
+                    return true;
+                }
+                return false;
+            });
+        }
+        if (btnClearSearch != null) {
+            btnClearSearch.setOnClickListener(v -> {
+                etSearch.setText("");
+                if (webView != null) {
+                    webView.evaluateJavascript("clearSearchHighlight()", null);
+                }
+            });
+        }
         
         // 刷新按钮
         com.google.android.material.floatingactionbutton.FloatingActionButton fabRefresh = 

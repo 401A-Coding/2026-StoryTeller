@@ -282,6 +282,122 @@
             var positions = network.getPositions();
             return JSON.stringify(positions);
         }
+        
+        // 搜索节点
+        function searchNodes(keyword) {
+            if (!network || !keyword || keyword.trim() === '') {
+                // 清除搜索高亮
+                clearSearchHighlight();
+                return JSON.stringify({ found: false, results: [] });
+            }
+            
+            keyword = keyword.toLowerCase().trim();
+            var results = [];
+            var foundIds = [];
+            
+            // 查找匹配的节点
+            nodesArray.forEach(function(node) {
+                if (node.label && node.label.toLowerCase().indexOf(keyword) !== -1) {
+                    results.push({
+                        id: node.id,
+                        label: node.label,
+                        title: node.title || node.label
+                    });
+                    foundIds.push(node.id);
+                }
+            });
+            
+            if (results.length > 0) {
+                // 高亮匹配的节点
+                highlightSearchResults(foundIds);
+                // 聚焦到第一个匹配结果
+                network.focus(results[0].id, {
+                    scale: 1.2,
+                    animation: true
+                });
+                // 选中第一个节点
+                network.selectNodes([results[0].id]);
+            } else {
+                clearSearchHighlight();
+            }
+            
+            return JSON.stringify({ found: results.length > 0, results: results });
+        }
+        
+        // 高亮搜索结果
+        function highlightSearchResults(ids) {
+            if (!network) return;
+            
+            var allNodeIds = nodesArray.map(function(n) { return n.id; });
+            
+            // 重置所有节点
+            nodesArray.forEach(function(node) {
+                var isMatch = ids.indexOf(node.id) !== -1;
+                var updateObj = {};
+                
+                if (node.isDeleted) {
+                    updateObj.color = { background: '#E0E0E0', border: '#9E9E9E' };
+                    updateObj.font = { color: '#9E9E9E', size: 12 };
+                } else if (node.isCenter) {
+                    updateObj.color = isMatch ? 
+                        { background: '#FF5722', border: '#FFD700', highlight: { background: '#FF7043', border: '#FFD700' } } :
+                        { background: COLORS.center, border: '#E64A19' };
+                    updateObj.font = { color: 'white', size: 16, bold: true };
+                } else if (node.isIsolated) {
+                    updateObj.color = isMatch ?
+                        { background: '#FFF59D', border: '#FFC107', highlight: { background: '#FFE082', border: '#FFC107' } } :
+                        { background: '#F5F5F5', border: '#BDBDBD' };
+                    updateObj.font = { color: isMatch ? '#333' : '#757575', size: 14 };
+                } else {
+                    updateObj.color = isMatch ?
+                        { background: '#FFF59D', border: '#FFC107', highlight: { background: '#FFE082', border: '#FFC107' } } :
+                        { background: '#E3F2FD', border: '#90CAF9' };
+                    updateObj.font = { color: isMatch ? '#333' : '#333', size: 14 };
+                }
+                
+                updateObj.id = node.id;
+                network.body.data.nodes.update(updateObj);
+            });
+        }
+        
+        // 清除搜索高亮
+        function clearSearchHighlight() {
+            if (!network) return;
+            
+            nodesArray.forEach(function(node) {
+                var updateObj = { id: node.id };
+                
+                if (node.isDeleted) {
+                    updateObj.color = { background: '#E0E0E0', border: '#9E9E9E' };
+                    updateObj.font = { color: '#9E9E9E', size: 12 };
+                } else if (node.isCenter) {
+                    updateObj.color = { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } };
+                    updateObj.font = { color: 'white', size: 16, bold: true };
+                } else if (node.isIsolated) {
+                    updateObj.color = { background: '#F5F5F5', border: '#BDBDBD' };
+                    updateObj.font = { color: '#757575', size: 14 };
+                } else {
+                    updateObj.color = { background: '#E3F2FD', border: '#90CAF9' };
+                    updateObj.font = { color: '#333', size: 14 };
+                }
+                
+                network.body.data.nodes.update(updateObj);
+            });
+        }
+        
+        // 聚焦到指定节点
+        function focusOnNode(nodeId) {
+            if (!network) return;
+            
+            var node = nodesArray.find(function(n) { return n.id === nodeId; });
+            if (node) {
+                network.focus(nodeId, {
+                    scale: 1.2,
+                    animation: true
+                });
+                network.selectNodes([nodeId]);
+            }
+        }
     </script>
 </body>
 </html>
