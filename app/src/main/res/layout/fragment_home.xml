@@ -19,7 +19,7 @@
             android:id="@+id/layout_home_content"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="32dp">
+            android:padding="16dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_current_novel"
@@ -75,7 +75,10 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:padding="16dp">
+                    android:paddingTop="48dp"
+                    android:paddingStart="32dp"
+                    android:paddingEnd="32dp"
+                    android:paddingBottom="48dp">
 
                     <ImageView
                         android:id="@+id/iv_story_generate_icon"
@@ -253,7 +256,10 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:padding="16dp">
+                    android:paddingTop="48dp"
+                    android:paddingStart="32dp"
+                    android:paddingEnd="32dp"
+                    android:paddingBottom="48dp">
 
                     <ImageView
                         android:id="@+id/iv_material_icon"
