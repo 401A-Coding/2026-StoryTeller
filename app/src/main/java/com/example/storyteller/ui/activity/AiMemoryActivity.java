@@ -166,7 +166,12 @@ public class AiMemoryActivity extends BaseActivity {
 
         // 更新标题
         if (storyTitle != null && !storyTitle.isEmpty()) {
-            tvTitle.setText("《" + storyTitle + "》AI记忆");
+            // 书名最大显示长度（单位：字符），超过则截断
+            String displayTitle = storyTitle;
+            if (storyTitle.length() > 4) {
+                displayTitle = storyTitle.substring(0, 4) + "...";
+            }
+            tvTitle.setText("《" + displayTitle + "》记忆");
         }
 
         // 加载记忆

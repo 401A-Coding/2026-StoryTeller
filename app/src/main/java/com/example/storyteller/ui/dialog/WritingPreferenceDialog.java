@@ -108,11 +108,18 @@ public class WritingPreferenceDialog extends DialogFragment {
         View contentView = getLayoutInflater().inflate(R.layout.dialog_writing_preference, null);
         builder.setView(contentView);
         
+        // 书名最大显示长度（单位：字符），超过则截断
+        int maxTitleLength = 7;
         String title = storyId != null ? "本书写作偏好" : "写作偏好设置";
         if (getArguments() != null) {
             String storyTitle = getArguments().getString(ARG_STORY_TITLE);
             if (!TextUtils.isEmpty(storyTitle)) {
-                title = "《" + storyTitle + "》写作偏好";
+                // 截断过长的书名
+                String displayTitle = storyTitle;
+                if (storyTitle.length() > maxTitleLength) {
+                    displayTitle = storyTitle.substring(0, maxTitleLength) + "...";
+                }
+                title = "《" + displayTitle + "》写作偏好";
             }
         }
         builder.setTitle(title);
