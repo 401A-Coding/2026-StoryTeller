@@ -477,6 +477,63 @@ public class ApiClient {
     }
     
     /**
+     * 构建设定配图生成提示词
+     * @param title 设定标题
+     * @param summary 设定摘要
+     * @param detail 详细描述
+     * @param category 主分类
+     * @param subCategory 子分类
+     */
+    public static String buildSettingImagePrompt(String title, String summary, String detail, String category, String subCategory) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Create an illustration for a story setting with the following details:\n\n");
+        prompt.append("Title: ").append(title != null ? title : "").append("\n");
+        prompt.append("Category: ").append(category != null ? category : "").append(" - ").append(subCategory != null ? subCategory : "").append("\n");
+        
+        if (summary != null && !summary.isEmpty()) {
+            prompt.append("Summary: ").append(summary).append("\n");
+        }
+        
+        if (detail != null && !detail.isEmpty()) {
+            // 只取前500字符作为详细描述
+            String detailText = detail.length() > 500 ? detail.substring(0, 500) : detail;
+            prompt.append("Details: ").append(detailText).append("\n");
+        }
+        
+        prompt.append("\nRequirements:\n");
+        prompt.append("- Aspect ratio 1:1 (square format)\n");
+        prompt.append("- The subject should be the main focus of the illustration\n");
+        prompt.append("- Style should match the category: \n");
+        
+        // 根据分类添加风格提示
+        if (category != null) {
+            switch (category) {
+                case "角色":
+                    prompt.append("- Portrait style, character-centered\n");
+                    prompt.append("- Show the character's key features, expressions, and personality\n");
+                    break;
+                case "地点":
+                    prompt.append("- Scene/landscape style, environment-focused\n");
+                    prompt.append("- Show atmosphere and key features of the location\n");
+                    break;
+                case "世界":
+                    prompt.append("- World-building style, immersive\n");
+                    prompt.append("- Show unique cultural or environmental features\n");
+                    break;
+                default:
+                    prompt.append("- Versatile illustration style\n");
+                    break;
+            }
+        }
+        
+        prompt.append("- High quality, detailed, visually striking\n");
+        prompt.append("- No text or letters on the image\n");
+        prompt.append("- Cinematic lighting and composition\n");
+        
+        return prompt.toString();
+    }
+    
+    /**
      * 清理AI返回内容中的Markdown代码块标记和思考过程标签
      */
     public String cleanMarkdownCodeBlock(String content) {

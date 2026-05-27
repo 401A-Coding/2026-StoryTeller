@@ -1,5 +1,6 @@
 package com.example.storyteller.ui.adapter;
 
+import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.File;
 import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -292,6 +294,19 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         // 标签预览
         loadTagsPreview(holder.chipGroupTagsPreview, setting.getTags());
         
+        // 配图预览
+        if (setting.getImagePath() != null && !setting.getImagePath().isEmpty()) {
+            holder.ivSettingImage.setVisibility(View.VISIBLE);
+            File imageFile = new File(setting.getImagePath());
+            if (imageFile.exists()) {
+                holder.ivSettingImage.setImageBitmap(BitmapFactory.decodeFile(setting.getImagePath()));
+            } else {
+                holder.ivSettingImage.setImageResource(R.drawable.ic_insert_drive_file);
+            }
+        } else {
+            holder.ivSettingImage.setVisibility(View.GONE);
+        }
+        
         // 多选模式处理
         if (isSelectionMode) {
             holder.cbSelect.setVisibility(View.VISIBLE);
@@ -436,6 +451,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView ivSettingImage;  // 配图预览
         TextView tvTitle;
         TextView tvCategory;
         TextView tvSummary;
@@ -448,6 +464,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
 
         ViewHolder(View itemView) {
             super(itemView);
+            ivSettingImage = itemView.findViewById(R.id.iv_setting_image);
             tvTitle = itemView.findViewById(R.id.tv_setting_title);
             tvCategory = itemView.findViewById(R.id.tv_setting_category);
             tvSummary = itemView.findViewById(R.id.tv_setting_summary);
