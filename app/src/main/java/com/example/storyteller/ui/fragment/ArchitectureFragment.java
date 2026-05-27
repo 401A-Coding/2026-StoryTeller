@@ -124,6 +124,15 @@ public class ArchitectureFragment extends BaseFragment {
         etDescription = view.findViewById(R.id.et_architecture_description);
         tvDescriptionCount = view.findViewById(R.id.tv_description_count);
         
+        // 让简介输入框支持垂直滚动
+        etDescription.setVerticalScrollBarEnabled(true);
+        
+        // 当 EditText 获得焦点时，阻止父容器拦截触摸事件
+        etDescription.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
+        
         // 初始化标签相关组件
         chipGroupSelectedGenres = view.findViewById(R.id.chip_group_selected_genres);
         chipGroupPresetGenres = view.findViewById(R.id.chip_group_preset_genres);

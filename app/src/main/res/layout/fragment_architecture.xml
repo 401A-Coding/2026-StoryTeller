@@ -270,6 +270,7 @@
                     android:hint="输入作品简介，让读者快速了解故事内容"
                     android:inputType="textMultiLine"
                     android:padding="12dp"
+                    android:scrollbars="vertical"
                     android:textSize="14sp" />
 
                 <TextView
