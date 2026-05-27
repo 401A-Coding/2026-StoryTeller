@@ -29,6 +29,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
+import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.dialog.SettingImageSelectionDialog;
@@ -2177,7 +2178,96 @@ public class SettingDetailActivity extends AppCompatActivity {
             
             @Override
             public void onGenerateRequested() {
-                Toast.makeText(SettingDetailActivity.this, "AI生成配图功能待实现", Toast.LENGTH_SHORT).show();
+                // 显示加载状态
+                if (currentImageDialog != null) {
+                    currentImageDialog.showLoading(true);
+                }
+                generateSettingImage();
+            }
+                
+            /**
+             * 生成设定配图
+             */
+            private void generateSettingImage() {
+                if (currentSetting == null) return;
+                    
+                String prompt = ApiClient.buildSettingImagePrompt(
+                    currentSetting.getTitle(),
+                    currentSetting.getSummary(),
+                    currentSetting.getDetail(),
+                    currentSetting.getCategory(),
+                    currentSetting.getSubCategory()
+                );
+                    
+                // 使用 MiniMax API 生成配图
+                ApiClient.getInstance().generateCover(prompt, 4, SettingDetailActivity.this, 
+                    new ApiClient.CoverCallback() {
+                        @Override
+                        public void onSuccess(List<String> imageUrls) {
+                            runOnUiThread(() -> {
+                                if (currentImageDialog != null) {
+                                    currentImageDialog.showLoading(false);
+                                    // 下载第一张图片并添加到对话框
+                                    downloadAndAddImage(imageUrls.get(0));
+                                }
+                            });
+                        }
+                            
+                        @Override
+                        public void onFailure(Exception e) {
+                            runOnUiThread(() -> {
+                                if (currentImageDialog != null) {
+                                    currentImageDialog.showLoading(false);
+                                }
+                                Toast.makeText(SettingDetailActivity.this, "生成失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    });
+            }
+                
+            /**
+             * 下载图片并添加到对话框
+             */
+            private void downloadAndAddImage(String imageUrl) {
+                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+                ApiClient.getInstance().downloadImageAsBitmap(imageUrl, SettingDetailActivity.this, executor,
+                    bitmap -> {
+                        runOnUiThread(() -> {
+                            // 保存到本地
+                            String path = saveBitmapToFile(bitmap);
+                            if (path != null && currentImageDialog != null) {
+                                currentImageDialog.addGeneratedImage(path);
+                            }
+                        });
+                    },
+                    error -> {
+                        runOnUiThread(() -> {
+                            Toast.makeText(SettingDetailActivity.this, "下载图片失败", Toast.LENGTH_SHORT).show();
+                        });
+                    });
+            }
+                
+            /**
+             * 保存 Bitmap 到本地文件
+             */
+            private String saveBitmapToFile(Bitmap bitmap) {
+                try {
+                    File imagesDir = new File(getFilesDir(), "setting_images");
+                    if (!imagesDir.exists()) {
+                        imagesDir.mkdirs();
+                    }
+                    String fileName = "setting_" + (currentSetting != null ? currentSetting.getId() : "new") + "_" + System.currentTimeMillis() + ".jpg";
+                    File outputFile = new File(imagesDir, fileName);
+                        
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos);
+                    fos.close();
+                        
+                    return outputFile.getAbsolutePath();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
             }
         });
         

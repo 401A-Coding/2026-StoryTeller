@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.adapter.SettingImageOptionAdapter;
+import com.example.storyteller.utils.SettingCategoryConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,17 @@ public class SettingImageSelectionDialog extends Dialog {
     public void setOnGalleryPickListener(OnGalleryPickListener listener) {
         this.galleryPickListener = listener;
     }
+    
+    /**
+     * 设置AI生成按钮的可见性（根据主分类）
+     */
+    public void updateAiButtonVisibility() {
+        if (btnGenerate != null && setting != null) {
+            String category = setting.getCategory();
+            boolean supported = SettingCategoryConfig.supportsAiImageGeneration(category);
+            btnGenerate.setVisibility(supported ? View.VISIBLE : View.GONE);
+        }
+    }
 
     public SettingImageSelectionDialog(@NonNull Context context, StorySetting setting, 
                                         OnImageSelectedListener listener) {
@@ -62,6 +74,9 @@ public class SettingImageSelectionDialog extends Dialog {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dialog_setting_image_selection);
+        
+        // 禁止点击外部关闭对话框
+        setCanceledOnTouchOutside(false);
         
         rvImageOptions = findViewById(R.id.rv_image_options);
         btnPickGallery = findViewById(R.id.btn_pick_gallery);
@@ -81,6 +96,7 @@ public class SettingImageSelectionDialog extends Dialog {
         layoutButtons.setVisibility(View.VISIBLE);
         setupRecyclerView();
         setupButtons();
+        updateAiButtonVisibility();
     }
 
     private void setupRecyclerView() {

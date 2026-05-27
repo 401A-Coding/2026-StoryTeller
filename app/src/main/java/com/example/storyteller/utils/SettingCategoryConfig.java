@@ -13,6 +13,11 @@ public class SettingCategoryConfig {
     public static final String[] MAIN_CATEGORIES = new String[]{
             "世界", "角色", "地点", "剧情", "规则体系", "创作控制"
     };
+    
+    // === 支持AI配图的主分类 ===
+    private static final String[] AI_IMAGE_CATEGORIES = new String[]{
+            "角色", "地点", "世界"
+    };
 
     // === 子分类映射 ===
     private static final Map<String, String[]> SUB_CATEGORY_MAP = new HashMap<>();
@@ -126,6 +131,21 @@ public class SettingCategoryConfig {
      */
     public static boolean isValidMainCategory(String mainCategory) {
         for (String category : MAIN_CATEGORIES) {
+            if (category.equals(mainCategory)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查主分类是否支持AI配图功能
+     *
+     * @param mainCategory 主分类名称
+     * @return 是否支持
+     */
+    public static boolean supportsAiImageGeneration(String mainCategory) {
+        for (String category : AI_IMAGE_CATEGORIES) {
             if (category.equals(mainCategory)) {
                 return true;
             }
