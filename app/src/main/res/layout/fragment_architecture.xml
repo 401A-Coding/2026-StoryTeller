@@ -127,6 +127,16 @@
                     </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- AI生成封面按钮 -->
+                <Button
+                    android:id="@+id/btn_generate_cover"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_gravity="center_horizontal"
+                    android:text="✨ AI生成封面"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
                 <!-- 标题 -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -147,16 +157,6 @@
                     android:maxLines="1"
                     android:padding="12dp"
                     android:textSize="15sp" />
-
-                <!-- AI生成封面按钮 -->
-                <Button
-                    android:id="@+id/btn_generate_cover"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:layout_gravity="center_horizontal"
-                    android:text="✨ AI生成封面"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
                 <!-- 类型标签 -->
                 <TextView

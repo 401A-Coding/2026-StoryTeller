@@ -1,5 +1,6 @@
 package com.example.storyteller.ui.fragment;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.drawable.GradientDrawable;
@@ -109,6 +110,7 @@ public class ArchitectureFragment extends BaseFragment {
         return R.layout.fragment_architecture;
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void initView(View view) {
         // 初始化封面相关组件
