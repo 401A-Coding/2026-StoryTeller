@@ -49,6 +49,7 @@ public class StorySettingDao {
         values.put(DBHelper.COL_STORY_SETTING_UPDATE_TIME, setting.getUpdateTime());
         values.put(DBHelper.COL_STORY_SETTING_IS_FAVORITE, setting.isFavorite() ? 1 : 0);
         values.put(DBHelper.COL_STORY_SETTING_USAGE_COUNT, setting.getUsageCount());
+        values.put(DBHelper.COL_STORY_SETTING_IMAGE_PATH, setting.getImagePath());
         
         return db.insert(DBHelper.TABLE_STORY_SETTING, null, values);
     }
@@ -80,6 +81,7 @@ public class StorySettingDao {
         values.put(DBHelper.COL_STORY_SETTING_UPDATE_TIME, System.currentTimeMillis());
         values.put(DBHelper.COL_STORY_SETTING_IS_FAVORITE, setting.isFavorite() ? 1 : 0);
         values.put(DBHelper.COL_STORY_SETTING_USAGE_COUNT, setting.getUsageCount());
+        values.put(DBHelper.COL_STORY_SETTING_IMAGE_PATH, setting.getImagePath());
         
         return db.update(DBHelper.TABLE_STORY_SETTING, values,
                 DBHelper.COL_STORY_SETTING_ID + "=?",
@@ -304,6 +306,19 @@ public class StorySettingDao {
             new Object[]{id}
         );
     }
+    
+    /**
+     * 更新设定配图
+     */
+    public int updateSettingImage(int id, String imagePath) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_SETTING_IMAGE_PATH, imagePath);
+        values.put(DBHelper.COL_STORY_SETTING_UPDATE_TIME, System.currentTimeMillis());
+        return db.update(DBHelper.TABLE_STORY_SETTING, values,
+                DBHelper.COL_STORY_SETTING_ID + "=?",
+                new String[]{String.valueOf(id)});
+    }
 
     /**
      * 批量删除某小说的所有设定
@@ -345,6 +360,7 @@ public class StorySettingDao {
         setting.setUpdateTime(cursor.getLong(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_SETTING_UPDATE_TIME)));
         setting.setFavorite(cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_SETTING_IS_FAVORITE)) == 1);
         setting.setUsageCount(cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_SETTING_USAGE_COUNT)));
+        setting.setImagePath(getColumnString(cursor, DBHelper.COL_STORY_SETTING_IMAGE_PATH));
         return setting;
     }
 

@@ -2,7 +2,7 @@ package com.example.storyteller.model;
 
 /**
  * 小说设定模型
- * 支持5大分类：世界观、角色、剧情、风格、规则
+ * 支持6大分类：世界、角色、地点、剧情、规则体系、创作控制
  * 每个子分类有专属属性（JSON存储）
  */
 public class StorySetting {
@@ -10,7 +10,7 @@ public class StorySetting {
     // === 基础字段 ===
     private int id;
     private int storyId;              // 所属小说ID（0表示全局素材库）
-    private String category;          // 顶层分类：世界观/角色/剧情/风格/规则
+    private String category;          // 顶层分类：世界/角色/地点/剧情/规则体系/创作控制
     private String subCategory;       // 子分类（如：地理环境、主要角色等）
     private String title;             // 标题/名称
     private String summary;           // 简要描述（200字内）
@@ -43,6 +43,7 @@ public class StorySetting {
     private long updateTime;
     private boolean isFavorite;       // 是否收藏
     private int usageCount;           // 使用次数（被AI引用的次数）
+    private String imagePath;        // 配图路径
     
     // === 构造方法 ===
     
@@ -267,6 +268,14 @@ public class StorySetting {
     
     public void setUsageCount(int usageCount) {
         this.usageCount = usageCount;
+    }
+    
+    public String getImagePath() {
+        return imagePath;
+    }
+    
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
     
     /**

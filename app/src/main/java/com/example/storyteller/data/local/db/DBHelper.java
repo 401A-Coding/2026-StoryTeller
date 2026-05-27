@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 21;  // 版本21：移除关系表UNIQUE约束，支持同一实体间多种关系类型
+    private static final int DB_VERSION = 22;  // 版本22：添加设定配图功能
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -118,6 +118,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_SETTING_UPDATE_TIME = "update_time";
     public static final String COL_STORY_SETTING_IS_FAVORITE = "is_favorite";
     public static final String COL_STORY_SETTING_USAGE_COUNT = "usage_count";
+    public static final String COL_STORY_SETTING_IMAGE_PATH = "image_path";
 
     // 用户行为日志表字段
     public static final String TABLE_BEHAVIOR_LOG = "behavior_log";
@@ -431,6 +432,14 @@ public class DBHelper extends SQLiteOpenHelper {
                 db.execSQL("DROP TABLE " + TABLE_SETTING_RELATIONSHIPS + "_old");
             } catch (Exception e) {
                 // 可能表不存在或其他错误
+            }
+        }
+        if (oldVersion < 22) {
+            // 版本22：添加设定配图字段
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY_SETTING + " ADD COLUMN " + COL_STORY_SETTING_IMAGE_PATH + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
             }
         }
     }

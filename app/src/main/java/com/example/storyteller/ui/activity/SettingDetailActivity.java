@@ -1,6 +1,10 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -10,6 +14,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -26,6 +31,7 @@ import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
+import com.example.storyteller.ui.dialog.SettingImageSelectionDialog;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.example.storyteller.utils.SpecificAttributesParser;
 import com.example.storyteller.utils.SpecificAttributesParser.AttributeField;
@@ -35,6 +41,9 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +67,9 @@ public class SettingDetailActivity extends AppCompatActivity {
     private TextView tvSourceUrl;    // 来源URL
     private TextView tvCreateTime;
     private TextView tvUpdateTime;
+    private ImageView ivSettingImage;    // 配图
+    private Button btnChangeImage;       // 更换配图按钮
+    private Button btnDeleteImage;       // 删除配图按钮
     
     private EditText etEditTitle;
     private EditText etEditSummary;
@@ -148,6 +160,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         tvSourceUrl = findViewById(R.id.tv_source_url);      // 来源URL
         tvCreateTime = findViewById(R.id.tv_detail_create_time);
         tvUpdateTime = findViewById(R.id.tv_detail_update_time);
+        ivSettingImage = findViewById(R.id.iv_setting_image);
+        btnChangeImage = findViewById(R.id.btn_change_image);
+        btnDeleteImage = findViewById(R.id.btn_delete_image);
         
         // 编辑模式视图
         etEditTitle = findViewById(R.id.et_edit_title);
@@ -252,6 +267,12 @@ public class SettingDetailActivity extends AppCompatActivity {
         
         // 初始化标签和别名ChipGroup（添加"+ 添加"按钮）
         fillTagsAndAliases();
+        
+        // 新建模式下隐藏配图卡片
+        View cardSettingImage = findViewById(R.id.card_setting_image);
+        if (cardSettingImage != null) {
+            cardSettingImage.setVisibility(View.GONE);
+        }
         
         // 切换到编辑模式UI
         setViewMode(true);
@@ -366,6 +387,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         tvCreateTime.setText("创建时间: " + sdf.format(new java.util.Date(currentSetting.getCreateTime())));
         tvUpdateTime.setText("更新时间: " + sdf.format(new java.util.Date(currentSetting.getUpdateTime())));
         
+        // 配图
+        displaySettingImage();
+        
         // 填充查看模式的标签和别名
         fillViewModeTagsAndAliases();
         
@@ -409,6 +433,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         
         // 显示编辑模式的关联设定
         displayEditModeRelations();
+        
+        // 显示配图卡片
+        displaySettingImage();
         
         setViewMode(true);
     }
@@ -2063,6 +2090,189 @@ public class SettingDetailActivity extends AppCompatActivity {
             for (SettingRelationship rel : relationsList) {
                 addViewModeRelationItemView(layoutRelationsContent, rel);
             }
+        }
+    }
+    
+    /**
+     * 显示设定配图
+     */
+    private void displaySettingImage() {
+        View cardSettingImage = findViewById(R.id.card_setting_image);
+        if (cardSettingImage == null) return;
+        
+        String imagePath = currentSetting != null ? currentSetting.getImagePath() : null;
+        boolean hasImage = imagePath != null && !imagePath.isEmpty();
+        
+        // 编辑模式始终显示卡片；查看模式仅在有配图时显示
+        // 但新建模式下（id==0）不显示配图卡片
+        if (isEditMode && (currentSetting == null || currentSetting.getId() != 0)) {
+            cardSettingImage.setVisibility(View.VISIBLE);
+            
+            if (hasImage && ivSettingImage != null) {
+                File imageFile = new File(imagePath);
+                if (imageFile.exists()) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                    if (bitmap != null) {
+                        ivSettingImage.setImageBitmap(bitmap);
+                    }
+                } else {
+                    ivSettingImage.setImageResource(R.drawable.ic_insert_drive_file);
+                }
+                // 编辑模式显示"更换配图"按钮
+                if (btnChangeImage != null) {
+                    btnChangeImage.setText("更换配图");
+                    btnChangeImage.setOnClickListener(v -> showImageSelectionDialog());
+                }
+                // 有配图时显示删除按钮
+                if (btnDeleteImage != null) {
+                    btnDeleteImage.setVisibility(View.VISIBLE);
+                    btnDeleteImage.setOnClickListener(v -> showDeleteImageConfirmDialog());
+                }
+            } else if (ivSettingImage != null) {
+                // 无配图时显示添加图标和提示
+                ivSettingImage.setImageResource(R.drawable.ic_insert_drive_file);
+                ivSettingImage.setScaleType(ImageView.ScaleType.CENTER);
+                // 编辑模式无配图时显示"添加配图"按钮
+                if (btnChangeImage != null) {
+                    btnChangeImage.setText("添加配图");
+                    btnChangeImage.setOnClickListener(v -> showImageSelectionDialog());
+                }
+                // 无配图时隐藏删除按钮
+                if (btnDeleteImage != null) {
+                    btnDeleteImage.setVisibility(View.GONE);
+                }
+            }
+        } else {
+            // 查看模式：使用独立的配图卡片
+            View cardViewMode = findViewById(R.id.card_setting_image_view);
+            ImageView ivViewMode = findViewById(R.id.iv_setting_image_view);
+            if (hasImage && ivViewMode != null) {
+                cardViewMode.setVisibility(View.VISIBLE);
+                File imageFile = new File(imagePath);
+                if (imageFile.exists()) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                    if (bitmap != null) {
+                        ivViewMode.setImageBitmap(bitmap);
+                    }
+                }
+            } else if (cardViewMode != null) {
+                cardViewMode.setVisibility(View.GONE);
+            }
+        }
+    }
+    
+    /**
+     * 显示配图选择对话框
+     */
+    private SettingImageSelectionDialog currentImageDialog;
+    
+    private void showImageSelectionDialog() {
+        currentImageDialog = new SettingImageSelectionDialog(this, currentSetting, new SettingImageSelectionDialog.OnImageSelectedListener() {
+            @Override
+            public void onImageSelected(String imagePath) {
+                settingDao.updateSettingImage(currentSetting.getId(), imagePath);
+                currentSetting.setImagePath(imagePath);
+                displaySettingImage();
+            }
+            
+            @Override
+            public void onGenerateRequested() {
+                Toast.makeText(SettingDetailActivity.this, "AI生成配图功能待实现", Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        // 设置相册选择监听器
+        currentImageDialog.setOnGalleryPickListener(() -> pickImageFromGallery());
+        
+        currentImageDialog.show();
+    }
+    
+    private static final int REQUEST_PICK_IMAGE = 1001;
+    
+    /**
+     * 显示删除配图确认对话框
+     */
+    private void showDeleteImageConfirmDialog() {
+        new AlertDialog.Builder(this)
+            .setTitle("删除配图")
+            .setMessage("确定要删除这张配图吗？")
+            .setPositiveButton("删除", (dialog, which) -> deleteSettingImage())
+            .setNegativeButton("取消", null)
+            .show();
+    }
+    
+    /**
+     * 删除配图
+     */
+    private void deleteSettingImage() {
+        String imagePath = currentSetting.getImagePath();
+        if (imagePath != null && !imagePath.isEmpty()) {
+            // 删除本地文件
+            File file = new File(imagePath);
+            if (file.exists()) {
+                file.delete();
+            }
+            // 更新数据库
+            settingDao.updateSettingImage(currentSetting.getId(), null);
+            currentSetting.setImagePath(null);
+            // 刷新显示
+            displaySettingImage();
+        }
+    }
+    
+    /**
+     * 从相册选择图片
+     */
+    private void pickImageFromGallery() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setType("image/*");
+        startActivityForResult(intent, REQUEST_PICK_IMAGE);
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_IMAGE && resultCode == RESULT_OK && data != null) {
+            Uri selectedImageUri = data.getData();
+            if (selectedImageUri != null && currentImageDialog != null) {
+                // 将URI转换为文件路径并保存
+                String imagePath = copyImageToAppStorage(selectedImageUri);
+                if (imagePath != null) {
+                    currentImageDialog.addGeneratedImage(imagePath);
+                }
+            }
+        }
+    }
+    
+    /**
+     * 将图片复制到应用存储目录
+     */
+    private String copyImageToAppStorage(Uri sourceUri) {
+        try {
+            String fileName = "setting_" + System.currentTimeMillis() + ".jpg";
+            File outputDir = new File(getFilesDir(), "setting_images");
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+            }
+            File outputFile = new File(outputDir, fileName);
+            
+            java.io.InputStream inputStream = getContentResolver().openInputStream(sourceUri);
+            java.io.FileOutputStream outputStream = new java.io.FileOutputStream(outputFile);
+            
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            
+            inputStream.close();
+            outputStream.close();
+            
+            return outputFile.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "保存图片失败", Toast.LENGTH_SHORT).show();
+            return null;
         }
     }
     
