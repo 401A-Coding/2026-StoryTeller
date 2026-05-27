@@ -6,7 +6,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -17,11 +19,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
+import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.adapter.CoverOptionAdapter;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -31,6 +36,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -56,11 +62,15 @@ public class ArchitectureFragment extends BaseFragment {
     private View btnAddGenre;
     private EditText etDescription;
     private TextView tvDescriptionCount;
+    private android.widget.Button btnGenerateCover;
+    private android.widget.Button btnConfirmCover;
 
     // 数据
     private Story currentStory;
     private int storyId;
     private StoryDao storyDao;
+    private final ApiClient apiClient = ApiClient.getInstance();
+    private final ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(4);
     
     // 标记是否正在加载数据，避免加载时触发自动保存
     private boolean isLoadingData = false;
@@ -119,6 +129,10 @@ public class ArchitectureFragment extends BaseFragment {
         chipGroupPresetGenres = view.findViewById(R.id.chip_group_preset_genres);
         etCustomGenre = view.findViewById(R.id.et_custom_genre);
         btnAddGenre = view.findViewById(R.id.btn_add_genre);
+        btnGenerateCover = view.findViewById(R.id.btn_generate_cover);
+
+        // AI生成封面按钮
+        btnGenerateCover.setOnClickListener(v -> showCoverGenerationDialog());
 
         // 设置状态下拉框
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(
@@ -714,5 +728,177 @@ public class ArchitectureFragment extends BaseFragment {
         gradient.setColors(colors);
         gradient.setCornerRadius(12f);
         vCoverBackground.setBackground(gradient);
+    }
+    
+    // ==================== AI生成封面功能 ====================
+    
+    /**
+     * 显示封面生成对话框
+     */
+    private void showCoverGenerationDialog() {
+        if (currentStory == null) {
+            Toast.makeText(requireContext(), "请先保存作品信息", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 构建基础提示词
+        String basePrompt = ApiClient.buildCoverPrompt(
+            currentStory.getTitle(),
+            currentStory.getDescription(),
+            selectedGenres
+        );
+        
+        // 使用自定义布局
+        View dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_cover_prompt, null);
+        EditText input = dialogView.findViewById(R.id.et_cover_prompt);
+        
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        builder.setTitle("AI生成封面");
+        builder.setView(dialogView);
+        
+        builder.setPositiveButton("生成", (dialog, which) -> {
+            String userPrompt = input.getText().toString().trim();
+            String fullPrompt = basePrompt;
+            if (!userPrompt.isEmpty()) {
+                fullPrompt = basePrompt + "\n\nAdditional requirement: " + userPrompt;
+            }
+            generateCoverImages(fullPrompt, 4);
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+    
+    /**
+     * 生成封面图片
+     */
+    private void generateCoverImages(String prompt, int count) {
+        // 显示加载对话框（不可取消，点击屏幕无反应）
+        android.app.AlertDialog.Builder loadingBuilder = new android.app.AlertDialog.Builder(requireContext());
+        loadingBuilder.setTitle("正在生成封面");
+        loadingBuilder.setMessage("请稍候...\n\n生成可能需要10-20秒");
+        loadingBuilder.setCancelable(false);
+        android.app.AlertDialog loadingDialog = loadingBuilder.create();
+        loadingDialog.show();
+        
+        apiClient.generateCover(prompt, count, requireContext(), new ApiClient.CoverCallback() {
+            @Override
+            public void onSuccess(List<String> imageUrls) {
+                requireActivity().runOnUiThread(() -> {
+                    loadingDialog.dismiss();
+                    showCoverSelectionDialog(imageUrls);
+                });
+            }
+            
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    loadingDialog.dismiss();
+                    Toast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+    
+    /**
+     * 显示封面选择对话框
+     */
+    private void showCoverSelectionDialog(List<String> imageUrls) {
+        View dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_cover_selection, null);
+        
+        // 创建适配器
+        CoverOptionAdapter adapter = new CoverOptionAdapter(imageUrls, apiClient, executor, requireContext());
+        
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        builder.setTitle("选择封面");
+        builder.setView(dialogView);
+        builder.setPositiveButton("确认", (dialog, which) -> {
+            String selectedUrl = adapter.getSelectedUrl();
+            if (selectedUrl != null) {
+                saveAiGeneratedCover(selectedUrl);
+            }
+        });
+        builder.setNegativeButton("取消", null);
+        
+        android.app.AlertDialog dialog = builder.create();
+        
+        // 加载图片
+        RecyclerView rvCovers = dialogView.findViewById(R.id.rv_cover_options);
+        rvCovers.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(requireContext(), 2));
+        rvCovers.setAdapter(adapter);
+        
+        // 选中监听器
+        adapter.setOnCoverSelectedListener(url -> {
+            // 选中后启用确认按钮
+            if (btnConfirmCover != null) {
+                btnConfirmCover.setEnabled(true);
+            }
+        });
+        
+        // 对话框显示后获取按钮并初始禁用
+        dialog.setOnShowListener(dialogInterface -> {
+            if (btnConfirmCover == null) {
+                btnConfirmCover = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+            }
+            btnConfirmCover.setEnabled(false);
+        });
+        
+        dialog.show();
+    }
+    
+    /**
+     * 保存AI生成的封面
+     */
+    private void saveAiGeneratedCover(String imageUrl) {
+        // 显示加载状态
+        Toast.makeText(requireContext(), "正在保存封面...", Toast.LENGTH_SHORT).show();
+        
+        apiClient.downloadImageAsBitmap(imageUrl, requireContext(), executor,
+            bitmap -> {
+                requireActivity().runOnUiThread(() -> {
+                    // 保存到本地
+                    String coverPath = saveCoverBitmap(bitmap);
+                    if (coverPath != null) {
+                        currentStory.setCoverPath(coverPath);
+                        storyDao.updateStoryCoverPath(currentStory.getId(), coverPath);
+                        loadCoverImage();
+                        Toast.makeText(requireContext(), "封面已保存", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(requireContext(), "保存封面失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            },
+            e -> {
+                requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(requireContext(), "下载封面失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        );
+    }
+    
+    /**
+     * 保存Bitmap到本地
+     */
+    private String saveCoverBitmap(android.graphics.Bitmap bitmap) {
+        try {
+            File coverDir = new File(requireContext().getFilesDir(), "covers");
+            if (!coverDir.exists()) {
+                coverDir.mkdirs();
+            }
+            
+            String fileName = "cover_" + System.currentTimeMillis() + ".jpg";
+            File coverFile = new File(coverDir, fileName);
+            
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(coverFile);
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, fos);
+            fos.flush();
+            fos.close();
+            
+            return coverFile.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

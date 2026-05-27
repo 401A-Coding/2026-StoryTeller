@@ -7,10 +7,13 @@ import okhttp3.Response;
 import okhttp3.MediaType;
 import com.google.gson.Gson;
 import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import android.content.Context;
+import android.graphics.Bitmap;
+
 import com.example.storyteller.utils.PromptManager;
 
 public class ApiClient {
@@ -300,6 +303,177 @@ public class ApiClient {
     public interface AgentCallback {
         void onCommandReady(AgentCommand command);
         void onFailure(Exception e);
+    }
+    
+    // ==================== 图像生成功能 ====================
+    
+    // 图像生成请求模型
+    public static class ImageGenerationRequest {
+        public String model = "image-01";
+        public String prompt;
+        public String aspect_ratio = "3:4";  // 书籍封面比例
+        public String response_format = "url";
+        public int n = 1;
+        public Boolean prompt_optimizer = true;
+        public Boolean aigc_watermark = false;
+    }
+    
+    // 图像生成响应模型
+    public static class ImageGenerationResponse {
+        public ImageData data;
+        public ImageMetadata metadata;
+        public String id;
+        public BaseResp base_resp;
+        
+        public static class ImageData {
+            public List<String> image_urls;
+            public List<String> image_base64;
+        }
+        
+        public static class ImageMetadata {
+            public int success_count;
+            public int failed_count;
+        }
+        
+        public static class BaseResp {
+            public int status_code;
+            public String status_msg;
+        }
+    }
+    
+    // 图像生成回调接口
+    public interface CoverCallback {
+        void onSuccess(List<String> imageUrls);
+        void onFailure(Exception e);
+    }
+    
+    /**
+     * 生成AI封面
+     * @param prompt 封面描述
+     * @param n 生成数量
+     * @param context Android Context
+     * @param callback 回调
+     */
+    public void generateCover(String prompt, int n, Context context, CoverCallback callback) {
+        String apiKey = ApiKeyManager.getApiKey(context, ModelConfig.Provider.MINIMAX);
+        if (apiKey.isEmpty()) {
+            callback.onFailure(new Exception("请先配置 MiniMax API Key"));
+            return;
+        }
+        
+        // 构建请求
+        ImageGenerationRequest request = new ImageGenerationRequest();
+        request.prompt = prompt;
+        request.n = Math.min(Math.max(n, 1), 9);  // 限制在1-9之间
+        request.aspect_ratio = "3:4";  // 书籍封面比例 3:4
+        request.response_format = "url";
+        request.prompt_optimizer = true;
+        
+        String json = gson.toJson(request);
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+        
+        Request req = new Request.Builder()
+                .url("https://api.minimaxi.com/v1/image_generation")
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+        
+        // 异步执行请求
+        new Thread(() -> {
+            try (Response response = okHttpClient.newCall(req).execute()) {
+                if (response.isSuccessful()) {
+                    String responseJson = response.body().string();
+                    ImageGenerationResponse apiResponse = gson.fromJson(responseJson, ImageGenerationResponse.class);
+                    
+                    if (apiResponse.base_resp != null && apiResponse.base_resp.status_code != 0) {
+                        String errorMsg = getImageApiErrorMessage(apiResponse.base_resp.status_code);
+                        callback.onFailure(new Exception(errorMsg));
+                        return;
+                    }
+                    
+                    if (apiResponse.data != null && apiResponse.data.image_urls != null) {
+                        callback.onSuccess(apiResponse.data.image_urls);
+                    } else {
+                        callback.onFailure(new Exception("生成封面失败，请重试"));
+                    }
+                } else {
+                    callback.onFailure(new Exception("API Error: " + response.code() + " - " + response.message()));
+                }
+            } catch (IOException e) {
+                callback.onFailure(e);
+            }
+        }).start();
+    }
+    
+    /**
+     * 下载图片并转换为 Bitmap
+     */
+    public void downloadImageAsBitmap(String imageUrl, android.content.Context context, java.util.concurrent.ExecutorService executor, java.util.function.Consumer<Bitmap> onSuccess, java.util.function.Consumer<Exception> onFailure) {
+        executor.execute(() -> {
+            try {
+                java.net.URL url = new URL(imageUrl);
+                java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.connect();
+                
+                android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(connection.getInputStream());
+                connection.disconnect();
+                
+                if (bitmap != null) {
+                    onSuccess.accept(bitmap);
+                } else {
+                    onFailure.accept(new Exception("图片下载失败"));
+                }
+            } catch (Exception e) {
+                onFailure.accept(e);
+            }
+        });
+    }
+    
+    /**
+     * 获取图像API错误信息
+     */
+    private String getImageApiErrorMessage(int statusCode) {
+        switch (statusCode) {
+            case 1002: return "触发限流，请稍后再试";
+            case 1004: return "账号鉴权失败，请检查 API Key 是否正确";
+            case 1008: return "账号余额不足";
+            case 1026: return "图片描述涉及敏感内容，请修改后重试";
+            case 2013: return "传入参数异常";
+            case 2049: return "无效的 API Key";
+            default: return "生成失败，错误码: " + statusCode;
+        }
+    }
+    
+    /**
+     * 构建封面生成提示词
+     */
+    public static String buildCoverPrompt(String title, String description, List<String> genres) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Create a book cover for a novel with the following details:\n\n");
+        prompt.append("Title: ").append(title).append("\n");
+        
+        if (description != null && !description.isEmpty()) {
+            prompt.append("Synopsis: ").append(description).append("\n");
+        }
+        
+        if (genres != null && !genres.isEmpty()) {
+            prompt.append("Genres: ").append(String.join(", ", genres)).append("\n");
+        }
+        
+        prompt.append("\nRequirements:\n");
+        prompt.append("- Aspect ratio 3:4 (book cover format)\n");
+        prompt.append("- Style should match the story's genre and mood\n");
+        prompt.append("- Include key elements or characters from the story\n");
+        prompt.append("- Color scheme should be harmonious and visually striking\n");
+        prompt.append("- Clear composition, suitable for book cover\n");
+        prompt.append("- NO text or letters on the image - leave space for title overlay\n");
+        prompt.append("- Cinematic, high quality, detailed\n");
+        
+        return prompt.toString();
     }
     
     /**
