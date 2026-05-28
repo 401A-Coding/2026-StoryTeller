@@ -68,7 +68,7 @@ public class MoreFragment extends BaseFragment {
 
     // 文件选择器Launcher
     private final ActivityResultLauncher<String> createDocumentLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("text/plain"), uri -> {
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("text/markdown"), uri -> {
                 if (uri != null) {
                     saveExportedFile(uri);
                 }
@@ -109,7 +109,7 @@ public class MoreFragment extends BaseFragment {
     }
 
     /**
-     * 导出作品为TXT
+     * 导出作品
      */
     private void exportStory() {
         currentStory = storyDao.getStoryById(storyId);
@@ -118,7 +118,7 @@ public class MoreFragment extends BaseFragment {
             return;
         }
 
-        String fileName = sanitizeFileName(currentStory.getTitle()) + ".txt";
+        String fileName = sanitizeFileName(currentStory.getTitle()) + ".md";
         createDocumentLauncher.launch(fileName);
     }
 
@@ -127,10 +127,11 @@ public class MoreFragment extends BaseFragment {
      */
     private void saveExportedFile(Uri uri) {
         try {
-            String txtContent = buildTxtContent();
+            String content = buildMarkdownContent();
+            
             java.io.OutputStream outputStream = requireContext().getContentResolver().openOutputStream(uri);
             if (outputStream != null) {
-                outputStream.write(txtContent.getBytes("UTF-8"));
+                outputStream.write(content.getBytes("UTF-8"));
                 outputStream.close();
                 Toast.makeText(requireContext(), "导出成功！", Toast.LENGTH_SHORT).show();
             }
@@ -141,17 +142,18 @@ public class MoreFragment extends BaseFragment {
     }
 
     /**
-     * 构建TXT内容
+     * 构建Markdown内容
      */
-    private String buildTxtContent() {
+    private String buildMarkdownContent() {
         StringBuilder sb = new StringBuilder();
-        sb.append(currentStory.getTitle()).append("\n\n");
+        sb.append("# ").append(currentStory.getTitle()).append("\n\n");
 
         String description = currentStory.getDescription();
         if (description != null && !description.isEmpty()) {
-            sb.append("【简介】\n").append(description).append("\n\n");
+            sb.append("## 简介\n\n").append(description).append("\n\n");
         }
 
+        // 章节内容
         String structure = currentStory.getStructure();
         if (structure != null && !structure.isEmpty()) {
             try {
@@ -164,9 +166,7 @@ public class MoreFragment extends BaseFragment {
                         if (volumeTitle == null || volumeTitle.isEmpty()) {
                             volumeTitle = "第" + (i + 1) + "卷";
                         }
-                        sb.append("\n").append("=".repeat(24)).append("\n");
-                        sb.append(volumeTitle).append("\n");
-                        sb.append("=".repeat(24)).append("\n\n");
+                        sb.append("## ").append(volumeTitle).append("\n\n");
 
                         List<Chapter> chapters = volume.getChapters();
                         if (chapters != null) {
@@ -176,7 +176,7 @@ public class MoreFragment extends BaseFragment {
                                 String chapterContent = chapter.getContent();
 
                                 if (chapterTitle != null && !chapterTitle.isEmpty()) {
-                                    sb.append("第" + (j + 1) + "章：" + chapterTitle).append("\n\n");
+                                    sb.append("### ").append(chapterTitle).append("\n\n");
                                 }
                                 if (chapterContent != null && !chapterContent.isEmpty()) {
                                     sb.append(chapterContent);
@@ -197,9 +197,9 @@ public class MoreFragment extends BaseFragment {
         }
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        sb.append("\n\n---\n");
-        sb.append("导出时间：").append(sdf.format(new Date())).append("\n");
-        sb.append("导出工具：StoryTeller\n");
+        sb.append("---\n");
+        sb.append("**导出时间**：").append(sdf.format(new Date())).append("\n");
+        sb.append("**导出工具**：StoryTeller\n");
 
         return sb.toString();
     }
