@@ -96,10 +96,6 @@ public class MoreFragment extends BaseFragment {
         view.findViewById(R.id.btn_share).setOnClickListener(v -> shareStory());
         view.findViewById(R.id.btn_share_image).setOnClickListener(v -> shareStoryImage());
 
-        // 设置
-        view.findViewById(R.id.btn_settings).setOnClickListener(v -> openSettings());
-        view.findViewById(R.id.btn_about).setOnClickListener(v -> showAbout());
-
         // 帮助与反馈
         view.findViewById(R.id.btn_help).setOnClickListener(v -> showHelp());
         view.findViewById(R.id.btn_feedback).setOnClickListener(v -> showFeedback());
@@ -284,24 +280,6 @@ public class MoreFragment extends BaseFragment {
 
         sb.append("\n—— 来源：StoryTeller\n");
         return sb.toString();
-    }
-
-    /**
-     * 打开设置
-     */
-    private void openSettings() {
-        Toast.makeText(requireContext(), "请切换到底部导航的\"设置\"Tab", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * 显示关于
-     */
-    private void showAbout() {
-        new AlertDialog.Builder(requireContext())
-            .setTitle("关于 StoryTeller")
-            .setMessage("版本：1.0.0\n\n一款AI辅助的小说创作工具\n帮助你更好地构思和写作故事。")
-            .setPositiveButton("确定", null)
-            .show();
     }
 
     /**
