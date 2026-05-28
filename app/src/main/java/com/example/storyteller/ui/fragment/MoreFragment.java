@@ -346,7 +346,39 @@ public class MoreFragment extends BaseFragment {
      * 显示反馈
      */
     private void showFeedback() {
-        Toast.makeText(requireContext(), "意见反馈功能（开发中）", Toast.LENGTH_SHORT).show();
+        String[] options = {"GitHub Issue（功能建议/Bug）", "发送邮件（其他问题）", "访问项目主页"};
+        new AlertDialog.Builder(requireContext())
+            .setTitle("意见反馈")
+            .setItems(options, (dialog, which) -> {
+                switch (which) {
+                    case 0: // GitHub Issue
+                        Intent issueIntent = new Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/401A-Coding/2026-StoryTeller/issues/new"));
+                        startActivity(issueIntent);
+                        break;
+                    case 1: // 发送邮件
+                        Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+                        emailIntent.setData(android.net.Uri.parse("mailto:"));
+                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"1750096317@qq.com"});
+                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "StoryTeller意见反馈");
+                        emailIntent.putExtra(Intent.EXTRA_TEXT, "\n\n---\n" +
+                            "版本：1.0\n" +
+                            "设备：Android\n");
+                        if (emailIntent.resolveActivity(requireContext().getPackageManager()) != null) {
+                            startActivity(Intent.createChooser(emailIntent, "发送邮件"));
+                        } else {
+                            Toast.makeText(requireContext(), "未找到邮件应用", Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case 2: // 项目主页
+                        Intent webIntent = new Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/401A-Coding/2026-StoryTeller"));
+                        startActivity(webIntent);
+                        break;
+                }
+            })
+            .setNegativeButton("取消", null)
+            .show();
     }
 
     // ==================== 图片分享功能 ====================
