@@ -29,7 +29,7 @@
                 android:contentDescription="展开/收起"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="6dp"
-                app:tint="#1976D2" />
+                app:tint="@color/colorPrimary" />
 
             <!-- 卷标题 -->
             <TextView
@@ -40,7 +40,7 @@
                 android:layout_marginStart="4dp"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="#1976D2" />
+                android:textColor="@color/colorPrimary" />
 
             <!-- 编辑按钮 -->
             <ImageButton
@@ -82,7 +82,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:maxLines="3"
                 android:ellipsize="end"
                 android:visibility="gone" />
@@ -94,7 +94,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="12sp"
-                android:textColor="#999999"
+                android:textColor="@color/text_hint"
                 android:visibility="gone" />
 
             <!-- 章节列表 -->

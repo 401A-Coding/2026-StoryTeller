@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="+ 新建"
-            android:backgroundTint="#1976D2" />
+            android:backgroundTint="@color/colorPrimary" />
 
     </LinearLayout>
 
@@ -89,7 +89,7 @@
             android:layout_height="wrap_content"
             android:text="暂无设定"
             android:textSize="16sp"
-            android:textColor="#999999" />
+            android:textColor="@color/text_secondary" />
 
         <TextView
             android:layout_width="wrap_content"

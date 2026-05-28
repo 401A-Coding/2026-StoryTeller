@@ -16,7 +16,7 @@
             android:layout_height="wrap_content"
             android:text="涉及角色"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.chip.ChipGroup
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:text="关键物品"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.chip.ChipGroup
@@ -70,7 +70,7 @@
             android:layout_height="wrap_content"
             android:text="场景位置"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.chip.ChipGroup

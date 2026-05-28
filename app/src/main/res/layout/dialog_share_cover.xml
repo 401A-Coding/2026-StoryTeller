@@ -11,7 +11,7 @@
         android:text="选择分享封面样式"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="#333333"
+        android:textColor="@color/text_primary"
         android:gravity="center" />
 
     <TextView
@@ -20,7 +20,7 @@
         android:layout_marginTop="8dp"
         android:text="选择一种方式生成分享卡片"
         android:textSize="14sp"
-        android:textColor="#666666"
+        android:textColor="@color/text_secondary"
         android:gravity="center" />
 
     <!-- 选项0：使用现有封面 -->
@@ -63,7 +63,7 @@
                     android:layout_height="wrap_content"
                     android:text="使用现有封面"
                     android:textSize="16sp"
-                    android:textColor="#333333" />
+                    android:textColor="@color/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -71,7 +71,7 @@
                     android:layout_marginTop="4dp"
                     android:text="使用作品中已有的封面图片"
                     android:textSize="13sp"
-                    android:textColor="#666666" />
+                    android:textColor="@color/text_secondary" />
 
             </LinearLayout>
 
@@ -90,7 +90,7 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:strokeWidth="1dp"
-        app:strokeColor="#E0E0E0"
+        app:strokeColor="@color/divider"
         xmlns:app="http://schemas.android.com/apk/res-auto">
 
         <LinearLayout
@@ -121,7 +121,7 @@
                     android:layout_height="wrap_content"
                     android:text="选择本地图片"
                     android:textSize="16sp"
-                    android:textColor="#333333" />
+                    android:textColor="@color/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -129,7 +129,7 @@
                     android:layout_marginTop="4dp"
                     android:text="从相册选择一张图片作为封面"
                     android:textSize="13sp"
-                    android:textColor="#666666" />
+                    android:textColor="@color/text_secondary" />
 
             </LinearLayout>
 
@@ -155,7 +155,7 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:strokeWidth="1dp"
-        app:strokeColor="#E0E0E0"
+        app:strokeColor="@color/divider"
         xmlns:app="http://schemas.android.com/apk/res-auto">
 
         <LinearLayout
@@ -186,7 +186,7 @@
                     android:layout_height="wrap_content"
                     android:text="AI生成封面"
                     android:textSize="16sp"
-                    android:textColor="#333333" />
+                    android:textColor="@color/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -194,7 +194,7 @@
                     android:layout_marginTop="4dp"
                     android:text="让AI为你生成一张专属封面"
                     android:textSize="13sp"
-                    android:textColor="#666666" />
+                    android:textColor="@color/text_secondary" />
 
             </LinearLayout>
 
@@ -220,7 +220,7 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:strokeWidth="1dp"
-        app:strokeColor="#E0E0E0"
+        app:strokeColor="@color/divider"
         xmlns:app="http://schemas.android.com/apk/res-auto">
 
         <LinearLayout
@@ -247,7 +247,7 @@
                     android:layout_height="wrap_content"
                     android:text="渐变背景色"
                     android:textSize="16sp"
-                    android:textColor="#333333" />
+                    android:textColor="@color/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -255,7 +255,7 @@
                     android:layout_marginTop="4dp"
                     android:text="使用标题生成的渐变色作为背景"
                     android:textSize="13sp"
-                    android:textColor="#666666" />
+                    android:textColor="@color/text_secondary" />
 
             </LinearLayout>
 

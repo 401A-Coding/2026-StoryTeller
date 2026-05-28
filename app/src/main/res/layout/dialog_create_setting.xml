@@ -16,7 +16,7 @@
             android:text="创建新设定"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="16dp" />
 
         <!-- 分类选择 -->
@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:text="顶层分类 *"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <Spinner
@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:text="子分类 *"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <Spinner
@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:text="标题 *"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <EditText
@@ -78,7 +78,7 @@
             android:layout_height="wrap_content"
             android:text="摘要 *（200字内）"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <EditText
@@ -101,7 +101,7 @@
             android:layout_height="wrap_content"
             android:text="详细描述（可选）"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <EditText
@@ -124,7 +124,7 @@
             android:layout_height="wrap_content"
             android:text="标签（可选，用逗号分隔）"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <EditText
@@ -145,7 +145,7 @@
             android:layout_height="wrap_content"
             android:text="别名（可选，用逗号分隔）"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <EditText
@@ -182,7 +182,7 @@
                 android:layout_height="wrap_content"
                 android:text="创建"
                 android:textSize="14sp"
-                android:backgroundTint="#1976D2" />
+                android:backgroundTint="@color/colorPrimary" />
 
         </LinearLayout>
 

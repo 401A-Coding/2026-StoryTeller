@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="@color/background_primary">
 
     <WebView
         android:id="@+id/webview_graph"
@@ -32,7 +32,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_search"
-                app:tint="#999999"
+                app:tint="@color/text_secondary"
                 android:contentDescription="搜索" />
 
             <EditText
@@ -44,8 +44,8 @@
                 android:background="@null"
                 android:hint="搜索设定名称..."
                 android:textSize="14sp"
-                android:textColor="#333333"
-                android:textColorHint="#999999"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1" />
@@ -56,7 +56,7 @@
                 android:layout_height="32dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                app:tint="#999999"
+                app:tint="@color/text_secondary"
                 android:contentDescription="清除搜索"
                 android:visibility="gone" />
 
@@ -73,9 +73,9 @@
         android:layout_marginStart="16dp"
         android:contentDescription="刷新关系图"
         android:src="@drawable/ic_refresh"
-        app:backgroundTint="#2196F3"
+        app:backgroundTint="@color/colorPrimary"
         app:fabSize="mini"
-        app:tint="#FFFFFF" />
+        app:tint="@android:color/white" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_ai_analyze"
@@ -88,7 +88,7 @@
         android:src="@android:drawable/ic_menu_search"
         app:backgroundTint="#4CAF50"
         app:fabSize="mini"
-        app:tint="#FFFFFF" />
+        app:tint="@android:color/white" />
 
     <!-- 加载进度指示器 -->
     <FrameLayout

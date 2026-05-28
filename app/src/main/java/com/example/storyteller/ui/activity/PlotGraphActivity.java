@@ -28,6 +28,7 @@ import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -105,13 +106,19 @@ public class PlotGraphActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         
-        webView.setBackgroundColor(Color.WHITE);
+        webView.setBackgroundColor(ThemeColorUtils.getBackgroundPrimary(this));
         
         // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // 设置深色模式配色
+                boolean isDarkMode = (view.getContext().getResources().getConfiguration().uiMode
+                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK) 
+                        == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+                String colorScheme = isDarkMode ? "dark" : "light";
+                webView.evaluateJavascript("setColorScheme('" + colorScheme + "')", null);
                 // 页面加载完成后，加载数据
                 loadGraphData();
             }

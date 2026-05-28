@@ -1,7 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.StoryTeller" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <!-- 自定义 colorPrimary 与 colors.xml 保持一致 -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryLight</item>
+
+        <!-- 刘海屏适配：让布局延伸到状态栏区域 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.StoryTeller" parent="Base.Theme.StoryTeller" />
+
+    <!-- 通用Dialog样式 - 深色模式 -->
+    <style name="DialogTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/background_card</item>
+        <item name="android:backgroundDimEnabled">true</item>
     </style>
 </resources>

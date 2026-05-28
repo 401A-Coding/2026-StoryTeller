@@ -13,9 +13,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.content.res.Resources;
+import android.graphics.Typeface;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
@@ -325,6 +329,13 @@ public class StoryInfoPanelFragment extends BaseFragment {
     }
 
     /**
+     * 获取主题颜色
+     */
+    private int getThemeColor(int colorResId) {
+        return ContextCompat.getColor(requireContext(), colorResId);
+    }
+    
+    /**
      * 刷新目录视图（公开方法，供外部调用）
      */
     public void refreshTocView() {
@@ -379,7 +390,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
             TextView noVolumes = new TextView(requireContext());
             noVolumes.setText("暂无内容");
             noVolumes.setTextSize(14);
-            noVolumes.setTextColor(0xFF999999);
+            noVolumes.setTextColor(getThemeColor(R.color.text_hint));
             noVolumes.setPadding(16, 16, 0, 16);
             layoutToc.addView(noVolumes);
             return;
@@ -429,7 +440,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 LinearLayout.LayoutParams.WRAP_CONTENT));
             tvExpandIcon.setText(isExpanded ? "▼" : "▶");
             tvExpandIcon.setTextSize(12);
-            tvExpandIcon.setTextColor(0xFF666666);
+            tvExpandIcon.setTextColor(getThemeColor(R.color.colorPrimary));
             tvExpandIcon.setMinWidth(24);
             tvExpandIcon.setGravity(android.view.Gravity.CENTER);
             
@@ -442,7 +453,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
             volumeTitle.setText("第" + (i + 1) + "卷：" + volume.getTitle());
             volumeTitle.setTextSize(15);
             volumeTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-            volumeTitle.setTextColor(0xFF1976D2);
+            volumeTitle.setTextColor(getThemeColor(R.color.colorPrimary));
             volumeTitle.setPadding(4, 0, 0, 0);
             
             // 章节数量
@@ -453,7 +464,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
             int count = chapters != null ? chapters.size() : 0;
             chapterCount.setText(count + "章");
             chapterCount.setTextSize(12);
-            chapterCount.setTextColor(0xFF999999);
+            chapterCount.setTextColor(getThemeColor(R.color.text_hint));
             chapterCount.setPadding(8, 0, 0, 0);
             
             volumeHeader.addView(tvExpandIcon);
@@ -510,7 +521,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                         LinearLayout.LayoutParams.WRAP_CONTENT));
                     tvIndex.setMinWidth(48);
                     tvIndex.setText(String.valueOf(j + 1));
-                    tvIndex.setTextColor(0xFF9C27B0);
+                    tvIndex.setTextColor(getThemeColor(R.color.colorPrimary));
                     tvIndex.setTextSize(14);
                     tvIndex.setTypeface(tvIndex.getTypeface(), android.graphics.Typeface.BOLD);
                     tvIndex.setGravity(android.view.Gravity.CENTER);
@@ -525,14 +536,14 @@ public class StoryInfoPanelFragment extends BaseFragment {
                     String chapterTitleText = TextUtils.isEmpty(chapter.getTitle()) ? 
                         "未命名章" : chapter.getTitle().trim();
                     tvTitle.setText(chapterTitleText);
-                    tvTitle.setTextColor(0xFF333333);
+                    tvTitle.setTextColor(getThemeColor(R.color.text_primary));
                     tvTitle.setTextSize(14);
                     tvTitle.setPadding(12, 0, 0, 0);
                     
                     // 箭头
                     TextView tvArrow = new TextView(requireContext());
                     tvArrow.setText(">");
-                    tvArrow.setTextColor(0xFFBBBBBB);
+                    tvArrow.setTextColor(getThemeColor(R.color.text_secondary));
                     tvArrow.setTextSize(14);
                     
                     chapterRow.addView(tvIndex);
@@ -565,7 +576,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                         divider.setLayoutParams(new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, 1
                         ));
-                        divider.setBackgroundColor(0xFFEEEEEE);
+                        divider.setBackgroundColor(getThemeColor(R.color.divider));
                         divider.setPadding(32, 0, 0, 0);
                         chaptersContainer.addView(divider);
                     }
@@ -575,7 +586,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 TextView noChapters = new TextView(requireContext());
                 noChapters.setText("暂无章节");
                 noChapters.setTextSize(13);
-                noChapters.setTextColor(0xFF999999);
+                noChapters.setTextColor(getThemeColor(R.color.text_hint));
                 noChapters.setPadding(32, 4, 0, 4);
                 chaptersContainer.addView(noChapters);
             }
@@ -589,7 +600,7 @@ public class StoryInfoPanelFragment extends BaseFragment {
                 volumeDivider.setLayoutParams(new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 1
                 ));
-                volumeDivider.setBackgroundColor(0xFFE0E0E0);
+                volumeDivider.setBackgroundColor(getThemeColor(R.color.divider));
                 ((LinearLayout.LayoutParams) volumeDivider.getLayoutParams()).topMargin = 12;
                 layoutToc.addView(volumeDivider);
             }

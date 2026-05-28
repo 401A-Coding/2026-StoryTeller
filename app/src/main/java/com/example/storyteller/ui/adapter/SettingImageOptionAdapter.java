@@ -1,6 +1,7 @@
 package com.example.storyteller.ui.adapter;
 
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.android.material.card.MaterialCardView;
 
 import java.io.File;
@@ -90,11 +92,11 @@ public class SettingImageOptionAdapter extends RecyclerView.Adapter<SettingImage
             
             // 选中状态
             if (isSelected) {
-                cardImage.setCardBackgroundColor(0x332196F3);
+                cardImage.setCardBackgroundColor(Color.argb(50, 33, 150, 243));
                 cardImage.setStrokeWidth(4);
-                cardImage.setStrokeColor(0xFF2196F3);
-                viewSelected.setVisibility(View.VISIBLE);
-                ivSelectedCheck.setVisibility(View.VISIBLE);
+                cardImage.setStrokeColor(ThemeColorUtils.getLinkColor(itemView.getContext()));
+                viewSelected.setVisibility(View.GONE);
+                ivSelectedCheck.setVisibility(View.GONE);
             } else {
                 cardImage.setCardBackgroundColor(0x00000000);
                 cardImage.setStrokeWidth(0);

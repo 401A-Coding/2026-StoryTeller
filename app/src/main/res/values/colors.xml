@@ -2,9 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
     <color name="chat_bubble_user">#FFDCEBFF</color>
     <color name="chat_bubble_bot">#FFF3F4F6</color>
     <color name="colorPrimary">#CE93D8</color>
     <color name="colorPrimaryLight">#E3F2FD</color>
     <color name="colorGray">#666666</color>
+
+    <!-- 主题感知颜色（浅色主题值） -->
+    <color name="background_primary">#FFFAFAFA</color>
+    <color name="background_secondary">#FFF5F5F5</color>
+    <color name="background_card">#FFFFFFFF</color>
+    <color name="text_primary">#FF212121</color>
+    <color name="text_secondary">#FF757575</color>
+    <color name="text_hint">#FF9E9E9E</color>
+    <color name="divider">#FFE0E0E0</color>
+    <color name="link_color">#FF2196F3</color>
 </resources>

@@ -117,7 +117,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="暂无文档"
-                android:textColor="#999999"
+                android:textColor="@color/text_secondary"
                 android:textSize="16sp" />
 
             <TextView
@@ -125,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="点击右下角按钮创建新文档"
-                android:textColor="#BBBBBB"
+                android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 
         </LinearLayout>

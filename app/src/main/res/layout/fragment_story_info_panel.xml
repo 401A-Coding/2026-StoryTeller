@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:background="@color/background_primary">
 
     <!-- 顶部标题栏 -->
     <LinearLayout
@@ -13,7 +13,7 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
-        android:background="#1976D2">
+        android:background="@color/colorPrimary">
 
         <ImageView
             android:layout_width="24dp"
@@ -21,14 +21,14 @@
             android:src="@drawable/ic_book_info"
             android:layout_marginEnd="8dp"
             android:contentDescription="小说信息"
-            app:tint="#FFFFFF" />
+            app:tint="@android:color/white" />
 
         <TextView
             android:id="@+id/tv_story_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="新小说"
-            android:textColor="#FFFFFF"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginEnd="4dp" />
@@ -41,7 +41,7 @@
             android:src="@drawable/ic_arrow_drop_down"
             android:contentDescription="切换小说"
             android:padding="4dp"
-            app:tint="#FFFFFF" />
+            app:tint="@android:color/white" />
 
         <!-- 占位空间，将关闭按钮推到右侧 -->
         <View
@@ -57,7 +57,7 @@
             android:src="@drawable/ic_close"
             android:contentDescription="关闭"
             android:padding="4dp"
-            app:tint="#FFFFFF" />
+            app:tint="@android:color/white" />
     </LinearLayout>
 
     <!-- Tab导航 -->
@@ -66,10 +66,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:tabMode="fixed"
-        app:tabGravity="fill"
-        app:tabIndicatorColor="#1976D2"
-        app:tabSelectedTextColor="#1976D2"
-        app:tabTextColor="#666666" />
+        app:tabGravity="fill" />
 
     <!-- 内容区域 -->
     <FrameLayout

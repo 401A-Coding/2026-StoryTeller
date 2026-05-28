@@ -4,14 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
-
-    <!-- 顶部标题栏 -->
+    android:background="@color/background_primary">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@android:color/white"
+        android:background="@color/background_card"
         android:elevation="4dp"
         android:padding="16dp"
         android:gravity="center_vertical">
@@ -31,7 +29,7 @@
             android:layout_weight="1"
             android:layout_marginStart="16dp"
             android:text="记忆详情"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -74,7 +72,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="标题"
-                            android:textColor="#999999"
+                            android:textColor="@color/text_hint"
                             android:textSize="12sp" />
 
                         <TextView
@@ -83,7 +81,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="记忆标题"
-                            android:textColor="#333333"
+                            android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
@@ -121,7 +119,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="类型"
-                                    android:textColor="#999999"
+                                    android:textColor="@color/text_hint"
                                     android:textSize="12sp" />
 
                                 <TextView
@@ -130,9 +128,9 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:text="剧情类"
-                                    android:textColor="#333333"
+                                    android:textColor="@color/text_primary"
                                     android:textSize="14sp"
-                                    android:background="#E0E0E0"
+                                    android:background="@color/divider"
                                     android:paddingHorizontal="8dp"
                                     android:paddingVertical="2dp" />
 
@@ -147,7 +145,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="重要性"
-                                    android:textColor="#999999"
+                                    android:textColor="@color/text_hint"
                                     android:textSize="12sp" />
 
                                 <TextView
@@ -185,7 +183,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="内容"
-                            android:textColor="#999999"
+                            android:textColor="@color/text_hint"
                             android:textSize="12sp" />
 
                         <TextView
@@ -194,7 +192,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="记忆详细内容..."
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             android:textSize="14sp"
                             android:lineSpacingMultiplier="1.3" />
 
@@ -208,7 +206,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="创建时间: 2026-05-22"
-                    android:textColor="#999999"
+                    android:textColor="@color/text_hint"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp" />
 
@@ -298,7 +296,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@android:color/white"
+        android:background="@color/background_card"
         android:elevation="4dp"
         android:padding="12dp"
         android:gravity="end">

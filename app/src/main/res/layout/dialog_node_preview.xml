@@ -33,7 +33,7 @@
                     android:layout_weight="1"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/black" />
+                    android:textColor="@color/text_primary" />
 
                 <ImageButton
                     android:id="@+id/btn_preview_close"
@@ -43,7 +43,7 @@
                     android:src="@android:drawable/ic_menu_close_clear_cancel"
                     android:contentDescription="关闭"
                     android:scaleType="center"
-                    app:tint="@android:color/darker_gray" />
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
 
             <!-- 分类 -->
@@ -61,7 +61,7 @@
                 android:layout_height="1dp"
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="12dp"
-                android:background="#E0E0E0" />
+                android:background="@color/divider" />
 
             <!-- 摘要 -->
             <TextView
@@ -69,7 +69,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="15sp"
-                android:textColor="#555555"
+                android:textColor="@color/text_secondary"
                 android:lineSpacingExtra="4dp"
                 android:maxLines="3"
                 android:ellipsize="end" />
@@ -81,7 +81,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="@color/text_secondary"
                 android:visibility="gone" />
 
             <!-- 标签列表 -->

@@ -32,7 +32,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="记忆标题"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="2"
@@ -44,8 +44,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:textSize="12sp"
-                android:textColor="#666666"
-                android:background="#E0E0E0"
+                android:textColor="@color/text_secondary"
+                android:background="@color/divider"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
                 android:text="剧情类" />
@@ -58,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="记忆内容"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp"
             android:lineSpacingMultiplier="1.2"
             android:layout_marginTop="6dp"
@@ -79,7 +79,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="重要性: ⭐⭐⭐"
-                android:textColor="#999999"
+                android:textColor="@color/text_hint"
                 android:textSize="11sp" />
 
             <View
@@ -92,7 +92,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#2196F3"
+                android:textColor="@color/link_color"
                 android:text="📥 AI提取" />
 
         </LinearLayout>

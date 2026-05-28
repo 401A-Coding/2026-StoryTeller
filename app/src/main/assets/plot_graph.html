@@ -57,6 +57,24 @@
         .empty-hint-text {
             font-size: 16px;
         }
+        /* vis.js 导航按钮样式（浅色模式） */
+        .vis-navigation .vis-button {
+            background-color: #2196F3;
+            border: 1px solid #1976D2;
+            color: white;
+        }
+        .vis-navigation .vis-button:hover {
+            background-color: #1976D2;
+        }
+        /* vis.js 导航按钮样式（深色模式） */
+        .dark-mode .vis-navigation .vis-button {
+            background-color: #424242 !important;
+            border: 1px solid #616161 !important;
+            color: white !important;
+        }
+        .dark-mode .vis-navigation .vis-button:hover {
+            background-color: #616161 !important;
+        }
     </style>
 </head>
 <body>
@@ -85,6 +103,21 @@
             current: '#2196F3'      // 当前设定（蓝色）
         };
         
+        // 深色模式配色
+        const DARK_COLORS = {
+            center: '#FF7043',
+            hierarchy: '#66BB6A',
+            association: '#42A5F5',
+            family: '#F06292',
+            opposition: '#EF5350',
+            causality: '#FFA726',
+            derivation: '#AB47BC',
+            other: '#78909C'
+        };
+        
+        // 当前配色方案
+        var currentScheme = 'light';
+        
         const ARROW_DIRECTED = 'to';  // 有向箭头
         const ARROW_BIDIRECTIONAL = 'both';  // 双向箭头
         
@@ -92,6 +125,53 @@
         var network = null;
         var nodesArray = [];
         var edgesArray = [];
+        
+        // 设置配色方案
+        function setColorScheme(scheme) {
+            currentScheme = scheme;
+            var networkBg = scheme === 'dark' ? '#1E1E1E' : '#fafafa';
+            document.getElementById('network').style.background = networkBg;
+            var headerBg = scheme === 'dark' ? '#2D2D2D' : '#2196F3';
+            document.querySelector('.header').style.background = headerBg;
+            if (scheme === 'dark') {
+                document.querySelector('.empty-hint').style.color = '#888';
+                document.body.classList.add('dark-mode');
+                // 深色模式：设置 vis.js 导航按钮样式
+                updateNavigationButtonsDarkMode(true);
+            } else {
+                document.querySelector('.empty-hint').style.color = '#999';
+                document.body.classList.remove('dark-mode');
+                // 浅色模式：恢复 vis.js 导航按钮样式
+                updateNavigationButtonsDarkMode(false);
+            }
+        }
+        
+        // 更新导航按钮的深色/浅色模式样式
+        function updateNavigationButtonsDarkMode(isDark) {
+            var buttons = document.querySelectorAll('.vis-button');
+            var bgColor = isDark ? '#424242' : '#2196F3';
+            var hoverBgColor = isDark ? '#616161' : '#1976D2';
+            var textColor = 'white';
+            
+            buttons.forEach(function(btn) {
+                btn.style.backgroundColor = bgColor;
+                btn.style.border = 'none';
+                btn.style.color = textColor;
+                btn.style.borderRadius = '4px';
+                // 移除 vis.js 默认的白色边框
+                if (isDark) {
+                    btn.style.border = '1px solid #424242';
+                }
+            });
+            
+            // 如果网络已创建，也更新容器样式
+            if (network && network.canvas && network.canvas.canvas) {
+                var navContainer = document.querySelector('.vis-navigation');
+                if (navContainer) {
+                    navContainer.style.opacity = '1';
+                }
+            }
+        }
         
         // 清除关系图
         function clearGraph() {
@@ -102,6 +182,62 @@
                 network = null;
             }
             document.getElementById('emptyHint').style.display = 'none';
+        }
+        
+        // 获取当前配色的颜色
+        function getSchemeColor(category) {
+            if (currentScheme === 'dark') {
+                return DARK_COLORS[category] || DARK_COLORS.other;
+            }
+            return COLORS[category] || COLORS.other;
+        }
+        
+        // 获取节点背景色
+        function getNodeBgColor(isDeleted, isCenter, isIsolated, isMatch) {
+            if (currentScheme === 'dark') {
+                if (isDeleted) return '#424242';
+                if (isMatch) return '#FFF59D';
+                if (isCenter) return '#FF7043';
+                if (isIsolated) return '#546E7A';
+                return '#1565C0';
+            }
+            if (isDeleted) return '#E0E0E0';
+            if (isMatch) return '#FFF59D';
+            if (isCenter) return COLORS.center;
+            if (isIsolated) return '#F5F5F5';
+            return '#E3F2FD';
+        }
+        
+        // 获取节点边框色
+        function getNodeBorderColor(isDeleted, isCenter, isIsolated, isMatch) {
+            if (currentScheme === 'dark') {
+                if (isDeleted) return '#616161';
+                if (isMatch) return '#FFC107';
+                if (isCenter) return '#FFD700';
+                if (isIsolated) return '#90A4AE';
+                return '#1E88E5';
+            }
+            if (isDeleted) return '#9E9E9E';
+            if (isMatch) return '#FFC107';
+            if (isCenter) return '#E64A19';
+            if (isIsolated) return '#BDBDBD';
+            return '#90CAF9';
+        }
+        
+        // 获取节点文字色
+        function getNodeFontColor(isDeleted, isCenter, isIsolated, isMatch) {
+            if (currentScheme === 'dark') {
+                if (isDeleted) return '#9E9E9E';
+                if (isMatch) return '#333333';
+                if (isCenter) return 'white';
+                if (isIsolated) return '#E0E0E0';
+                return 'white';
+            }
+            if (isDeleted) return '#9E9E9E';
+            if (isMatch) return '#333333';
+            if (isCenter) return 'white';
+            if (isIsolated) return '#757575';
+            return '#333333';
         }
         
         // 初始化关系图
@@ -122,25 +258,19 @@
             
             // 创建节点
             var nodes = new vis.DataSet(nodesArray.map(function(node) {
-                var nodeColor, fontColor, nodeSize;
-                if (node.isDeleted) {
-                    // 已删除的节点：灰色
-                    nodeColor = { background: '#E0E0E0', border: '#9E9E9E', highlight: { background: '#BDBDBD', border: '#757575' } };
-                    fontColor = '#9E9E9E';
-                    nodeSize = 22;
-                } else if (node.isCenter) {
-                    nodeColor = { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } };
-                    fontColor = 'white';
-                    nodeSize = 40;
-                } else if (node.isIsolated) {
-                    nodeColor = { background: '#F5F5F5', border: '#BDBDBD', highlight: { background: '#E0E0E0', border: '#9E9E9E' } };
-                    fontColor = '#757575';
-                    nodeSize = 25;
-                } else {
-                    nodeColor = { background: '#E3F2FD', border: '#90CAF9', highlight: { background: '#BBDEFB', border: '#2196F3' } };
-                    fontColor = '#333';
-                    nodeSize = 30;
-                }
+                var isDeleted = node.isDeleted;
+                var isCenter = node.isCenter;
+                var isIsolated = node.isIsolated;
+                var nodeColor = {
+                    background: getNodeBgColor(isDeleted, isCenter, isIsolated, false),
+                    border: getNodeBorderColor(isDeleted, isCenter, isIsolated, false),
+                    highlight: {
+                        background: getNodeBgColor(isDeleted, isCenter, isIsolated, false),
+                        border: getNodeBorderColor(isDeleted, isCenter, isIsolated, false)
+                    }
+                };
+                var fontColor = getNodeFontColor(isDeleted, isCenter, isIsolated, false);
+                var nodeSize = isDeleted ? 22 : (isCenter ? 40 : (isIsolated ? 25 : 30));
                 return {
                     id: node.id,
                     label: node.label,
@@ -148,10 +278,10 @@
                     color: nodeColor,
                     font: {
                         color: fontColor,
-                        size: node.isDeleted ? 12 : (node.isCenter ? 16 : 14),
-                        bold: node.isCenter
+                        size: isDeleted ? 12 : (isCenter ? 16 : 14),
+                        bold: isCenter
                     },
-                    borderWidth: node.isDeleted ? 1 : 2,
+                    borderWidth: isDeleted ? 1 : 2,
                     borderWidthSelected: 3,
                     shape: 'circle',
                     size: nodeSize,
@@ -161,23 +291,24 @@
             
             // 创建边
             var edges = new vis.DataSet(edgesArray.map(function(edge) {
-                var color, edgeStyle;
+                var edgeColor, edgeStyle;
                 if (edge.isDeleted) {
                     // 涉及已删除设定的边：灰色虚线
-                    color = '#BDBDBD';
+                    edgeColor = currentScheme === 'dark' ? '#616161' : '#BDBDBD';
                     edgeStyle = { type: 'continuous', dash: { enabled: true, lengthFactor: 5, gapFactor: 3 } };
                 } else {
-                    color = COLORS[edge.category] || COLORS.other;
+                    edgeColor = getSchemeColor(edge.category);
                     edgeStyle = { type: 'continuous' };
                 }
+                var fontColor = currentScheme === 'dark' ? '#B0B0B0' : '#666';
                 return {
                     from: edge.from,
                     to: edge.to,
                     label: edge.label,
                     title: edge.title || edge.label,
                     arrows: edge.isDirected ? ARROW_DIRECTED : ARROW_BIDIRECTIONAL,
-                    color: { color: color, highlight: color, hover: color },
-                    font: { color: edge.isDeleted ? '#9E9E9E' : '#666', size: edge.isDeleted ? 10 : 11, strokeWidth: 0 },
+                    color: { color: edgeColor, highlight: edgeColor, hover: edgeColor },
+                    font: { color: edge.isDeleted ? (currentScheme === 'dark' ? '#9E9E9E' : '#9E9E9E') : fontColor, size: edge.isDeleted ? 10 : 11, strokeWidth: 0 },
                     smooth: edgeStyle,
                     width: edge.isDeleted ? 1 : 1.5
                 };
@@ -226,6 +357,9 @@
             };
             
             network = new vis.Network(container, { nodes: nodes, edges: edges }, options);
+            
+            // 应用当前配色方案的导航按钮样式
+            updateNavigationButtonsDarkMode(currentScheme === 'dark');
             
             // 双击节点跳转到设定详情
             network.on('doubleClick', function(params) {
@@ -333,28 +467,24 @@
             // 重置所有节点
             nodesArray.forEach(function(node) {
                 var isMatch = ids.indexOf(node.id) !== -1;
-                var updateObj = {};
-                
-                if (node.isDeleted) {
-                    updateObj.color = { background: '#E0E0E0', border: '#9E9E9E' };
-                    updateObj.font = { color: '#9E9E9E', size: 12 };
-                } else if (node.isCenter) {
-                    updateObj.color = isMatch ? 
-                        { background: '#FF5722', border: '#FFD700', highlight: { background: '#FF7043', border: '#FFD700' } } :
-                        { background: COLORS.center, border: '#E64A19' };
-                    updateObj.font = { color: 'white', size: 16, bold: true };
-                } else if (node.isIsolated) {
-                    updateObj.color = isMatch ?
-                        { background: '#FFF59D', border: '#FFC107', highlight: { background: '#FFE082', border: '#FFC107' } } :
-                        { background: '#F5F5F5', border: '#BDBDBD' };
-                    updateObj.font = { color: isMatch ? '#333' : '#757575', size: 14 };
-                } else {
-                    updateObj.color = isMatch ?
-                        { background: '#FFF59D', border: '#FFC107', highlight: { background: '#FFE082', border: '#FFC107' } } :
-                        { background: '#E3F2FD', border: '#90CAF9' };
-                    updateObj.font = { color: isMatch ? '#333' : '#333', size: 14 };
-                }
-                
+                var isDeleted = node.isDeleted;
+                var isCenter = node.isCenter;
+                var isIsolated = node.isIsolated;
+                var updateObj = {
+                    color: {
+                        background: getNodeBgColor(isDeleted, isCenter, isIsolated, isMatch),
+                        border: getNodeBorderColor(isDeleted, isCenter, isIsolated, isMatch),
+                        highlight: {
+                            background: getNodeBgColor(isDeleted, isCenter, isIsolated, isMatch),
+                            border: getNodeBorderColor(isDeleted, isCenter, isIsolated, isMatch)
+                        }
+                    },
+                    font: {
+                        color: getNodeFontColor(isDeleted, isCenter, isIsolated, isMatch),
+                        size: isDeleted ? 12 : (isCenter ? 16 : 14),
+                        bold: isCenter
+                    }
+                };
                 updateObj.id = node.id;
                 network.body.data.nodes.update(updateObj);
             });
@@ -365,22 +495,25 @@
             if (!network) return;
             
             nodesArray.forEach(function(node) {
-                var updateObj = { id: node.id };
-                
-                if (node.isDeleted) {
-                    updateObj.color = { background: '#E0E0E0', border: '#9E9E9E' };
-                    updateObj.font = { color: '#9E9E9E', size: 12 };
-                } else if (node.isCenter) {
-                    updateObj.color = { background: COLORS.center, border: '#E64A19', highlight: { background: '#FF7043', border: '#FF5722' } };
-                    updateObj.font = { color: 'white', size: 16, bold: true };
-                } else if (node.isIsolated) {
-                    updateObj.color = { background: '#F5F5F5', border: '#BDBDBD' };
-                    updateObj.font = { color: '#757575', size: 14 };
-                } else {
-                    updateObj.color = { background: '#E3F2FD', border: '#90CAF9' };
-                    updateObj.font = { color: '#333', size: 14 };
-                }
-                
+                var isDeleted = node.isDeleted;
+                var isCenter = node.isCenter;
+                var isIsolated = node.isIsolated;
+                var updateObj = {
+                    id: node.id,
+                    color: {
+                        background: getNodeBgColor(isDeleted, isCenter, isIsolated, false),
+                        border: getNodeBorderColor(isDeleted, isCenter, isIsolated, false),
+                        highlight: {
+                            background: getNodeBgColor(isDeleted, isCenter, isIsolated, false),
+                            border: getNodeBorderColor(isDeleted, isCenter, isIsolated, false)
+                        }
+                    },
+                    font: {
+                        color: getNodeFontColor(isDeleted, isCenter, isIsolated, false),
+                        size: isDeleted ? 12 : (isCenter ? 16 : 14),
+                        bold: isCenter
+                    }
+                };
                 network.body.data.nodes.update(updateObj);
             });
         }

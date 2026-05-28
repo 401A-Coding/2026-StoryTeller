@@ -10,12 +10,12 @@
         android:id="@+id/tab_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
+        android:background="@color/background_primary"
         app:tabMode="fixed"
         app:tabGravity="fill"
-        app:tabIndicatorColor="#2196F3"
-        app:tabSelectedTextColor="#2196F3"
-        app:tabTextColor="#757575" />
+        app:tabIndicatorColor="@color/colorPrimary"
+        app:tabSelectedTextColor="@color/colorPrimary"
+        app:tabTextColor="@color/text_secondary" />
 
     <!-- ViewPager2用于切换两个Tab -->
     <androidx.viewpager2.widget.ViewPager2

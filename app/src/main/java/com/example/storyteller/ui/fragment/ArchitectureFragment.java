@@ -152,10 +152,10 @@ public class ArchitectureFragment extends BaseFragment {
         // 设置状态下拉框
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(
             requireContext(),
-            android.R.layout.simple_spinner_item,
+            R.layout.item_spinner_white,
             STATUS_OPTIONS
         );
-        statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        statusAdapter.setDropDownViewResource(R.layout.item_spinner_dropdown_white);
         spinnerStatus.setAdapter(statusAdapter);
         
         // 设置预设标签

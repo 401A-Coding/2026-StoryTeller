@@ -38,6 +38,7 @@ import com.example.storyteller.ui.activity.SettingDetailActivity;
 import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import com.example.storyteller.ui.dialog.ExtractionResultDialogFragment;
 import com.example.storyteller.utils.RelationExtractor;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
 import com.google.gson.Gson;
@@ -167,13 +168,19 @@ public class PlotGraphFragment extends BaseFragment {
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         
-        webView.setBackgroundColor(Color.WHITE);
+        webView.setBackgroundColor(ThemeColorUtils.getBackgroundPrimary(requireContext()));
         
         // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // 设置深色模式配色
+                boolean isDarkMode = (view.getContext().getResources().getConfiguration().uiMode
+                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK) 
+                        == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+                String colorScheme = isDarkMode ? "dark" : "light";
+                webView.evaluateJavascript("setColorScheme('" + colorScheme + "')", null);
                 // 页面加载完成后，加载数据
                 loadGraphData();
             }
@@ -450,7 +457,7 @@ public class PlotGraphFragment extends BaseFragment {
             tvSummary.setText(setting.getSummary());
         } else {
             tvSummary.setText("暂无摘要");
-            tvSummary.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvSummary.setTextColor(ThemeColorUtils.getSecondaryTextColor(requireContext()));
         }
         
         // 关联数量
