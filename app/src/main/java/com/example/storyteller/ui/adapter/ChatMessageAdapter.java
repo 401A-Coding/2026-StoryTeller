@@ -108,13 +108,16 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         holder.tvMessage.setVisibility(View.VISIBLE);
         markwon.setMarkdown(holder.tvMessage, message.getDisplayContent());
         
+        // 根据消息来源设置背景色和位置
         ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) holder.tvMessage.getLayoutParams();
         if (message.isFromUser()) {
-            // 用户消息：气泡靠右，文本左对齐
+            // 用户消息：气泡靠右，浅蓝色背景
+            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_user);
             params.startToStart = ConstraintLayout.LayoutParams.UNSET;
             params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
         } else {
-            // AI消息：气泡靠左，文本左对齐
+            // AI消息：气泡靠左，浅灰色背景
+            holder.tvMessage.setBackgroundResource(R.drawable.bg_chat_bubble_bot);
             params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
             params.endToEnd = ConstraintLayout.LayoutParams.UNSET;
         }

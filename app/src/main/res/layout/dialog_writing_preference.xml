@@ -332,7 +332,7 @@
                         android:id="@+id/tv_ai_preference_result"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="【当前无分析结果】"
+                        android:text="当前无分析结果"
                         android:textSize="13sp"
                         android:textColor="#999999"
                         android:lineSpacingExtra="4dp" />
