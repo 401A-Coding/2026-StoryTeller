@@ -7,7 +7,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -20,6 +22,7 @@ import com.example.storyteller.data.remote.ApiKeyManager;
 import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.ui.adapter.ModelAdapter;
 import com.example.storyteller.ui.dialog.WritingPreferenceDialog;
+import com.example.storyteller.utils.ThemeManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +35,8 @@ public class SettingsFragment extends BaseFragment {
     private RecyclerView rvModels;
     private ModelAdapter modelAdapter;
     private List<ModelConfig.Provider> addedProviders = new ArrayList<>();
+    private TextView tvThemeModeValue;
+    private ThemeManager themeManager;
 
     @Override
     protected int getLayoutId() {
@@ -68,6 +73,13 @@ public class SettingsFragment extends BaseFragment {
             WritingPreferenceDialog dialog = WritingPreferenceDialog.newInstance();
             dialog.show(getChildFragmentManager(), "global_writing_preference");
         });
+
+        // 主题设置
+        tvThemeModeValue = view.findViewById(R.id.tv_theme_mode_value);
+        themeManager = ThemeManager.getInstance(requireContext());
+        updateThemeModeDisplay();
+        view.findViewById(R.id.tv_theme_mode_label).setOnClickListener(v -> showThemeModeDialog());
+        view.findViewById(R.id.iv_theme_arrow).setOnClickListener(v -> showThemeModeDialog());
     }
 
     @Override
@@ -89,6 +101,29 @@ public class SettingsFragment extends BaseFragment {
 
     private void updateModelsUI() {
         modelAdapter.setProviders(addedProviders);
+    }
+
+    private void updateThemeModeDisplay() {
+        int currentMode = themeManager.getThemeMode();
+        tvThemeModeValue.setText(ThemeManager.getThemeModeDisplayText(currentMode));
+    }
+
+    private void showThemeModeDialog() {
+        String[] options = ThemeManager.getThemeModeOptions();
+        int currentMode = themeManager.getThemeMode();
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.theme_mode)
+                .setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+                    themeManager.setThemeMode(which);
+                    updateThemeModeDisplay();
+                    Toast.makeText(requireContext(),
+                            getString(R.string.theme_switched, ThemeManager.getThemeModeDisplayText(which)),
+                            Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void showAddModelDialog() {

@@ -7,6 +7,7 @@ import com.example.storyteller.ui.fragment.HomeFragment;
 import com.example.storyteller.ui.fragment.StoryManagementFragment;
 import com.example.storyteller.ui.fragment.SettingsFragment;
 import com.example.storyteller.utils.DatabaseMigrationUtils;
+import com.example.storyteller.utils.ThemeManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.fragment.app.Fragment;
 
@@ -53,6 +54,9 @@ public class MainActivity extends BaseActivity {
 
     @Override
     protected void initData() {
+        // 应用保存的主题设置
+        ThemeManager.getInstance(this).applySavedTheme();
+        
         // 初始化故事字数统计（仅在首次启动或数据库升级后执行）
         DatabaseMigrationUtils.initializeWordCounts(this);
         

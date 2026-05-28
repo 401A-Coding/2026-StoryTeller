@@ -37,7 +37,7 @@
                     android:text="📤 导出作品"
                     android:textSize="16sp"
                     android:textColor="#333333"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true" />
 
@@ -54,7 +54,7 @@
                     android:text="🔗 分享作品"
                     android:textSize="16sp"
                     android:textColor="#333333"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true" />
 
@@ -71,7 +71,7 @@
                     android:text="🖼️ 分享作品简介"
                     android:textSize="16sp"
                     android:textColor="#333333"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true" />
 
@@ -104,7 +104,7 @@
                     android:text="❓ 使用帮助"
                     android:textSize="16sp"
                     android:textColor="#333333"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true" />
 
@@ -121,7 +121,7 @@
                     android:text="💬 意见反馈"
                     android:textSize="16sp"
                     android:textColor="#333333"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true" />
 
