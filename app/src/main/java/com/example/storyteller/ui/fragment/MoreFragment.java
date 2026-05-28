@@ -42,7 +42,6 @@ public class MoreFragment extends BaseFragment {
         // 作品管理
         view.findViewById(R.id.btn_export).setOnClickListener(v -> exportStory());
         view.findViewById(R.id.btn_share).setOnClickListener(v -> shareStory());
-        view.findViewById(R.id.btn_delete).setOnClickListener(v -> deleteStory());
 
         // 设置
         view.findViewById(R.id.btn_settings).setOnClickListener(v -> openSettings());
@@ -74,26 +73,6 @@ public class MoreFragment extends BaseFragment {
     private void shareStory() {
         Toast.makeText(requireContext(), "分享功能（开发中）", Toast.LENGTH_SHORT).show();
         // TODO: 实现分享功能
-    }
-
-    /**
-     * 删除作品
-     */
-    private void deleteStory() {
-        new AlertDialog.Builder(requireContext())
-            .setTitle("确认删除")
-            .setMessage("确定要删除这部作品吗？此操作不可恢复！")
-            .setPositiveButton("删除", (dialog, which) -> {
-                int result = storyDao.deleteStory(storyId);
-                if (result > 0) {
-                    Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
-                    requireActivity().finish();
-                } else {
-                    Toast.makeText(requireContext(), "删除失败", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
     }
 
     /**
