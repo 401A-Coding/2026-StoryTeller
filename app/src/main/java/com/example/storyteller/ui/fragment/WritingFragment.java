@@ -122,26 +122,28 @@ public class WritingFragment extends BaseFragment {
     public void onResume() {
         super.onResume();
         // 每次可见时从数据库重新加载最新数据，确保不会覆盖OutlineFragment的修改
-        android.util.Log.d("WritingFragment", "onResume: 重新加载数据");
         if (storyId > 0) {
+            volumes.clear();
             loadStoryData();
         }
     }
     
     @Override
     public void onDestroyView() {
-        super.onDestroyView();
         // View销毁时，先保存数据，防止切换Tab导致数据丢失
-        android.util.Log.d("WritingFragment", "onDestroyView: 保存数据, isAdded=" + isAdded());
         saveStructureSilently();
         // 清除编辑状态
         currentEditingEditText = null;
+        super.onDestroyView();
     }
 
     /**
      * 加载作品数据
      */
     private void loadStoryData() {
+        // 重置UI状态，防止残留视图干扰
+        resetUIState();
+        
         currentStory = storyRepository.getStoryById(storyId);
         if (currentStory == null) {
             storyCharacters.clear();
@@ -156,17 +158,17 @@ public class WritingFragment extends BaseFragment {
 
         // 解析卷章结构
         String structureJson = currentStory.getStructure();
+        
         if (!TextUtils.isEmpty(structureJson)) {
             try {
                 volumes = JsonUtils.fromJson(structureJson, 
                     new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
             } catch (Exception e) {
+                android.util.Log.e("WritingFragment", "解析卷章结构失败: " + e.getMessage());
                 e.printStackTrace();
                 volumes = new ArrayList<>();
             }
-        }
-
-        if (volumes == null) {
+        } else {
             volumes = new ArrayList<>();
         }
 
@@ -174,9 +176,37 @@ public class WritingFragment extends BaseFragment {
         if (!volumes.isEmpty()) {
             volumeCount = volumes.size();
         }
-
+        
         // 渲染卷章
         renderVolumes();
+    }
+    
+    /**
+     * 重置UI状态，确保不会有残留视图或数据
+     */
+    private void resetUIState() {
+        if (layoutContent != null) {
+            // 清除所有子视图（保留永久视图）
+            List<View> viewsToRemove = new ArrayList<>();
+            for (int i = 0; i < layoutContent.getChildCount(); i++) {
+                View child = layoutContent.getChildAt(i);
+                int childId = child.getId();
+                if (childId != R.id.btn_add_volume
+                        && childId != R.id.tv_empty_hint
+                        && childId != R.id.card_writing_reference) {
+                    viewsToRemove.add(child);
+                }
+            }
+            for (View view : viewsToRemove) {
+                layoutContent.removeView(view);
+            }
+        }
+        
+        // 清空数据列表，防止残留数据
+        volumes.clear();
+        
+        // 显示加载提示
+        tvEmptyHint.setVisibility(View.GONE);
     }
     
     /**
@@ -194,6 +224,7 @@ public class WritingFragment extends BaseFragment {
     private void renderVolumes() {
         // 清除除btn_add_volume之外的所有视图
         List<View> viewsToRemove = new ArrayList<>();
+        
         for (int i = 0; i < layoutContent.getChildCount(); i++) {
             View child = layoutContent.getChildAt(i);
             if (child.getId() != R.id.btn_add_volume
@@ -202,6 +233,7 @@ public class WritingFragment extends BaseFragment {
                 viewsToRemove.add(child);
             }
         }
+        
         for (View view : viewsToRemove) {
             layoutContent.removeView(view);
         }
@@ -268,7 +300,7 @@ public class WritingFragment extends BaseFragment {
             View chapterView = createChapterView(chapter, volume, i + 1);
             layoutChapters.addView(chapterView);
         }
-
+        
         return volumeView;
     }
 
@@ -277,7 +309,7 @@ public class WritingFragment extends BaseFragment {
      */
     private View createChapterView(Chapter chapter, Volume volume, int chapterIndex) {
         View chapterView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.item_chapter, null, false);
+            .inflate(R.layout.item_chapter, layoutContent, false);
 
         // 设置章节前缀
         TextView tvChapterPrefix = chapterView.findViewById(R.id.tv_chapter_prefix);
@@ -301,11 +333,8 @@ public class WritingFragment extends BaseFragment {
         // 内容编辑器
         EditText etContent = chapterView.findViewById(R.id.et_chapter_content);
         etContent.setHint("开始写作...");
-        if (!TextUtils.isEmpty(chapter.getContent())) {
-            etContent.setText(chapter.getContent());
-        }
         
-        // 监听内容变化
+        // 先添加 TextWatcher，再设置文本内容
         etContent.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -315,11 +344,17 @@ public class WritingFragment extends BaseFragment {
 
             @Override
             public void afterTextChanged(android.text.Editable s) {
+                // 忽略setText触发的回调
                 chapter.setContent(s.toString());
-                // 实时静默保存正文内容（作为退出保存的额外保险）
+                // 实时静默保存正文内容
                 saveStructureSilently();
             }
         });
+        
+        // 设置初始内容
+        if (!TextUtils.isEmpty(chapter.getContent())) {
+            etContent.setText(chapter.getContent());
+        }
 
         return chapterView;
     }
@@ -1057,31 +1092,50 @@ public class WritingFragment extends BaseFragment {
      * @param showToast 是否显示Toast提示
      */
     private void saveStructureInternal(boolean showToast) {
+        android.util.Log.d("WritingFragment", "[SAVE] saveStructureInternal 开始, showToast=" + showToast + ", volumes.size=" + volumes.size());
+        
         if (currentStory == null) {
-            android.util.Log.e("WritingFragment", "保存失败: currentStory为null");
+            android.util.Log.e("WritingFragment", "[SAVE] 保存失败: currentStory为null");
             return;
         }
         
-        // 检查Fragment和Activity是否处于有效状态
-        if (!isAdded() || getActivity() == null || getActivity().isFinishing() || getActivity().isDestroyed()) {
-            android.util.Log.w("WritingFragment", "保存跳过: Fragment或Activity已销毁");
+        // 【修复】移除isAdded检查，因为在onDestroyView时isAdded=false但仍需要保存数据
+        // 检查Activity是否处于有效状态（允许在Fragment未attached时保存，只要Activity有效）
+        boolean activityValid = getActivity() != null && !getActivity().isFinishing() && !getActivity().isDestroyed();
+        android.util.Log.d("WritingFragment", "[SAVE] Activity有效性检查: activityValid=" + activityValid + ", isAdded=" + isAdded());
+        
+        // 如果Activity已销毁，则不保存（数据会丢失，但这是无法避免的）
+        // 如果Activity有效，即使Fragment已detached，也可以尝试保存
+        if (!activityValid) {
+            android.util.Log.w("WritingFragment", "[SAVE] 保存跳过: Activity已销毁");
             return;
         }
 
         // 计算总字数
         int totalWordCount = 0;
-        for (Volume volume : volumes) {
-            for (Chapter chapter : volume.getChapters()) {
+        android.util.Log.d("WritingFragment", "[SAVE] 开始遍历章节计算字数");
+        for (int i = 0; i < volumes.size(); i++) {
+            Volume volume = volumes.get(i);
+            android.util.Log.d("WritingFragment", "[SAVE] 卷" + (i+1) + "《" + volume.getTitle() + "》有" + volume.getChapters().size() + "章");
+            for (int j = 0; j < volume.getChapters().size(); j++) {
+                Chapter chapter = volume.getChapters().get(j);
                 if (chapter.getContent() != null) {
-                    totalWordCount += chapter.getContent().length();
+                    int contentLen = chapter.getContent().length();
+                    totalWordCount += contentLen;
+                    android.util.Log.d("WritingFragment", "[SAVE]   章" + (j+1) + "《" + chapter.getTitle() + "》字数=" + contentLen);
+                } else {
+                    android.util.Log.d("WritingFragment", "[SAVE]   章" + (j+1) + "《" + chapter.getTitle() + "》字数=0(null)");
                 }
             }
         }
+        android.util.Log.d("WritingFragment", "[SAVE] 总字数=" + totalWordCount);
         
         // 【分离存储】不再需要合并大纲数据，因为大纲和写作内容已分离存储
         
         // 更新卷章结构
         String structureJson = JsonUtils.toJson(volumes);
+        android.util.Log.d("WritingFragment", "[SAVE] 序列化volumes为JSON, JSON长度=" + (structureJson != null ? structureJson.length() : 0));
+        
         currentStory.setStructure(structureJson);
         currentStory.setWordCount(totalWordCount);
         
@@ -1100,14 +1154,17 @@ public class WritingFragment extends BaseFragment {
             }
         }
         currentStory.setContent(fullContent.toString().trim());
+        android.util.Log.d("WritingFragment", "[SAVE] 构建完整内容完成, content长度=" + currentStory.getContent().length());
 
         // 只更新写作相关字段，不覆盖架构信息
+        android.util.Log.d("WritingFragment", "[SAVE] 调用storyRepository.updateStoryWriting");
         int result = storyRepository.updateStoryWriting(
             currentStory.getId(),
             structureJson,
             totalWordCount,
             currentStory.getContent()
         );
+        android.util.Log.d("WritingFragment", "[SAVE] 数据库更新结果=" + result);
         
         if (result > 0) {
             // 【同步】同步标题到outline_data
@@ -1129,6 +1186,7 @@ public class WritingFragment extends BaseFragment {
                 Toast.makeText(requireContext(), "保存失败", Toast.LENGTH_SHORT).show();
             }
         }
+        android.util.Log.d("WritingFragment", "[SAVE] saveStructureInternal 结束");
     }
     
     /**
