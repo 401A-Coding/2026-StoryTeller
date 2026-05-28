@@ -308,17 +308,37 @@ public class MoreFragment extends BaseFragment {
      * 显示帮助
      */
     private void showHelp() {
+        String helpContent = "📖 功能概览\n\n" +
+                "【写作Tab】\n" +
+                "• 大纲：生成/查看小说整体框架\n" +
+                "• 章节：编辑卷结构和章节内容\n" +
+                "• AI辅助：创作建议、续写、优化\n\n" +
+                "【架构Tab】\n" +
+                "• 基本信息：书名、简介、标签\n" +
+                "• 大纲：查看/编辑故事主线\n" +
+                "• 设定：角色、物品、地点等设定\n" +
+                "• 关系：管理角色间的关系\n\n" +
+                "【AI功能】\n" +
+                "• 智能体：执行复杂创作任务\n" +
+                "• 生图：AI生成封面/配图\n" +
+                "• 审校：全面审核内容质量\n\n" +
+                "【快捷操作】\n" +
+                "• 点击设定卡片可查看预览\n" +
+                "• 分享卡片可自定义封面\n\n" +
+                "【数据安全】\n" +
+                "• 自动保存，无需手动保存\n" +
+                "• 随时可导出为TXT文件\n\n" +
+                "如需帮助，请通过GitHub提交Issue";
+
         new AlertDialog.Builder(requireContext())
             .setTitle("使用帮助")
-            .setMessage(
-                "📝 写作Tab：编辑小说的卷章结构\n\n" +
-                "🏗️ 架构Tab：编辑小说基本信息\n\n" +
-                "👥 人物Tab：管理角色设定（开发中）\n\n" +
-                "📚 素材Tab：管理写作素材（开发中）\n\n" +
-                "💡 点击标题可打开左侧信息面板\n\n" +
-                "🤖 右下角按钮唤起AI助手（开发中）"
-            )
+            .setMessage(helpContent)
             .setPositiveButton("确定", null)
+            .setNegativeButton("访问GitHub", (dialog, which) -> {
+                Intent intent = new Intent(Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://github.com/401A-Coding/2026-StoryTeller"));
+                startActivity(intent);
+            })
             .show();
     }
 
