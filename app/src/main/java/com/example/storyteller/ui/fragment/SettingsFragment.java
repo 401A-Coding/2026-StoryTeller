@@ -24,6 +24,8 @@ import com.example.storyteller.ui.adapter.ModelAdapter;
 import com.example.storyteller.ui.dialog.WritingPreferenceDialog;
 import com.example.storyteller.utils.ThemeManager;
 
+import androidx.fragment.app.Fragment;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -80,6 +82,9 @@ public class SettingsFragment extends BaseFragment {
         updateThemeModeDisplay();
         view.findViewById(R.id.tv_theme_mode_label).setOnClickListener(v -> showThemeModeDialog());
         view.findViewById(R.id.iv_theme_arrow).setOnClickListener(v -> showThemeModeDialog());
+
+        // 使用帮助
+        view.findViewById(R.id.btn_help).setOnClickListener(v -> showHelpFragment());
     }
 
     @Override
@@ -193,5 +198,14 @@ public class SettingsFragment extends BaseFragment {
                     loadAddedProviders();
                 })
                 .show();
+    }
+
+    private void showHelpFragment() {
+        Fragment helpFragment = new HelpFragment();
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, helpFragment)
+                .addToBackStack(null)
+                .commit();
     }
 }
