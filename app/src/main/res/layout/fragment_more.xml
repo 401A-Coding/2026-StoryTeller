@@ -68,7 +68,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:text="🖼️ 分享卡片图片"
+                    android:text="🖼️ 分享作品简介"
                     android:textSize="16sp"
                     android:textColor="#333333"
                     android:background="?attr/selectableItemBackground"

@@ -215,7 +215,7 @@ public class MoreFragment extends BaseFragment {
     }
 
     /**
-     * 分享作品（文本分享）
+     * 分享作品（分享完整Markdown文件）
      */
     private void shareStory() {
         currentStory = storyDao.getStoryById(storyId);
@@ -224,62 +224,38 @@ public class MoreFragment extends BaseFragment {
             return;
         }
 
-        String shareContent = buildShareContent();
+        try {
+            String content = buildMarkdownContent();
+            String fileName = sanitizeFileName(currentStory.getTitle()) + ".md";
 
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "分享作品：" + currentStory.getTitle());
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
+            // 保存到缓存目录
+            File cacheDir = requireContext().getCacheDir();
+            File shareFile = new File(cacheDir, fileName);
+            FileOutputStream fos = new FileOutputStream(shareFile);
+            fos.write(content.getBytes("UTF-8"));
+            fos.flush();
+            fos.close();
 
-        Intent chooserIntent = Intent.createChooser(shareIntent, "分享作品");
-        startActivity(chooserIntent);
-    }
+            // 通过FileProvider分享
+            Uri contentUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    shareFile);
 
-    /**
-     * 构建分享内容
-     */
-    private String buildShareContent() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(currentStory.getTitle()).append("\n\n");
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/markdown");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "分享作品：" + currentStory.getTitle());
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-        String description = currentStory.getDescription();
-        if (description != null && !description.isEmpty()) {
-            sb.append(description).append("\n\n");
+            Intent chooserIntent = Intent.createChooser(shareIntent, "分享作品");
+            startActivity(chooserIntent);
+
+            shareFile.deleteOnExit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(), "分享失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
-        String structure = currentStory.getStructure();
-        if (structure != null && !structure.isEmpty()) {
-            try {
-                List<Volume> volumes = JsonUtils.fromJson(structure,
-                    new com.google.gson.reflect.TypeToken<List<Volume>>(){}.getType());
-                if (volumes != null) {
-                    for (int i = 0; i < volumes.size(); i++) {
-                        Volume volume = volumes.get(i);
-                        String volumeTitle = volume.getTitle();
-                        if (volumeTitle == null || volumeTitle.isEmpty()) {
-                            volumeTitle = "第" + (i + 1) + "卷";
-                        }
-                        sb.append("《").append(volumeTitle).append("》\n");
-
-                        List<Chapter> chapters = volume.getChapters();
-                        if (chapters != null) {
-                            for (int j = 0; j < chapters.size(); j++) {
-                                Chapter chapter = chapters.get(j);
-                                String chapterTitle = chapter.getTitle();
-                                if (chapterTitle != null && !chapterTitle.isEmpty()) {
-                                    sb.append("第" + (j + 1) + "章：" + chapterTitle).append("\n");
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        sb.append("\n—— 来源：StoryTeller\n");
-        return sb.toString();
     }
 
     /**
