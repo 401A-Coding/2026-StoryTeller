@@ -2520,9 +2520,9 @@ public class SettingDetailActivity extends AppCompatActivity {
             });
         }
         
-        // 删除按钮
+        // 删除按钮（始终使用错误色，表示危险操作）
         if (!rel.isSourceSettingDeleted() && !rel.isTargetSettingDeleted()) {
-            btnDelete.setTextColor(ThemeColorUtils.getLinkColor(this));
+            btnDelete.setTextColor(ThemeColorUtils.getErrorColor(this));
             btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
         } else {
             btnDelete.setTextColor(ThemeColorUtils.getErrorColor(this));
