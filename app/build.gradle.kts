@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.glide)  // 图片加载
     implementation(libs.markwon)  // Markdown渲染
     implementation(libs.localbroadcastmanager)  // 本地广播管理器
+    implementation(libs.zxing.core)  // 二维码生成
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
