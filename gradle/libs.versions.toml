@@ -16,6 +16,7 @@ jsoup = "1.18.3"
 glide = "4.16.0"
 markwon = "4.6.2"
 localbroadcastmanager = "1.1.0"
+zxing = "3.5.3"
 
 [libraries]
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -34,6 +35,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 markwon = { module = "io.noties.markwon:core", version.ref = "markwon" }
 localbroadcastmanager = { module = "androidx.localbroadcastmanager:localbroadcastmanager", version.ref = "localbroadcastmanager" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
