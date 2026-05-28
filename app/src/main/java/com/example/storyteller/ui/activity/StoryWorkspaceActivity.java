@@ -4,8 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,12 +18,11 @@ import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.WorkspacePagerAdapter;
-import com.example.storyteller.ui.component.BottomActionBar;
 import com.example.storyteller.ui.fragment.AIPanelFragment;
 import com.example.storyteller.ui.fragment.ArchitectureFragment;
 import com.example.storyteller.ui.fragment.StoryInfoPanelFragment;
 import com.example.storyteller.ui.fragment.WritingFragment;
-import com.google.android.material.card.MaterialCardView;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -45,9 +42,8 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
     private WorkspacePagerAdapter pagerAdapter;
-    private BottomActionBar bottomActionBar;
-    private TextView tvStoryTitle;
     private FloatingActionButton fabAI;
+    private TextView tvStoryTitle;
     private StoryInfoPanelFragment storyInfoPanelFragment;
     private AIPanelFragment aiPanelFragment;
 
@@ -117,16 +113,6 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         tvStoryTitle = findViewById(R.id.tv_story_title);
         fabAI = findViewById(R.id.fab_ai);
 
-        // 底部操作栏 - 暂时隐藏（功能开发中）
-        MaterialCardView cardBottomBar = findViewById(R.id.bottom_action_bar);
-        LinearLayout layoutActions = findViewById(R.id.layout_bottom_actions);
-        bottomActionBar = new BottomActionBar(this, cardBottomBar, layoutActions);
-        
-        // 确保底部栏保持隐藏
-        if (cardBottomBar != null) {
-            cardBottomBar.setVisibility(View.GONE);
-        }
-
         // 返回按钮 - 静默保存并退出
         findViewById(R.id.btn_back).setOnClickListener(v -> {
             saveCurrentWorkSilently();
@@ -146,9 +132,6 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
 
         // 保存按钮
         findViewById(R.id.btn_save).setOnClickListener(v -> saveCurrentWork());
-
-        // 更多操作按钮
-        findViewById(R.id.btn_more).setOnClickListener(v -> showMoreMenu());
 
         // AI助手按钮 - 打开右侧AI面板
         fabAI.setOnClickListener(v -> openAIPanel());
@@ -205,110 +188,16 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
                 @Override
                 public void onPageSelected(int position) {
                     super.onPageSelected(position);
-                    // 暂时禁用底部操作栏更新（功能开发中）
-                    // updateBottomActionBar(position);
                 }
             });
-
-            // 初始化底部操作栏（默认显示写作Tab的按钮）- 暂时禁用
-            // updateBottomActionBar(WorkspacePagerAdapter.TAB_WRITING);
         } else {
             Toast.makeText(this, "未找到作品", Toast.LENGTH_SHORT).show();
             finish();
         }
     }
 
-    /**
-     * 根据当前Tab更新底部操作栏
-     */
-    private void updateBottomActionBar(int tabPosition) {
-        switch (tabPosition) {
-            case WorkspacePagerAdapter.TAB_WRITING:
-                setupWritingBottomActions();
-                break;
-            case WorkspacePagerAdapter.TAB_ARCHITECTURE:
-                setupArchitectureBottomActions();
-                break;
-            case WorkspacePagerAdapter.TAB_CHARACTERS:
-                bottomActionBar.setupCharactersActions();
-                break;
-            case WorkspacePagerAdapter.TAB_GRAPH:
-                bottomActionBar.setupMaterialsActions();
-                break;
-            case WorkspacePagerAdapter.TAB_MORE:
-                bottomActionBar.setupMoreActions();
-                break;
-        }
-    }
-
-    /**
-     * 配置写作Tab的底部按钮
-     */
-    private void setupWritingBottomActions() {
-        bottomActionBar.setupWritingActions(
-            this::addVolume,      // + 卷
-            this::addChapter,     // + 章
-            this::aiContinue,     // AI续写
-            this::showStats       // 统计
-        );
-    }
-
-    /**
-     * 配置架构Tab的底部按钮
-     */
-    private void setupArchitectureBottomActions() {
-        bottomActionBar.setupArchitectureActions(
-            this::saveArchitecture,   // 保存
-            this::aiOptimize,         // AI优化
-            this::previewArchitecture // 预览
-        );
-    }
-
-    // ========== 底部按钮功能实现 ==========
-
-    private void addVolume() {
-        Toast.makeText(this, "添加新卷（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 切换到写作Fragment并添加卷
-    }
-
-    private void addChapter() {
-        Toast.makeText(this, "添加新章节（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 切换到写作Fragment并添加章节
-    }
-
-    private void aiContinue() {
-        openAIPanel();
-        // 预填充“续写”指令
-        if (aiPanelFragment != null) {
-            aiPanelFragment.prefillMessage("请帮我续写下一章内容");
-        }
-    }
-
-    private void showStats() {
-        Toast.makeText(this, "字数统计（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 显示统计信息
-    }
-
-    private void saveArchitecture() {
-        Toast.makeText(this, "保存架构信息（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 保存架构Fragment的数据
-    }
-
-    private void aiOptimize() {
-        openAIPanel();
-        // 预填充“优化”指令
-        if (aiPanelFragment != null) {
-            aiPanelFragment.prefillMessage("请帮我优化简介和大纲");
-        }
-    }
-
-    private void previewArchitecture() {
-        Toast.makeText(this, "预览效果（功能开发中）", Toast.LENGTH_SHORT).show();
-        // TODO: 显示预览界面
-    }
-
     // ========== Toolbar按钮功能 ==========
-
+    
     private void saveCurrentWork() {
         saveCurrentWorkInternal(true);
     }
@@ -345,23 +234,6 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         if (showToast) {
             Toast.makeText(this, "已保存所有更新", Toast.LENGTH_SHORT).show();
         }
-    }
-
-    private void showMoreMenu() {
-        // 显示更多操作菜单
-        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(this, findViewById(R.id.btn_more));
-        popupMenu.getMenu().add("导出作品");
-        popupMenu.getMenu().add("分享");
-        popupMenu.getMenu().add("删除作品");
-        popupMenu.getMenu().add("设置");
-        
-        popupMenu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
-            Toast.makeText(this, title + "（功能开发中）", Toast.LENGTH_SHORT).show();
-            return true;
-        });
-        
-        popupMenu.show();
     }
 
     private void openAIPanel() {

@@ -96,6 +96,9 @@ public class ArchitectureFragment extends BaseFragment {
     
     // 封面图片请求码
     private static final int REQUEST_CODE_SELECT_COVER = 1001;
+    
+    // 装饰图形（无封面时显示）
+    private View decorationView;
 
     public static ArchitectureFragment newInstance(int storyId) {
         ArchitectureFragment fragment = new ArchitectureFragment();
@@ -141,6 +144,7 @@ public class ArchitectureFragment extends BaseFragment {
         etCustomGenre = view.findViewById(R.id.et_custom_genre);
         btnAddGenre = view.findViewById(R.id.btn_add_genre);
         btnGenerateCover = view.findViewById(R.id.btn_generate_cover);
+        decorationView = view.findViewById(R.id.view_decoration);
 
         // AI生成封面按钮
         btnGenerateCover.setOnClickListener(v -> showCoverGenerationDialog());
@@ -586,6 +590,7 @@ public class ArchitectureFragment extends BaseFragment {
                     ivCoverImage.setImageBitmap(bitmap);
                     ivCoverImage.setVisibility(View.VISIBLE);
                     vCoverBackground.setVisibility(View.GONE);
+                    decorationView.setVisibility(View.GONE);
                 } else {
                     // 图片加载失败，显示渐变背景
                     ivCoverImage.setVisibility(View.GONE);
@@ -595,11 +600,13 @@ public class ArchitectureFragment extends BaseFragment {
                 e.printStackTrace();
                 ivCoverImage.setVisibility(View.GONE);
                 vCoverBackground.setVisibility(View.VISIBLE);
+                decorationView.setVisibility(View.VISIBLE);
             }
         } else {
-            // 没有封面图片，显示渐变背景
+            // 没有封面图片，显示渐变背景和装饰
             ivCoverImage.setVisibility(View.GONE);
             vCoverBackground.setVisibility(View.VISIBLE);
+            decorationView.setVisibility(View.VISIBLE);
         }
     }
     
