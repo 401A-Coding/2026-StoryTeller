@@ -152,15 +152,68 @@
 
 ## 五、版本历史
 
-| 版本 | 日期 | 更新内容               |
-|------|------|--------------------|
-|1.0.0|2026.05.28| 首发版本，初步实现完整小说创作工作流 |
-| 1.0.1 | 2026.05.29 | 当前版本，更新首页布局        |
+| 版本    | 日期         | 更新内容               |
+|-------|------------|--------------------|
+| 1.0.0 | 2026.05.28 | 首发版本，初步实现完整小说创作工作流 |
+| 1.0.1 | 2026.05.29 | 更新首页布局             |
+| 1.0.2 | 2026.05.29 | 配置构建发布工作流          |
+| 1.0.3 | 2026.05.30 | 最新版本，实现朗读功能        |
 
 ---
 
-## 六、提交规范（GitHub）
+## 六、发布流程（CI/CD）
+
+项目使用 GitHub Actions 实现自动化构建和发布。
+
+### 发布步骤
+
+```bash
+# 1. PR 合并到 main 后，确保本地 main 最新
+git checkout main && git pull
+
+# 2. 创建 tag（遵循语义化版本 v{major}.{minor}.{patch}）
+git tag v1.1.0
+
+# 3. 推送 tag 触发构建
+git push origin v1.1.0
+```
+
+
+### GitHub Actions 工作流程
+
+推送 tag 后自动执行：
+1. 解密 keystore（从 Secrets 获取）
+2. 构建 Release APK（签名）
+3. 创建 GitHub Release（草稿模式）
+
+### 首次配置
+
+1. **生成签名密钥**：在 Android Studio 中生成 JKS 文件
+2. **Base64 编码 keystore**：
+   ```bash
+   # Linux/Mac
+   base64 keystore.jks | tr -d '\n' > keystore_b64.txt
+   
+   # Windows PowerShell
+   [Convert]::ToBase64String((Get-Content -Path "keystore.jks" -Encoding Byte)) -replace '\r?\n' | Set-Content keystore_b64.txt
+   ```
+3. **添加 GitHub Secrets**：
+   - `KEY_STORE_FILE`：Base64 编码的 keystore 内容
+   - `KEY_STORE_PASSWORD`：Keystore 密码
+   - `KEY_PASSWORD`：密钥密码
+
+### Workflow 文件
+
+- `.github/workflows/android.yml`：CI 检查（PR/推送时构建 debug）
+- `.github/workflows/release.yml`：Release 发布（推送 tag 时构建 release）
+
+
+---
+
+## 七、提交规范（GitHub）
+
 
 - 每周功能合并到 `main`
 - 功能分支命名：`feature/模块名`
+- 发布分支命名：`release/v{version}`
 - 提交信息：`feat: 完成XXX` / `fix: 修复XXX` / `ui: 优化XXX`

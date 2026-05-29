@@ -14,13 +14,13 @@ android {
         applicationId = "com.example.storyteller"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2605293
-        versionName = "1.0.2"
+        versionCode = 2605304
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 启用 BuildConfig 生成
-        buildConfigField("String", "VERSION_NAME", "\"1.0.2\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.0.3\"")
     }
 
     buildFeatures {
