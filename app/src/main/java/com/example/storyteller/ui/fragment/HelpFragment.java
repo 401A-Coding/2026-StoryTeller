@@ -7,6 +7,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.example.storyteller.BuildConfig;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 
@@ -23,6 +24,10 @@ public class HelpFragment extends BaseFragment {
 
     @Override
     protected void initView(View view) {
+        // 设置版本号
+        android.widget.TextView tvVersion = view.findViewById(R.id.tv_version);
+        tvVersion.setText("StoryTeller v" + BuildConfig.VERSION_NAME);
+
         // 书架模块帮助
         view.findViewById(R.id.card_bookshelf).setOnClickListener(v -> showBookshelfHelp());
         
