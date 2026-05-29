@@ -336,9 +336,10 @@
 
         <!-- 版本信息 -->
         <TextView
+            android:id="@+id/tv_version"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="StoryTeller v1.0"
+            android:text="StoryTeller"
             android:textSize="12sp"
             android:textColor="@color/text_hint"
             android:layout_gravity="center_horizontal"
