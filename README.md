@@ -1,9 +1,9 @@
 # AI 故事生成助手 - Android 项目
 
 ## 一、项目介绍
-**项目名称**：AI 故事生成助手（Android 本地版）
-**项目仓库**：https://github.com/401A-Coding/2026-StoryTeller
-**项目主页**：https://401a-coding.github.io/2026-StoryTeller
+**项目名称**：AI 故事生成助手（Android 本地版）  
+**项目仓库**：https://github.com/401A-Coding/2026-StoryTeller  
+**项目主页**：https://401a-coding.github.io/2026-StoryTeller  
 **开发环境**：Android Studio + Java  
 **数据方案**：全本地存储（SQLite + SharedPreferences），仅调用大模型 API 生成内容，**无云端部署**  
 **项目目标**：完成一个可正常运行、界面美观、功能完整的 Android 应用原型，熟悉移动端 UI、数据存储、网络请求、交互逻辑开发。
