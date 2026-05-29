@@ -34,6 +34,7 @@ public class HomeFragment extends BaseFragment {
     private TextView tvCurrentNovelTitle;
     private TextView tvCurrentNovelStats;
     private TextView tvCurrentNovelLastEdit;
+    private View btnContinueEdit;
     private ImageView ivCurrentCoverImage;
     private View vCurrentCoverBackground;
     private TextView tvRecentTitle;
@@ -49,8 +50,8 @@ public class HomeFragment extends BaseFragment {
 
     @Override
     protected void initView(View view) {
-        view.findViewById(R.id.btn_continue_edit)
-            .setOnClickListener(v -> continueEditingCurrentStory());
+        btnContinueEdit = view.findViewById(R.id.btn_continue_edit);
+        btnContinueEdit.setOnClickListener(v -> continueEditingCurrentStory());
         view.findViewById(R.id.btn_switch_novel).setOnClickListener(v -> showSwitchNovelDialog());
         tvCurrentNovelTitle = view.findViewById(R.id.tv_current_novel_title);
         tvCurrentNovelStats = view.findViewById(R.id.tv_current_novel_stats);
@@ -79,7 +80,7 @@ public class HomeFragment extends BaseFragment {
     }
 
     private void refreshCurrentNovel() {
-        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null) {
+        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null || btnContinueEdit == null) {
             return;
         }
         String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
@@ -103,6 +104,7 @@ public class HomeFragment extends BaseFragment {
             tvCurrentNovelTitle.setText(R.string.home_current_novel_empty_title);
             tvCurrentNovelStats.setText(R.string.home_current_novel_stats_empty);
             tvCurrentNovelLastEdit.setText(R.string.home_current_novel_last_edit_empty);
+            btnContinueEdit.setVisibility(View.GONE);
             bindCurrentCover(null);
             return;
         }
@@ -112,6 +114,7 @@ public class HomeFragment extends BaseFragment {
         tvCurrentNovelTitle.setText(story.getTitle());
         tvCurrentNovelStats.setText(buildStatsText(story));
         tvCurrentNovelLastEdit.setText(getString(R.string.home_current_novel_last_edit_format, formatLastEditTime(story.getLastEditTime())));
+        btnContinueEdit.setVisibility(View.VISIBLE);
         bindCurrentCover(story);
     }
 
