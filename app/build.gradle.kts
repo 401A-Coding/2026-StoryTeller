@@ -27,6 +27,15 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = "storyteller"
+            keyPassword = "gd20020502"
+            storeFile = file("storyteller.jks")
+            storePassword = "gd20020502"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -34,6 +43,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
