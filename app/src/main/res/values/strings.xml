@@ -137,6 +137,8 @@
     <string name="title_appearance">外观与显示</string>
     <string name="title_help">使用帮助</string>
     <string name="title_support">支持与反馈</string>
+    <string name="title_about">关于</string>
+    <string name="title_feedback">意见反馈</string>
     <string name="theme_mode">主题</string>
     <string name="theme_mode_light">浅色</string>
     <string name="theme_mode_dark">深色</string>

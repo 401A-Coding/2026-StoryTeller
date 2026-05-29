@@ -84,7 +84,13 @@ public class SettingsFragment extends BaseFragment {
         view.findViewById(R.id.iv_theme_arrow).setOnClickListener(v -> showThemeModeDialog());
 
         // 使用帮助
-        view.findViewById(R.id.btn_help).setOnClickListener(v -> showHelpFragment());
+        view.findViewById(R.id.btn_help).setOnClickListener(v -> showFragment(new HelpFragment()));
+
+        // 关于
+        view.findViewById(R.id.btn_about).setOnClickListener(v -> showFragment(new AboutFragment()));
+
+        // 意见反馈
+        view.findViewById(R.id.btn_feedback).setOnClickListener(v -> showFragment(new FeedbackFragment()));
     }
 
     @Override
@@ -200,11 +206,10 @@ public class SettingsFragment extends BaseFragment {
                 .show();
     }
 
-    private void showHelpFragment() {
-        Fragment helpFragment = new HelpFragment();
+    private void showFragment(Fragment fragment) {
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, helpFragment)
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
     }

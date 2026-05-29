@@ -165,7 +165,7 @@ public class HelpFragment extends BaseFragment {
     private void openGitHub() {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/401A-Coding/2026-StoryTeller"));
+                    Uri.parse("https://401a-coding.github.io/2026-StoryTeller"));
             startActivity(intent);
         } catch (Exception e) {
             Toast.makeText(requireContext(), "无法打开链接", Toast.LENGTH_SHORT).show();
