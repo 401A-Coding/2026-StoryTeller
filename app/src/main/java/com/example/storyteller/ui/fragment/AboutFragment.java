@@ -149,12 +149,25 @@ public class AboutFragment extends BaseFragment {
 
         if (compareVersions(latestVersion, currentVersion) > 0) {
             // 有新版本
-            new AlertDialog.Builder(requireContext())
+            StringBuilder message = new StringBuilder();
+            message.append("最新版本：").append(latestVersion).append("\n\n");
+            message.append("更新内容：\n").append(release.body);
+
+            // 查找APK下载链接
+            String apkUrl = findApkAsset(release.assets);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
                     .setTitle("发现新版本")
-                    .setMessage("最新版本：" + latestVersion + "\n\n" + release.body)
-                    .setPositiveButton("前往下载", (dialog, which) -> openLink(release.html_url))
-                    .setNegativeButton("暂不更新", null)
-                    .show();
+                    .setMessage(message.toString());
+
+            if (apkUrl != null) {
+                builder.setPositiveButton("下载APK", (dialog, which) -> openLink(apkUrl));
+                builder.setNeutralButton("查看详情", (dialog, which) -> openLink(release.html_url));
+            } else {
+                builder.setPositiveButton("前往下载", (dialog, which) -> openLink(release.html_url));
+            }
+            builder.setNegativeButton("暂不更新", null);
+            builder.show();
         } else {
             // 已是最新版本
             new AlertDialog.Builder(requireContext())
@@ -184,11 +197,32 @@ public class AboutFragment extends BaseFragment {
         return 0;
     }
 
+    /**
+     * 从Assets中查找APK文件下载链接
+     */
+    private String findApkAsset(Asset[] assets) {
+        if (assets == null || assets.length == 0) {
+            return null;
+        }
+        for (Asset asset : assets) {
+            if (asset.name != null && asset.name.endsWith(".apk")) {
+                return asset.browser_download_url;
+            }
+        }
+        return null;
+    }
+
     // GitHub Release JSON 对应类
     private static class GithubRelease {
         String tag_name;
         String name;
         String body;
         String html_url;
+        Asset[] assets;
+    }
+
+    private static class Asset {
+        String name;
+        String browser_download_url;
     }
 }
