@@ -27,7 +27,12 @@ jobs:
       run: chmod +x gradlew
 
     - name: Decode keystore
-      run: echo "$KEY_STORE_FILE" | base64 -d > app/storyteller.jks
+      run: |
+        # 清理换行和空格
+        echo "$KEY_STORE_FILE" | tr -d '\n\r ' > temp_b64.txt
+        # 解码
+        base64 -d temp_b64.txt > app/storyteller.jks
+        rm temp_b64.txt
       env:
         KEY_STORE_FILE: ${{ secrets.KEY_STORE_FILE }}
 
