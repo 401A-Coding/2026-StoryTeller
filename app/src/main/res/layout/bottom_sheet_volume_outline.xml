@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:background="@color/background_primary">
 
     <!-- 标题栏 -->
     <LinearLayout
@@ -13,7 +13,7 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
-        android:background="#F5F5F5">
+        android:background="@color/background_secondary">
 
         <TextView
             android:layout_width="0dp"
@@ -22,7 +22,7 @@
             android:text="编辑卷纲"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="#333333" />
+            android:textColor="@color/text_primary" />
 
         <Button
             android:id="@+id/btn_save_volume"
@@ -52,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:text="卷标题"
                 android:textSize="14sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="4dp" />
 
             <TextView
@@ -61,9 +61,9 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#1976D2"
+                android:textColor="@color/colorPrimary"
                 android:padding="12dp"
-                android:background="#E3F2FD"
+                android:background="@color/colorPrimaryLight"
                 android:layout_marginBottom="16dp" />
 
             <!-- 卷摘要 -->
@@ -91,7 +91,7 @@
                 android:layout_height="wrap_content"
                 android:text="目标字数"
                 android:textSize="14sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="4dp" />
 
             <LinearLayout
@@ -138,7 +138,7 @@
                 android:layout_height="wrap_content"
                 android:text="目标章节数"
                 android:textSize="14sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="4dp" />
 
             <LinearLayout

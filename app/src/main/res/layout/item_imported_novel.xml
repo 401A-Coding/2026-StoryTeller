@@ -19,7 +19,7 @@
             android:layout_width="60dp"
             android:layout_height="80dp"
             android:scaleType="centerCrop"
-            android:background="#F5F5F5"
+            android:background="@color/divider"
             android:contentDescription="封面" />
 
         <!-- 右侧信息区域 -->
@@ -68,7 +68,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="13sp"
-            android:textColor="#757575"
+            android:textColor="@color/text_secondary"
             android:maxLines="1"
             android:ellipsize="end" />
 
@@ -94,7 +94,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textSize="13sp"
-            android:textColor="#616161"
+            android:textColor="@color/text_hint"
             android:maxLines="2"
             android:ellipsize="end"
             android:lineSpacingExtra="2dp" />
@@ -112,21 +112,21 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#999999" />
+                android:textColor="@color/text_hint" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=" · "
                 android:textSize="12sp"
-                android:textColor="#999999" />
+                android:textColor="@color/text_hint" />
 
             <TextView
                 android:id="@+id/tv_word_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#999999" />
+                android:textColor="@color/text_hint" />
 
             <View
                 android:layout_width="0dp"
@@ -139,7 +139,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#BDBDBD" />
+                android:textColor="@color/text_hint" />
         </LinearLayout>
 
         </LinearLayout>

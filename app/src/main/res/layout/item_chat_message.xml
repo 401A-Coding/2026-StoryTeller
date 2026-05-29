@@ -19,7 +19,7 @@
         android:paddingTop="8dp"
         android:paddingEnd="12dp"
         android:paddingBottom="8dp"
-        android:textColor="@color/black"
+        android:textColor="@color/text_primary"
         android:textSize="14sp"
         android:textIsSelectable="true"
         android:longClickable="true"

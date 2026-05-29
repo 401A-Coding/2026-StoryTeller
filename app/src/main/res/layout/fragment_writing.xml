@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:padding="32dp"
             android:text="@string/writing_empty_hint"
-            android:textColor="#999999"
+            android:textColor="@color/text_hint"
             android:textSize="16sp"
             android:gravity="center"
             android:visibility="gone" />
@@ -31,10 +31,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:visibility="gone"
-            app:cardBackgroundColor="#F8FBFF"
+            app:cardBackgroundColor="@color/colorPrimaryLight"
             app:cardCornerRadius="12dp"
             app:cardElevation="1dp"
-            app:strokeColor="#D7E8FF"
+            app:strokeColor="@color/colorPrimary"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -47,7 +47,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/writing_reference_title"
-                    android:textColor="#1F1F1F"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -56,7 +56,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textColor="#5F6368"
+                    android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
                 <TextView
@@ -64,7 +64,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:visibility="gone" />
 
@@ -73,7 +73,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="13sp"
                     android:visibility="gone" />
 
@@ -93,7 +93,7 @@
             android:layout_marginBottom="32dp"
             android:text="@string/btn_add_volume"
             android:textAllCaps="false"
-            android:textColor="#1976D2" />
+            android:textColor="@color/colorPrimary" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

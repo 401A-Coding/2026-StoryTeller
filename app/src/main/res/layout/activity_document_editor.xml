@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/background_primary">
 
     <!-- 工具栏 -->
     <LinearLayout
@@ -11,7 +12,7 @@
         android:orientation="horizontal"
         android:padding="8dp"
         android:gravity="center_vertical"
-        android:background="#F5F5F5">
+        android:background="@color/background_secondary">
 
         <Button
             android:id="@+id/btn_save"
@@ -39,7 +40,7 @@
             android:layout_height="wrap_content"
             android:text="💡 支持Markdown语法"
             android:textSize="12sp"
-            android:textColor="#999999" />
+            android:textColor="@color/text_hint" />
 
     </LinearLayout>
 
@@ -53,7 +54,7 @@
         android:inputType="textMultiLine"
         android:textSize="14sp"
         android:lineSpacingExtra="4dp"
-        android:background="#FFFFFF" />
+        android:background="@color/background_card" />
 
     <!-- 预览模式 -->
     <ScrollView
@@ -61,7 +62,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone"
-        android:background="#FFFFFF">
+        android:background="@color/background_card">
 
         <TextView
             android:id="@+id/tv_document_preview"
@@ -70,7 +71,7 @@
             android:padding="16dp"
             android:textSize="14sp"
             android:lineSpacingExtra="4dp"
-            android:textColor="#333333" />
+            android:textColor="@color/text_primary" />
 
     </ScrollView>
 

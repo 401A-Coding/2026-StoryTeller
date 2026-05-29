@@ -16,7 +16,7 @@
             android:layout_height="wrap_content"
             android:text="章节标题"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="4dp" />
 
         <TextView
@@ -25,9 +25,9 @@
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#9C27B0"
+            android:textColor="@color/colorPrimary"
             android:padding="12dp"
-            android:background="#F3E5F5"
+            android:background="@color/colorPrimaryLight"
             android:layout_marginBottom="16dp" />
 
         <!-- 章节作用 -->
@@ -90,7 +90,7 @@
             android:layout_height="wrap_content"
             android:text="悬念级别"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.slider.Slider
@@ -135,7 +135,7 @@
             android:layout_height="wrap_content"
             android:text="转折级别"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.slider.Slider

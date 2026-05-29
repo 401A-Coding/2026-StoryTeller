@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:text="选择服务商"
         android:textSize="14sp"
-        android:textColor="#666666" />
+        android:textColor="@color/text_secondary" />
 
     <Spinner
         android:id="@+id/spinner_provider"
@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:text="API Key"
         android:textSize="14sp"
-        android:textColor="#666666" />
+        android:textColor="@color/text_secondary" />
 
     <EditText
         android:id="@+id/et_api_key"

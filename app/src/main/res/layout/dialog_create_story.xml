@@ -12,7 +12,7 @@
         android:text="创建小说"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#000000" />
+        android:textColor="@color/text_primary" />
 
     <TextView
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
         android:layout_marginTop="4dp"
         android:text="填写小说基本信息，开始创作"
         android:textSize="14sp"
-        android:textColor="#666666" />
+        android:textColor="@color/text_secondary" />
 
     <!-- 小说标题 -->
     <TextView
@@ -30,7 +30,7 @@
         android:text="小说标题 *"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="#000000" />
+        android:textColor="@color/text_primary" />
 
     <EditText
         android:id="@+id/et_story_title"
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:hint="请输入小说标题"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/bg_outline_edittext"
         android:padding="12dp"
         android:maxLines="1"
         android:inputType="text" />
@@ -51,7 +51,7 @@
         android:text="系列名称"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="#000000" />
+        android:textColor="@color/text_primary" />
 
     <EditText
         android:id="@+id/et_series_name"
@@ -59,7 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:hint="选填：输入系列名称"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/bg_outline_edittext"
         android:padding="12dp"
         android:maxLines="1"
         android:inputType="text" />
@@ -72,7 +72,7 @@
         android:text="小说简介"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="#000000" />
+        android:textColor="@color/text_primary" />
 
     <EditText
         android:id="@+id/et_story_description"
@@ -80,7 +80,7 @@
         android:layout_height="100dp"
         android:layout_marginTop="8dp"
         android:hint="输入小说简介"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/bg_outline_edittext"
         android:padding="12dp"
         android:gravity="top|start"
         android:inputType="textMultiLine" />
@@ -99,7 +99,8 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:text="取消"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="@color/white" />
 
         <Button
             android:id="@+id/btn_create"
@@ -107,8 +108,8 @@
             android:layout_height="wrap_content"
             android:text="创建小说"
             android:textAllCaps="false"
-            android:backgroundTint="#2196F3"
-            android:textColor="#FFFFFF" />
+            android:backgroundTint="@color/colorPrimary"
+            android:textColor="@color/white" />
     </LinearLayout>
 
 </LinearLayout>

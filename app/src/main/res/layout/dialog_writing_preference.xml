@@ -15,7 +15,7 @@
             android:layout_height="wrap_content"
             android:text="写作风格"
             android:textSize="14sp"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
@@ -86,7 +86,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#E0E0E0" />
+            android:background="@color/divider" />
 
         <!-- 叙事视角 -->
         <TextView
@@ -94,7 +94,7 @@
             android:layout_height="wrap_content"
             android:text="叙事视角"
             android:textSize="14sp"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
@@ -132,7 +132,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#E0E0E0" />
+            android:background="@color/divider" />
 
         <!-- 段落长度 -->
         <TextView
@@ -140,7 +140,7 @@
             android:layout_height="wrap_content"
             android:text="段落长度"
             android:textSize="14sp"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
@@ -178,15 +178,15 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#E0E0E0" />
-
+            android:background="@color/divider" />
+        
         <!-- 禁忌内容 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="禁忌内容"
             android:textSize="14sp"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
@@ -217,7 +217,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#E0E0E0" />
+            android:background="@color/divider" />
 
         <!-- 其他特殊要求 -->
         <TextView
@@ -225,7 +225,7 @@
             android:layout_height="wrap_content"
             android:text="其他特殊要求（可选）"
             android:textSize="14sp"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
@@ -250,7 +250,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#E0E0E0" />
+            android:background="@color/divider" />
 
         <!-- AI学习的偏好区域容器 -->
         <LinearLayout
@@ -265,7 +265,7 @@
                 android:layout_height="wrap_content"
                 android:text="AI学习的偏好"
                 android:textSize="14sp"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
@@ -274,7 +274,7 @@
                 android:layout_height="wrap_content"
                 android:text="从对话历史中分析您的写作习惯，显示AI分析结果供您参考"
                 android:textSize="12sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp" />
 
             <!-- 分析按钮区域 -->
@@ -309,7 +309,7 @@
                 android:layout_marginTop="12dp"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="#F5F5F5"
+                app:cardBackgroundColor="@color/background_secondary"
                 xmlns:app="http://schemas.android.com/apk/res-auto">
 
 
@@ -324,7 +324,7 @@
                         android:layout_height="wrap_content"
                         android:text="AI分析结果"
                         android:textSize="12sp"
-                        android:textColor="#666666"
+                        android:textColor="@color/text_secondary"
                         android:textStyle="bold"
                         android:layout_marginBottom="8dp" />
 
@@ -334,7 +334,7 @@
                         android:layout_height="wrap_content"
                         android:text="当前无分析结果"
                         android:textSize="13sp"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_hint"
                         android:lineSpacingExtra="4dp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

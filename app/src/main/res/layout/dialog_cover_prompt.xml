@@ -4,15 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:background="@color/background_card"
     android:padding="16dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="输入封面风格描述（可选）"
-        android:textColor="#666666"
-        android:textSize="12sp"
-        android:layout_marginBottom="8dp" />
 
     <EditText
         android:id="@+id/et_cover_prompt"

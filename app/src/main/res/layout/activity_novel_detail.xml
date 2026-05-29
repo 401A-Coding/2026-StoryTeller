@@ -3,18 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA">
+    android:background="@color/background_primary">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
-
-        <!-- 顶部封面区域 -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="240dp"
-            android:background="#E3F2FD">
+            android:background="@color/background_secondary">
 
             <ImageView
                 android:id="@+id/iv_cover"
@@ -40,16 +38,14 @@
                 android:layout_height="wrap_content"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="#212121" />
-
-            <!-- 作者 -->
+                android:textColor="@color/text_primary" />
             <TextView
                 android:id="@+id/tv_author"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="14sp"
-                android:textColor="#757575" />
+                android:textColor="@color/text_secondary" />
 
             <!-- 标签区域 -->
             <HorizontalScrollView
@@ -79,21 +75,21 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="13sp"
-                    android:textColor="#616161" />
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text=" · "
                     android:textSize="13sp"
-                    android:textColor="#616161" />
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/tv_word_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="13sp"
-                    android:textColor="#616161" />
+                    android:textColor="@color/text_secondary" />
 
                 <View
                     android:layout_width="0dp"
@@ -105,7 +101,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="12sp"
-                    android:textColor="#9E9E9E" />
+                    android:textColor="@color/text_hint" />
             </LinearLayout>
 
             <!-- 分隔线 -->
@@ -113,7 +109,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
-                android:background="#E0E0E0" />
+                android:background="@color/divider" />
 
             <!-- 简介标题 -->
             <TextView
@@ -123,7 +119,7 @@
                 android:text="作品简介"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#212121" />
+                android:textColor="@color/text_primary" />
 
             <!-- 简介内容 -->
             <TextView
@@ -132,7 +128,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="14sp"
-                android:textColor="#424242"
+                android:textColor="@color/text_primary"
                 android:lineSpacingExtra="4dp" />
 
             <!-- 分隔线 -->
@@ -140,7 +136,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
-                android:background="#E0E0E0" />
+                android:background="@color/divider" />
 
             <!-- 章节列表标题 -->
             <TextView
@@ -150,7 +146,7 @@
                 android:text="章节目录"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#212121" />
+                android:textColor="@color/text_primary" />
 
             <!-- 章节列表 -->
             <androidx.recyclerview.widget.RecyclerView
@@ -168,7 +164,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:padding="16dp"
-            android:background="#FFFFFF"
+            android:background="@color/background_card"
             android:elevation="8dp">
 
             <com.google.android.material.button.MaterialButton

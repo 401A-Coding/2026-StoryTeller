@@ -133,6 +133,17 @@
     <string name="material_detail_delete_failed">删除失败</string>
     <string name="material_detail_delete_confirm_title">删除素材</string>
     <string name="material_detail_delete_confirm_message">确认删除这条素材吗？删除后无法恢复。</string>
+    <string name="add_model">添加模型</string>
+    <string name="title_appearance">外观与显示</string>
+    <string name="title_help">使用帮助</string>
+    <string name="title_support">支持与反馈</string>
+    <string name="title_about">关于</string>
+    <string name="title_feedback">意见反馈</string>
+    <string name="theme_mode">主题</string>
+    <string name="theme_mode_light">浅色</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="theme_mode_system">跟随系统</string>
+    <string name="theme_switched">主题已切换为 %1$s</string>
     <string name="action_cancel">取消</string>
     <string name="action_delete">删除</string>
     <string name="desc_avatar">用户头像</string>

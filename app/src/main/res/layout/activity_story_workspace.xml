@@ -38,7 +38,8 @@
                     android:layout_height="48dp"
                     android:contentDescription="@string/action_back"
                     android:padding="12dp"
-                    android:src="@drawable/ic_arrow_back" />
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@android:color/white" />
 
                 <!-- 中间：标题区域 -->
                 <LinearLayout
@@ -61,7 +62,7 @@
                         android:src="@drawable/ic_menu"
                         android:contentDescription="打开信息面板"
                         android:scaleType="centerInside"
-                        app:tint="#FFFFFF" />
+                        app:tint="@android:color/white" />
 
                     <!-- 作品标题 -->
                     <TextView
@@ -86,7 +87,7 @@
                         android:src="@drawable/ic_arrow_drop_down"
                         android:contentDescription="展开"
                         android:scaleType="centerInside"
-                        app:tint="#FFFFFF" />
+                        app:tint="@android:color/white" />
 
                 </LinearLayout>
 
@@ -97,8 +98,8 @@
                     android:layout_height="48dp"
                     android:contentDescription="保存"
                     android:padding="12dp"
-                    android:src="@drawable/ic_save" />
-
+                    android:src="@drawable/ic_save"
+                    app:tint="@android:color/white" />
             </LinearLayout>
 
         </androidx.appcompat.widget.Toolbar>
@@ -108,13 +109,8 @@
             android:id="@+id/tab_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
-            app:tabGravity="fill"
-            app:tabIndicatorColor="#FFFFFF"
-            app:tabIndicatorHeight="3dp"
             app:tabMode="scrollable"
-            app:tabSelectedTextColor="#FFFFFF"
-            app:tabTextColor="#CCFFFFFF" />
+            app:tabGravity="fill" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- ViewPager2 - 主内容区域 -->
@@ -144,7 +140,7 @@
         android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="#FFFFFF"
+        android:background="@color/background_card"
         android:elevation="8dp"
         android:clickable="true"
         android:focusable="true" />
@@ -155,7 +151,7 @@
         android:layout_width="350dp"
         android:layout_height="match_parent"
         android:layout_gravity="end"
-        android:background="#FFFFFF"
+        android:background="@color/background_card"
         android:elevation="8dp"
         android:clickable="true"
         android:focusable="true" />

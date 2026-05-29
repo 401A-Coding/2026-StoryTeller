@@ -2,6 +2,7 @@ package com.example.storyteller.ui.adapter;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.storyteller.R;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.List;
@@ -108,10 +110,10 @@ public class CoverOptionAdapter extends RecyclerView.Adapter<CoverOptionAdapter.
             // 更新选中状态（边框+半透明背景色）
             if (isSelected) {
                 // 半透明背景色高亮
-                cardCover.setCardBackgroundColor(0x332196F3); // #2196F3 的 20% 透明度
+                cardCover.setCardBackgroundColor(Color.argb(50, 33, 150, 243)); // #2196F3 的 20% 透明度
                 // 加粗边框
                 cardCover.setStrokeWidth(8);
-                cardCover.setStrokeColor(0xFF2196F3);
+                cardCover.setStrokeColor(ThemeColorUtils.getLinkColor(context));
             } else {
                 // 恢复正常
                 cardCover.setCardBackgroundColor(0x00000000); // 透明背景

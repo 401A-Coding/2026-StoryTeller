@@ -17,6 +17,7 @@ import com.example.storyteller.R;
 import com.example.storyteller.model.ImportedNovel;
 import com.example.storyteller.ui.adapter.ChapterListAdapter;
 import com.example.storyteller.ui.adapter.VolumeChapterAdapter;
+import com.example.storyteller.utils.ThemeColorUtils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -294,7 +295,7 @@ public class NovelDetailActivity extends AppCompatActivity {
         TextView tagView = new TextView(this);
         tagView.setText(tag);
         tagView.setTextSize(12);
-        tagView.setTextColor(getResources().getColor(android.R.color.holo_blue_dark, null));
+        tagView.setTextColor(ThemeColorUtils.getLinkColor(this));
         tagView.setPadding(16, 6, 16, 6);
         tagView.setBackgroundResource(R.drawable.bg_tag_chip);
 

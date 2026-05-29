@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色主题专用颜色 -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="white_80">#99FFFFFF</color>
+    <color name="chat_bubble_user">#FF1E4A6E</color>
+    <color name="chat_bubble_bot">#FF3A3A3A</color>
+    <color name="colorPrimary">#9C5DBB</color>
+    <color name="colorPrimaryLight">#FF2D3748</color>
+    <color name="colorGray">#AAAAAA</color>
+
+    <!-- 深色主题背景色 -->
+    <color name="background_primary">#FF121212</color>
+    <color name="background_secondary">#FF1E1E1E</color>
+    <color name="background_card">#FF2D2D2D</color>
+
+    <!-- 深色主题文字色 -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB0B0B0</color>
+    <color name="text_hint">#FF808080</color>
+
+    <!-- 深色主题分割线 -->
+    <color name="divider">#FF3D3D3D</color>
+    <color name="link_color">#FF90CAF9</color>
+</resources>

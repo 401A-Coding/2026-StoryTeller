@@ -326,7 +326,7 @@ public class MoreFragment extends BaseFragment {
                         break;
                     case 2: // 项目主页
                         Intent webIntent = new Intent(Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/401A-Coding/2026-StoryTeller"));
+                            android.net.Uri.parse("https://401a-coding.github.io/2026-StoryTeller"));
                         startActivity(webIntent);
                         break;
                 }

@@ -18,6 +18,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 启用 BuildConfig 生成
+        buildConfigField("String", "VERSION_NAME", "\"1.0\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -39,6 +46,7 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
+    implementation(libs.google.material)
     implementation(libs.material)
     implementation(libs.okhttp)
     implementation(libs.gson)

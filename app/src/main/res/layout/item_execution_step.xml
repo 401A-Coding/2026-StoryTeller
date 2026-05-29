@@ -31,7 +31,7 @@
             android:layout_height="wrap_content"
             android:text="正在读取上下文..."
             android:textSize="13sp"
-            android:textColor="#424242"
+            android:textColor="@color/text_primary"
             android:textIsSelectable="true" />
 
         <!-- 详细信息（可选） -->
@@ -42,7 +42,7 @@
             android:layout_marginTop="2dp"
             android:text=""
             android:textSize="11sp"
-            android:textColor="#757575"
+            android:textColor="@color/text_secondary"
             android:visibility="gone"
             android:textIsSelectable="true" />
 

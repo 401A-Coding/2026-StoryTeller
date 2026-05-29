@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:scaleType="centerCrop"
-            android:background="#F5F5F5"
+            android:background="@color/background_secondary"
             android:visibility="gone" />
 
         <!-- 标题和分类 -->
@@ -44,7 +44,7 @@
                 android:layout_weight="1"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary"
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:text="设定标题" />
@@ -81,8 +81,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="12sp"
-            android:textColor="#666666"
-            android:background="#E0E0E0"
+            android:textColor="@color/text_secondary"
+            android:background="@color/divider"
             android:paddingHorizontal="8dp"
             android:paddingVertical="2dp"
             android:text="世界观 · 地理环境" />
@@ -94,7 +94,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:maxLines="2"
             android:ellipsize="end"
             android:lineSpacingMultiplier="1.2"
@@ -124,7 +124,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#2196F3"
+                android:textColor="@color/link_color"
                 android:visibility="gone"
                 android:text="📥 源自全局素材" />
 
@@ -138,7 +138,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#999999"
+                android:textColor="@color/text_hint"
                 android:text="2026-05-16" />
 
         </LinearLayout>

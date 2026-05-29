@@ -55,7 +55,7 @@
                 android:paddingEnd="10dp"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/white"
                 android:textSize="11sp" />
 
             <!-- 三点菜单 - 右上角 -->
@@ -70,7 +70,7 @@
                 android:contentDescription="更多操作"
                 android:padding="8dp"
                 android:src="@drawable/ic_more_vert"
-                app:tint="#FFFFFF" />
+                app:tint="@color/white" />
 
         </FrameLayout>
 
@@ -95,7 +95,7 @@
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end"
-            android:textColor="@android:color/black" />
+            android:textColor="@color/text_primary" />
 
         <!-- 系列名 -->
         <TextView
@@ -105,7 +105,7 @@
             android:layout_marginTop="2dp"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="#555555"
+            android:textColor="@color/text_secondary"
             android:maxLines="1"
             android:ellipsize="end"
             android:visibility="gone" />
@@ -117,7 +117,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="@color/text_secondary"
             android:maxLines="2"
             android:ellipsize="end"
             android:lineSpacingMultiplier="1.2"
@@ -130,7 +130,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="@color/text_secondary"
             android:maxLines="1"
             android:ellipsize="end" />
 
@@ -141,7 +141,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="@color/text_secondary"
             android:maxLines="1"
             android:ellipsize="end" />
 

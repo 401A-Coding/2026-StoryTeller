@@ -256,7 +256,7 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
                 Chip chip = new Chip(holder.itemView.getContext());
                 chip.setText(tags.get(i));
                 chip.setTextSize(10);
-                chip.setChipMinHeight(20f);
+                chip.setChipMinHeight(28f);
                 chip.setChipBackgroundColorResource(android.R.color.transparent);
                 chip.setChipStrokeWidth(1f);
                 chip.setChipStrokeColorResource(android.R.color.darker_gray);
@@ -268,7 +268,7 @@ public class ExtractionResultAdapter extends RecyclerView.Adapter<ExtractionResu
                 Chip chip = new Chip(holder.itemView.getContext());
                 chip.setText("+" + (tags.size() - maxShow));
                 chip.setTextSize(10);
-                chip.setChipMinHeight(20f);
+                chip.setChipMinHeight(28f);
                 chip.setClickable(false);
                 chip.setCheckable(false);
                 holder.chipGroupTags.addView(chip);

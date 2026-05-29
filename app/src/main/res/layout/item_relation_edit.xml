@@ -27,7 +27,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
-                android:textColor="@android:color/holo_blue_dark"
+                android:textColor="@color/link_color"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
@@ -37,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="@color/text_secondary"
                 android:maxLines="1" />
 
             <!-- 目标设定名称 -->
@@ -46,7 +46,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
-                android:textColor="@android:color/holo_blue_dark"
+                android:textColor="@color/link_color"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
@@ -92,8 +92,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="@android:color/darker_gray"
-        android:background="@android:drawable/edit_text"
+        android:textColor="@color/text_secondary"
+        android:background="@drawable/bg_outline_edittext"
         android:padding="8dp"
         android:layout_marginStart="24dp"
         android:hint="添加关系描述..."

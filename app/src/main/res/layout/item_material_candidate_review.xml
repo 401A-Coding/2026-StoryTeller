@@ -33,7 +33,7 @@
                 android:layout_weight="1"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary"
                 android:maxLines="2"
                 android:ellipsize="end"
                 android:text="候选标题" />
@@ -44,8 +44,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:textSize="12sp"
-                android:textColor="#666666"
-                android:background="#E0E0E0"
+                android:textColor="@color/text_secondary"
+                android:background="@color/divider"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
                 android:text="分类" />
@@ -59,7 +59,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:maxLines="3"
             android:ellipsize="end"
             android:lineSpacingMultiplier="1.2"
@@ -78,7 +78,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#2196F3"
+                android:textColor="@color/link_color"
                 android:visibility="gone"
                 android:text="📥 AI提取" />
 
@@ -92,7 +92,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#999999"
+                android:textColor="@color/text_hint"
                 android:text="置信度: 高" />
 
         </LinearLayout>

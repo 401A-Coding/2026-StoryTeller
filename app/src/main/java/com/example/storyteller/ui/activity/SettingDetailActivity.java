@@ -35,6 +35,7 @@ import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.dialog.SettingImageSelectionDialog;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.example.storyteller.utils.SpecificAttributesParser;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.example.storyteller.utils.SpecificAttributesParser.AttributeField;
 import com.example.storyteller.utils.SpecificAttributesParser.FieldType;
 import com.google.android.material.chip.Chip;
@@ -327,7 +328,7 @@ public class SettingDetailActivity extends AppCompatActivity {
             StorySetting sourceSetting = settingDao.getById(currentSetting.getSourceMaterialId());
             if (sourceSetting != null) {
                 tvSourceTitle.setText(sourceSetting.getTitle());
-                tvSourceTitle.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+                tvSourceTitle.setTextColor(ThemeColorUtils.getLinkColor(this));
                 layoutSourceInfo.setVisibility(View.VISIBLE);
                 
                 // 设置点击跳转到全局素材详情
@@ -344,7 +345,7 @@ public class SettingDetailActivity extends AppCompatActivity {
             } else {
                 // 原素材已被删除，显示提示
                 tvSourceTitle.setText("原素材已被删除");
-                tvSourceTitle.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                tvSourceTitle.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
                 layoutSourceInfo.setVisibility(View.VISIBLE);
                 layoutSourceInfo.setClickable(false);
                 cardSourceInfo.setClickable(false);
@@ -1095,7 +1096,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView labelView = new TextView(this);
         labelView.setText(label + "：");
         labelView.setTextSize(14);
-        labelView.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        labelView.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         labelView.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -1103,7 +1104,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView valueView = new TextView(this);
         valueView.setText(value);
         valueView.setTextSize(14);
-        valueView.setTextColor(getResources().getColor(android.R.color.black));
+        valueView.setTextColor(ThemeColorUtils.getTextPrimary(this));
         valueView.setLayoutParams(new LinearLayout.LayoutParams(
             0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         
@@ -1506,7 +1507,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         int currentValue = seekBar.getProgress();
         valueText.setText("当前值: " + currentValue + "/10");
         valueText.setTextSize(12);
-        valueText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        valueText.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -1655,7 +1656,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView formatHint = new TextView(this);
         formatHint.setText("格式：" + template.replace(",", fieldDelimiter) + "（回车分隔多条）");
         formatHint.setTextSize(12);
-        formatHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        formatHint.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         formatHint.setPadding(0, 4, 0, 8);
         mainContainer.addView(formatHint);
         
@@ -1763,7 +1764,7 @@ public class SettingDetailActivity extends AppCompatActivity {
                 TextView delimiterLabel = new TextView(this);
                 delimiterLabel.setText(fieldDelimiter);
                 delimiterLabel.setTextSize(14);
-                delimiterLabel.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                delimiterLabel.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
                 rowLayout.addView(delimiterLabel);
             }
         }
@@ -1851,7 +1852,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView label = new TextView(this);
         label.setText(text);
         label.setTextSize(14);
-        label.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        label.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         label.setPadding(0, 8, 0, 4);
         container.addView(label);
     }
@@ -2080,7 +2081,7 @@ public class SettingDetailActivity extends AppCompatActivity {
             TextView emptyHint = new TextView(this);
             emptyHint.setText("暂无关联设定");
             emptyHint.setTextSize(14);
-            emptyHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            emptyHint.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
             layoutRelationsContent.addView(emptyHint);
         } else {
             layoutRelations.setVisibility(View.VISIBLE);
@@ -2382,10 +2383,10 @@ public class SettingDetailActivity extends AppCompatActivity {
         tvSource.setTextSize(14);
         if (rel.isSourceSettingDeleted()) {
             // 已删除的设定显示为灰色，不可点击
-            tvSource.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvSource.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
             tvSource.setText(tvSource.getText() + " [已删除]");
         } else {
-            tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvSource.setTextColor(ThemeColorUtils.getLinkColor(this));
             // 点击事件
             View.OnClickListener sourceClickListener = v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
@@ -2404,7 +2405,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         String arrow = rel.isDirected() ? " → " : " ↔ ";
         tvArrow.setText(arrow + rel.getTypeDisplayName() + arrow);
         tvArrow.setTextSize(12);
-        tvArrow.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        tvArrow.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         tvArrow.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -2415,10 +2416,10 @@ public class SettingDetailActivity extends AppCompatActivity {
         tvTarget.setTextSize(14);
         if (rel.isTargetSettingDeleted()) {
             // 已删除的设定显示为灰色，不可点击
-            tvTarget.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvTarget.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
             tvTarget.setText(tvTarget.getText() + " [已删除]");
         } else {
-            tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvTarget.setTextColor(ThemeColorUtils.getLinkColor(this));
             // 点击事件
             View.OnClickListener targetClickListener = v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
@@ -2443,7 +2444,7 @@ public class SettingDetailActivity extends AppCompatActivity {
             TextView tvDesc = new TextView(this);
             tvDesc.setText(rel.getDescription());
             tvDesc.setTextSize(12);
-            tvDesc.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvDesc.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
             tvDesc.setPadding(0, 0, 0, 8);
             container.addView(tvDesc);
         }
@@ -2471,10 +2472,10 @@ public class SettingDetailActivity extends AppCompatActivity {
         // 源设定
         if (rel.isSourceSettingDeleted()) {
             tvSource.setText(sourceName + " [已删除]");
-            tvSource.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvSource.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         } else {
             tvSource.setText(sourceName);
-            tvSource.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvSource.setTextColor(ThemeColorUtils.getLinkColor(this));
             tvSource.setOnClickListener(v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
                 intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getSourceSettingId());
@@ -2490,10 +2491,10 @@ public class SettingDetailActivity extends AppCompatActivity {
         // 目标设定
         if (rel.isTargetSettingDeleted()) {
             tvTarget.setText(targetName + " [已删除]");
-            tvTarget.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            tvTarget.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         } else {
             tvTarget.setText(targetName);
-            tvTarget.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            tvTarget.setTextColor(ThemeColorUtils.getLinkColor(this));
             tvTarget.setOnClickListener(v -> {
                 Intent intent = new Intent(SettingDetailActivity.this, SettingDetailActivity.class);
                 intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, rel.getTargetSettingId());
@@ -2506,9 +2507,9 @@ public class SettingDetailActivity extends AppCompatActivity {
         btnToggleDirection.setText(rel.isDirected() ? "→" : "↔");
         if (rel.isSourceSettingDeleted() || rel.isTargetSettingDeleted()) {
             btnToggleDirection.setEnabled(false);
-            btnToggleDirection.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            btnToggleDirection.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         } else {
-            btnToggleDirection.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            btnToggleDirection.setTextColor(ThemeColorUtils.getLinkColor(this));
             btnToggleDirection.setOnClickListener(v -> {
                 rel.setDirected(!rel.isDirected());
                 String newArrow = rel.isDirected() ? " → " : " ↔ ";
@@ -2519,12 +2520,12 @@ public class SettingDetailActivity extends AppCompatActivity {
             });
         }
         
-        // 删除按钮
+        // 删除按钮（始终使用错误色，表示危险操作）
         if (!rel.isSourceSettingDeleted() && !rel.isTargetSettingDeleted()) {
-            btnDelete.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            btnDelete.setTextColor(ThemeColorUtils.getErrorColor(this));
             btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
         } else {
-            btnDelete.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            btnDelete.setTextColor(ThemeColorUtils.getErrorColor(this));
             btnDelete.setOnClickListener(v -> showDeleteRelationConfirmDialog(rel));
         }
         
@@ -2609,7 +2610,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView tvHint = new TextView(this);
         tvHint.setText("输入关系类型（如：师徒、位于、属于、朋友等）");
         tvHint.setTextSize(13);
-        tvHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        tvHint.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         container.addView(tvHint);
         
         final EditText input = new EditText(this);
@@ -2648,7 +2649,7 @@ public class SettingDetailActivity extends AppCompatActivity {
         TextView tvHint = new TextView(this);
         tvHint.setText("可为关系添加说明（如：军事统治、经济控制）\n留空则不显示描述");
         tvHint.setTextSize(13);
-        tvHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        tvHint.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
         container.addView(tvHint);
         
         final EditText input = new EditText(this);
@@ -2762,7 +2763,7 @@ public class SettingDetailActivity extends AppCompatActivity {
             TextView emptyHint = new TextView(this);
             emptyHint.setText("暂无关联设定");
             emptyHint.setTextSize(14);
-            emptyHint.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            emptyHint.setTextColor(ThemeColorUtils.getSecondaryTextColor(this));
             layoutEditRelationsContent.addView(emptyHint);
         } else {
             cardEditRelations.setVisibility(View.VISIBLE);

@@ -18,6 +18,7 @@ import com.example.storyteller.R;
 import com.example.storyteller.model.UserWritingPreference;
 import com.example.storyteller.utils.PreferenceExtractor;
 import com.example.storyteller.utils.PreferenceManager;
+import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -232,11 +233,11 @@ public class WritingPreferenceDialog extends DialogFragment {
                 
                 requireActivity().runOnUiThread(() -> {
                     if (result.length() == 0) {
-                        tvAiPreferenceResult.setText("【当前无分析结果】");
-                        tvAiPreferenceResult.setTextColor(0xFF999999);
+                        tvAiPreferenceResult.setText("当前无分析结果");
+                        tvAiPreferenceResult.setTextColor(ThemeColorUtils.getSecondaryTextColor(requireContext()));
                     } else {
                         tvAiPreferenceResult.setText(result.toString());
-                        tvAiPreferenceResult.setTextColor(0xFF333333);
+                        tvAiPreferenceResult.setTextColor(ThemeColorUtils.getTextPrimary(requireContext()));
                     }
                     Toast.makeText(requireContext(), "分析完成", Toast.LENGTH_SHORT).show();
                 });
@@ -289,7 +290,7 @@ public class WritingPreferenceDialog extends DialogFragment {
         
         if (result.length() > 0) {
             tvAiPreferenceResult.setText(result.toString());
-            tvAiPreferenceResult.setTextColor(0xFF333333);
+            tvAiPreferenceResult.setTextColor(ThemeColorUtils.getTextPrimary(requireContext()));
         }
     }
     
