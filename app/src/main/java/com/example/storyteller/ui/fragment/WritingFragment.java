@@ -7,8 +7,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +31,7 @@ import com.example.storyteller.model.PlotSummarySnapshot;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.model.Volume;
 import com.example.storyteller.utils.JsonUtils;
+import com.example.storyteller.utils.ReadingController;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -53,6 +56,20 @@ public class WritingFragment extends BaseFragment {
     private TextView tvWritingReferenceStatus;
     private TextView tvWritingReferenceOverview;
     private TextView tvWritingReferenceMainLine;
+
+    // 朗读控制栏控件
+    private View cardReadingControl;  // 悬浮卡片
+    private View layoutReadingControl;  // 内部布局
+    private ImageButton btnPlayPause;
+    private TextView tvChapterName;
+    private ImageView ivReadingIcon;
+    private TextView tvTime;
+    private ImageButton btnStop;
+
+    // 朗读控制器
+    private ReadingController readingController;
+    private int currentReadingVolumeIndex = -1;
+    private int currentReadingChapterIndex = -1;
 
     // Data
     private List<Volume> volumes = new ArrayList<>();
@@ -90,6 +107,69 @@ public class WritingFragment extends BaseFragment {
         tvWritingReferenceStatus = view.findViewById(R.id.tv_writing_reference_status);
         tvWritingReferenceOverview = view.findViewById(R.id.tv_writing_reference_overview);
         tvWritingReferenceMainLine = view.findViewById(R.id.tv_writing_reference_main_line);
+
+        // 初始化朗读控制栏控件
+        cardReadingControl = view.findViewById(R.id.card_reading_control);
+        layoutReadingControl = view.findViewById(R.id.layout_reading_content);
+        btnPlayPause = view.findViewById(R.id.btn_play_pause);
+        tvChapterName = view.findViewById(R.id.tv_chapter_name);
+        ivReadingIcon = view.findViewById(R.id.iv_reading_icon);
+        tvTime = view.findViewById(R.id.tv_time);
+        btnStop = view.findViewById(R.id.btn_stop);
+
+        // 初始化朗读控制器
+        readingController = new ReadingController(requireContext());
+        readingController.setCallback(new ReadingController.ReadingCallback() {
+            @Override
+            public void onInit(boolean success) {
+                if (!success) requireActivity().runOnUiThread(() ->
+                    Toast.makeText(requireContext(), "TTS初始化失败", Toast.LENGTH_SHORT).show());
+            }
+            @Override
+            public void onChapterChanged(String chapterTitle, int current, int total) {
+                requireActivity().runOnUiThread(() -> tvChapterName.setText(chapterTitle));
+            }
+            @Override
+            public void onProgress(int current, int total) {
+                requireActivity().runOnUiThread(() -> {
+                    if (total > 0) {
+                        tvTime.setText(current + "/" + total);
+                    } else {
+                        tvTime.setText("0/0");
+                    }
+                });
+            }
+            @Override
+            public void onPlayStateChanged(boolean isPlaying) {
+                requireActivity().runOnUiThread(() -> {
+                    btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
+                    // 播放时音量图标正常显示，暂停时半透明
+                    ivReadingIcon.setAlpha(isPlaying ? 1.0f : 0.5f);
+                });
+            }
+            @Override
+            public void onComplete() {
+                requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(requireContext(), "朗读完成", Toast.LENGTH_SHORT).show();
+                    stopReading();
+                });
+            }
+            @Override
+            public void onError(String message) {
+                requireActivity().runOnUiThread(() ->
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show());
+            }
+        });
+
+        // 播放按钮
+        btnPlayPause.setOnClickListener(v -> togglePlayPause());
+        // 停止按钮（真正停止，清除进度）
+        btnStop.setOnClickListener(v -> resetReadingState());
+
+        // 初始时音量图标半透明（未在播放）
+        if (ivReadingIcon != null) {
+            ivReadingIcon.setAlpha(0.5f);
+        }
 
         // 添加卷按钮
         btnAddVolume.setOnClickListener(v -> addNewVolume());
@@ -134,6 +214,10 @@ public class WritingFragment extends BaseFragment {
         saveStructureSilently();
         // 清除编辑状态
         currentEditingEditText = null;
+        // 停止朗读
+        if (readingController != null) {
+            readingController.stop();
+        }
         super.onDestroyView();
     }
 
@@ -1448,5 +1532,73 @@ public class WritingFragment extends BaseFragment {
         }
         
         return null;
+    }
+
+    private void togglePlayPause() {
+        if (!readingController.isInitialized()) {
+            Toast.makeText(requireContext(), "TTS未就绪", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (readingController.isPlaying()) {
+            readingController.pause();
+        } else if (readingController.isPaused()) {
+            // 从暂停处继续
+            readingController.resume();
+        } else {
+            if (!isReadingContentLoaded()) startReadingFromVisible();
+            else readingController.start();
+        }
+    }
+
+    private void stopReading() {
+        readingController.stop();
+        // 重置显示状态
+        tvChapterName.setText("点击播放开始朗读");
+        tvChapterName.setTextColor(getResources().getColor(R.color.text_secondary, null));
+        ivReadingIcon.setAlpha(0.5f);
+        tvTime.setText("0/0");
+        btnPlayPause.setImageResource(R.drawable.ic_play);
+        // 不重置索引，让用户可以从停止处继续
+    }
+
+    private void resetReadingState() {
+        // 完全重置朗读状态（真正停止，不保留进度）
+        currentReadingVolumeIndex = -1;
+        currentReadingChapterIndex = -1;
+        readingController.stop();
+    }
+
+    private boolean isReadingContentLoaded() {
+        return currentReadingVolumeIndex >= 0 && currentReadingChapterIndex >= 0;
+    }
+
+    private void startReadingFromVisible() {
+        for (int volIdx = 0; volIdx < volumes.size(); volIdx++) {
+            Volume volume = volumes.get(volIdx);
+            for (int chapIdx = 0; chapIdx < volume.getChapters().size(); chapIdx++) {
+                Chapter chapter = volume.getChapters().get(chapIdx);
+                if (!TextUtils.isEmpty(chapter.getContent())) {
+                    startReadingChapter(volIdx, chapIdx);
+                    return;
+                }
+            }
+        }
+        Toast.makeText(requireContext(), "没有可朗读的内容", Toast.LENGTH_SHORT).show();
+    }
+
+    private void startReadingChapter(int volumeIndex, int chapterIndex) {
+        if (volumeIndex < 0 || volumeIndex >= volumes.size()) return;
+        Volume volume = volumes.get(volumeIndex);
+        if (chapterIndex < 0 || chapterIndex >= volume.getChapters().size()) return;
+
+        Chapter chapter = volume.getChapters().get(chapterIndex);
+        String chapterTitle = "第" + (volumeIndex + 1) + "卷 第" + (chapterIndex + 1) + "章：" + chapter.getTitle();
+
+        currentReadingVolumeIndex = volumeIndex;
+        currentReadingChapterIndex = chapterIndex;
+        readingController.loadChapter(chapterTitle, chapter.getContent());
+        tvChapterName.setText(chapterTitle);
+        tvChapterName.setTextColor(getResources().getColor(R.color.text_primary, null));
+        readingController.start();
     }
 }

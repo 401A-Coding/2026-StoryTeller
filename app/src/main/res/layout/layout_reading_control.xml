@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_reading_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="12dp">
+
+    <!-- 播放/暂停按钮 -->
+    <ImageButton
+        android:id="@+id/btn_play_pause"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="播放/暂停"
+        android:src="@drawable/ic_play"
+        app:tint="@color/colorPrimary" />
+
+    <!-- 章节名 -->
+    <TextView
+        android:id="@+id/tv_chapter_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingHorizontal="8dp"
+        android:text="点击播放开始朗读"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <!-- 朗读图标（暂停时显示静态图标） -->
+    <ImageView
+        android:id="@+id/iv_reading_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginHorizontal="8dp"
+        android:src="@drawable/ic_volume"
+        app:tint="@color/colorPrimary"
+        android:contentDescription="朗读中" />
+
+    <!-- 时间 -->
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="8dp"
+        android:text="00:00"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
+
+    <!-- 停止按钮 -->
+    <ImageButton
+        android:id="@+id/btn_stop"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="停止"
+        android:src="@drawable/ic_close"
+        app:tint="@color/text_secondary" />
+
+</LinearLayout>
