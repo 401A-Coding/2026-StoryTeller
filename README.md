@@ -1,107 +1,166 @@
 # AI 故事生成助手 - Android 项目
 
 ## 一、项目介绍
-**项目名称**：AI 故事生成助手（Android 本地版）  
-**项目仓库**：https://github.com/401A-Coding/2026-StoryTeller  
-**项目主页**：https://401a-coding.github.io/2026-StoryTeller  
-**开发环境**：Android Studio + Java  
-**数据方案**：全本地存储（SQLite + SharedPreferences），仅调用大模型 API 生成内容，**无云端部署**  
-**项目目标**：完成一个可正常运行、界面美观、功能完整的 Android 应用原型，熟悉移动端 UI、数据存储、网络请求、交互逻辑开发。
+
+**项目名称**：AI 故事生成助手（StoryTeller）  
+**项目仓库**：[https://github.com/401A-Coding/2026-StoryTeller](https://github.com/401A-Coding/2026-StoryTeller)  
+**项目主页**：[https://401a-coding.github.io/2026-StoryTeller](https://401a-coding.github.io/2026-StoryTeller)  
+**开发环境**：Android Studio + Java + Gradle 9.2.1  
+**最低 SDK**：Android 7.0 (API 24)  
+**目标 SDK**：Android 16 (API 36)  
+**数据方案**：全本地存储（SQLite + 加密 SharedPreferences），调用大模型 API 生成内容，**无云端部署**  
+**当前版本**：1.0.1
 
 ### 核心功能
-- AI 故事生成（类型/篇幅/构思 → 大纲+正文）
-- 本地保存/修改/删除/书架管理
-- 人物画像界面展示人物卡片，可滑动与编辑
-- 平行剧情页面可撰写多版剧情方案，树形多结局剧情展示
-- 素材库（分类、搜索、筛选、插入）
-- 本地数据存储、用户行为记录、导出预览
-- 交互优化：加载提示、错误重试、页面跳转、滑动展开
-- 创意扩展：语音输入/朗读、个性化推荐、社交基础、主题设置
+
+- **AI 故事生成**：多模型支持（MiniMax、DeepSeek等），支持大纲生成、正文续写、素材提取
+- **小说管理工作区**：卷/章结构管理，支持多部小说切换
+- **设定管理系统**：六大分类体系（世界观/角色/地点/剧情/规则/创作控制），30个子分类专属属性
+- **AI 助手交互**：Agent 模式支持自然语言指令执行，提供条件分支审核功能
+- **人物画像**：角色卡片展示，支持关系网络管理
+- **平行剧情/剧情树**：多结局剧情方案，支持树形可视化与分支预览
+- **关系图可视化**：基于 vis.js 的交互式关系网络展示
+- **素材库管理**：分类、搜索、筛选，支持从网页导入小说内容
+- **文档编辑**：Markdown 编辑与渲染
+- **AI 记忆管理**：对话记忆存储与提取
+- **写作偏好设置**：语言风格、叙事视角、情感基调等个性化配置
+- **封面生成**：支持图生图/文生图 API 生成书籍封面
+- **导入小说**：支持从番茄小说等平台导入小说内容
+- **深色模式**：完整的深色主题适配
+
+---
 
 ## 二、项目结构
 
 ### 1. base（基础类模块）
-- BaseActivity、BaseFragment：统一 Activity/Fragment 基类，封装通用逻辑
+- `BaseActivity`、`BaseFragment`：统一 Activity/Fragment 基类，封装通用逻辑
 
 ### 2. ui（界面层模块）
-- activity：各主页面 Activity（主页、故事生成、人物、素材、剧情树、预览、设置等）
-- fragment：底部导航 Fragment（首页/书架/我的）
-- adapter：RecyclerView 适配器（故事、人物、聊天、素材等）
-- dialog：弹窗与底部弹窗组件
 
-### 3. model（数据模型模块）
-- Story、Character、ChatMessage、Material、NovelSummary、Volume、Chapter、BehaviorLog 等实体类
+#### Activity（10个主页面）
+| 类名 | 功能说明 |
+|------|----------|
+| `MainActivity` | 主页面，底部导航 |
+| `StoryWorkspaceActivity` | 小说工作区主容器 |
+| `CharacterActivity` | 角色管理 |
+| `PlotTreeActivity` | 剧情树管理 |
+| `SettingDetailActivity` | 设定详情编辑 |
+| `AiMemoryActivity` | AI记忆管理 |
+| `MemoryDetailActivity` | 记忆详情 |
+| `NovelDetailActivity` | 小说详情页 |
+| `DocumentEditorActivity` | 文档编辑器 |
+| `PlotGraphActivity` | 关系图查看器 |
+
+#### Fragment（20个功能模块）
+- 导航容器类：`HomeFragment`、`StoryInfoPanelFragment`、`StoryManagementFragment`、`MoreFragment`、`SettingsFragment`
+- 目录列表类：`StorySettingsListFragment`、`BookshelfFragment`、`ReferenceLibraryFragment`、`MaterialLibraryFragment`
+- 工作区类：`WritingFragment`、`ArchitectureFragment`、`OutlineFragment`、`CharactersFragment`
+- AI交互类：`AIPanelFragment`
+- 文档类：`DocumentsFragment`
+- 关系图：`PlotGraphFragment`
+- 其他：`AboutFragment`、`HelpFragment`、`FeedbackFragment`、`MyCreationsFragment`
+
+#### Adapter（20+列表适配器）
+#### Dialog（10+弹窗组件）
+
+### 3. model（数据模型模块 - 17个实体类）
+| 模型 | 说明 |
+|------|------|
+| `Story` | 小说主体，含seriesName字段 |
+| `Volume` | 卷 |
+| `Chapter` | 章节 |
+| `StorySetting` | 设定，支持30个子分类专属属性 |
+| `SettingRelationship` | 设定关系 |
+| `Character` | 角色 |
+| `StoryDocument` | 文档 |
+| `ChatMessage` | 聊天消息 |
+| `AiMemory` | AI记忆 |
+| `UserWritingPreference` | 用户写作偏好 |
+| `ImportedNovel` | 导入的小说 |
+| `NovelSummary` | 小说摘要 |
+| `PlotChapterSummary` | 剧情章节摘要 |
+| `PlotOverviewSummary` | 剧情概览摘要 |
+| `PlotSummarySnapshot` | 剧情摘要快照 |
+| `RelationExtractionResult` | 关系提取结果 |
+| `BehaviorLog` | 行为日志 |
 
 ### 4. data（数据访问与存储模块）
-- local：本地 SQLite 数据库（db/ DBHelper 与各实体 Dao）、偏好设置（prefs/）负责简单配置项存储
-- remote：API 客户端、API Key 管理、素材提取、网络爬虫
-- repository：数据仓库接口与实现，统一数据访问
+- **local**：SQLite 数据库（DBHelper）
+- **remote**：API 客户端（多模型支持）、素材提取、网络爬虫（Jsoup）
+- **repository**：数据仓库接口与实现
 
-### 5. utils（工具类模块）
-- JsonUtils、AudioUtils、AgentCommandExecutor 等
+### 5. utils（工具类模块 - 17个）
+| 工具类 | 说明 |
+|--------|------|
+| `AgentCommandExecutor` | Agent 命令执行器（94KB） |
+| `AiMemoryManager` | AI记忆管理器 |
+| `PromptManager` | 提示词管理 |
+| `RelationExtractor` | 关系提取工具 |
+| `SpecificAttributesParser` | 专属属性解析器 |
+| `PreferenceExtractor` | 偏好提取器 |
+| `PreferenceManager` | 偏好管理器 |
+| `ThemeManager` | 主题管理器 |
+| `ThemeColorUtils` | 主题颜色工具 |
+| `ImportedNovelFileManager` | 导入小说文件管理 |
+| `MaterialContentParser` | 素材内容解析 |
+| `DatabaseMigrationUtils` | 数据库迁移工具 |
+| `ConversationMemory` | 对话记忆 |
+| `AudioUtils` | 音频工具 |
+| `JsonUtils` | JSON工具 |
+| `TaskType` | 任务类型枚举 |
 
-## 三、当前完成情况
-- ✅ 基础包结构建立（BaseActivity / BaseFragment）
-- ✅ 主页底部导航与 3 个 Fragment
-- ✅ 首页 4 个入口卡片与“当前小说”占位
-- ✅ 书架列表（Story 数据占位）
-- ✅ 个人中心信息区与设置入口
-- ✅ 故事生成聊天界面（本地占位回复 hello world）
-- ✅ 人物画像列表（占位 5 人物）
-- ✅ 其余 Activity 页面占位与返回首页入口
-- ✅ 本地数据库与偏好配置工具类
-- ✅ API Client / JSON 工具类占位
-- ✅ Story/Character/Material/BehaviorLog 等数据模型初步实现
-- ✅ 数据访问层（Dao/Repository）初步实现
-- ✅ 素材相关适配器与弹窗初步实现
+---
 
-## 四、开发指导
-### 1. 新增页面（Activity / Fragment）
-- Activity：在 `ui/activity` 新建类，继承 `BaseActivity`，实现 `getLayoutId()`、`initView()`、`initData()`，并在 `AndroidManifest.xml` 注册
-- Fragment：在 `ui/fragment` 新建类，继承 `BaseFragment`，实现 `getLayoutId()`、`initView()`、`initData()`，用于底部导航切换
+## 三、设定分类体系
 
-### 2. 新增列表/弹窗界面
-- Adapter：在 `ui/adapter` 新建对应 Adapter（继承 RecyclerView.Adapter）
-- Dialog：在 `ui/dialog` 新建弹窗类（如 BottomSheetDialogFragment）
-- 编写 `item_xxx.xml` 布局
-- 在 Activity/Fragment 中设置 LayoutManager + Adapter
+项目采用六大顶层分类、30个子分类的设定体系：
 
-### 3. 本地存储开发流程
-- 建表：在 `DBHelper` 中写 CREATE TABLE
-- Dao：在 `data/local/db` 新建/完善 `XXXDao` 类，负责实体数据操作
-- 配置：使用 `PrefsUtils` 进行简单配置项存储
+| 大类 | 子分类 |
+|------|--------|
+| **世界观设定** | 地理环境、时代背景、历史背景、文明种族、文化习俗、社会制度、政治势力、科技发展、物品资源 |
+| **角色设定** | 主要角色、次要角色、反派角色、组织阵营 |
+| **地点设定** | 国家地区、城市、村庄、自然景观、关键场景、建筑设施、特殊空间 |
+| **剧情设定** | 主线剧情、支线剧情、关键事件、悬念伏笔、章节规划、矛盾冲突、时间线 |
+| **规则体系** | 力量体系、魔法/超能力、战斗系统、经济体系、时间规则、限制条件 |
+| **创作控制** | 主题内核、语言风格、情感基调、叙事视角 |
 
-### 4. AI 生成功能开发
-- 在 `data/remote/ApiClient` 实现 `generateStory(...)` 等方法
-- 入参：类型、篇幅、构思、用户自定义设定
-- 请求：OkHttp POST + JSON
-- 回调：返回故事内容 → 展示 → 本地保存
+详细设计参见 [SpecificAttributes_Design_v3.md](./SpecificAttributes_Design_v3.md)
 
-### 5. 数据仓库与网络
-- Repository：在 `data/repository` 实现统一数据访问接口，便于后续扩展
-- 网络相关：ApiKey 管理、素材提取、网络爬虫等
+---
 
-### 6. 交互与体验优化
-- 加载状态：ProgressBar / 弹窗
-- 错误提示：网络异常、生成失败、存储失败
-- 页面跳转：Intent / Fragment 切换
-- 流畅度：避免主线程耗时操作
+## 四、技术栈与依赖
 
-### 7. 命名规范（保持统一）
-- 布局：`activity_xxx` / `fragment_xxx` / `item_xxx`
-- 控件：`tv_xxx` `rv_xxx` `btn_xxx` `et_xxx`
-- 类：大驼峰；方法/变量：小驼峰
-- 字符串统一放到 `strings.xml`
+### 构建系统
+- **AGP**：9.2.1
+- **Gradle**：8.x
+- **Java**：11
 
-## 五、依赖说明（已内置）
-- AndroidX + Material Design
-- RecyclerView
-- OkHttp（网络请求）
-- Gson（JSON 解析）
-- SQLite（本地数据库）
-- 系统 TTS / SpeechRecognizer（语音，工具类占位）
+### 核心依赖
+| 库 | 版本 | 用途 |
+|---|------|------|
+| Material | 1.14.0 | Material Design 组件 |
+| OkHttp | 5.3.2 | HTTP 网络请求 |
+| Gson | 2.14.0 | JSON 解析 |
+| Glide | 4.16.0 | 图片加载 |
+| Markwon | 4.6.2 | Markdown 渲染 |
+| Jsoup | 1.18.3 | HTML 解析/网页爬取 |
+| ZXing | 3.5.3 | 二维码生成 |
+| security-crypto | 1.1.0-alpha06 | SharedPreferences 加密 |
+| vis.js | (WebView) | 关系图可视化 |
+
+---
+
+## 五、版本历史
+
+| 版本 | 日期 | 更新内容               |
+|------|------|--------------------|
+|1.0.0|2026.05.28| 首发版本，初步实现完整小说创作工作流 |
+| 1.0.1 | 2026.05.29 | 当前版本，更新首页布局        |
+
+---
 
 ## 六、提交规范（GitHub）
+
 - 每周功能合并到 `main`
 - 功能分支命名：`feature/模块名`
 - 提交信息：`feat: 完成XXX` / `fix: 修复XXX` / `ui: 优化XXX`
