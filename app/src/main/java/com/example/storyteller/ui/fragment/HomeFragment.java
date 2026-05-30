@@ -455,14 +455,40 @@ public class HomeFragment extends BaseFragment {
         }
 
         List<Story> recentStories = storyDao.getRecentStories(3);
-        if (recentStories == null || recentStories.isEmpty()) {
+        List<Story> filteredRecentStories = new java.util.ArrayList<>();
+
+        int selectedStoryId = -1;
+        String selectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+        if (!TextUtils.isEmpty(selectedId)) {
+            try {
+                selectedStoryId = Integer.parseInt(selectedId);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (recentStories != null) {
+            for (Story story : recentStories) {
+                if (story == null) {
+                    continue;
+                }
+                if (story.getId() == selectedStoryId) {
+                    continue;
+                }
+                filteredRecentStories.add(story);
+                if (filteredRecentStories.size() >= 3) {
+                    break;
+                }
+            }
+        }
+
+        if (filteredRecentStories.isEmpty()) {
             recentAdapter.setData(new java.util.ArrayList<>());
             tvRecentTitle.setVisibility(View.GONE);
             rvRecentStories.setVisibility(View.GONE);
         } else {
             tvRecentTitle.setVisibility(View.VISIBLE);
             rvRecentStories.setVisibility(View.VISIBLE);
-            recentAdapter.setData(recentStories);
+            recentAdapter.setData(filteredRecentStories);
         }
     }
 }
