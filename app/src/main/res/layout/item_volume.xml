@@ -75,24 +75,31 @@
                 app:tint="@color/text_secondary" />
         </LinearLayout>
 
-        <!-- 章节容器 -->
+        <!-- 章节容器（编辑模式显示） -->
         <LinearLayout
-            android:id="@+id/layout_chapters_container"
+            android:id="@+id/layout_chapters_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:orientation="vertical" />
+            android:orientation="vertical">
 
-        <!-- 添加章节按钮 -->
-        <Button
-            android:id="@+id/btn_add_chapter"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="8dp"
-            android:text="@string/btn_add_chapter"
-            android:textAllCaps="false"
-            android:textColor="@color/colorPrimary" />
+            <LinearLayout
+                android:id="@+id/layout_chapters_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- 添加章节按钮 -->
+            <Button
+                android:id="@+id/btn_add_chapter"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp"
+                android:text="@string/btn_add_chapter"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary" />
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

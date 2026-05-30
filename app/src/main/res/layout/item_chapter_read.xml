@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 阅读模式章节布局 - 常规小说阅读器样式 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="32dp"
+    android:orientation="vertical">
+
+    <!-- 章节标题 -->
+    <TextView
+        android:id="@+id/tv_chapter_read_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="第1章 · 章节标题"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <!-- 正文内容 - 小说阅读器样式 -->
+    <TextView
+        android:id="@+id/tv_chapter_read_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:lineSpacingExtra="6dp"
+        android:text="章节正文内容..."
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+    <!-- 空内容提示 -->
+    <TextView
+        android:id="@+id/tv_chapter_read_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:text="@string/writing_empty_chapter_content"
+        android:textColor="@color/text_hint"
+        android:textSize="15sp"
+        android:gravity="center"
+        android:visibility="gone" />
+
+</LinearLayout>

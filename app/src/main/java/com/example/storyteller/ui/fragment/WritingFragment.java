@@ -50,12 +50,16 @@ public class WritingFragment extends BaseFragment {
 
     // UI Components
     private LinearLayout layoutContent;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton fabSwitchMode;
     private Button btnAddVolume;
     private TextView tvEmptyHint;
     private View cardWritingReference;
     private TextView tvWritingReferenceStatus;
     private TextView tvWritingReferenceOverview;
     private TextView tvWritingReferenceMainLine;
+
+    // 模式状态：true=编辑模式，false=阅读模式
+    private boolean isEditMode = true;
 
     // 朗读控制栏控件
     private View cardReadingControl;  // 悬浮卡片
@@ -101,6 +105,7 @@ public class WritingFragment extends BaseFragment {
     @Override
     protected void initView(View view) {
         layoutContent = view.findViewById(R.id.layout_content);
+        fabSwitchMode = view.findViewById(R.id.fab_switch_mode);
         btnAddVolume = view.findViewById(R.id.btn_add_volume);
         tvEmptyHint = view.findViewById(R.id.tv_empty_hint);
         cardWritingReference = view.findViewById(R.id.card_writing_reference);
@@ -108,9 +113,14 @@ public class WritingFragment extends BaseFragment {
         tvWritingReferenceOverview = view.findViewById(R.id.tv_writing_reference_overview);
         tvWritingReferenceMainLine = view.findViewById(R.id.tv_writing_reference_main_line);
 
+        // 初始化模式切换FAB
+        setupModeSwitchButton();
+
         // 初始化朗读控制栏控件
         cardReadingControl = view.findViewById(R.id.card_reading_control);
         layoutReadingControl = view.findViewById(R.id.layout_reading_content);
+        // 编辑模式下朗读控制栏默认隐藏
+        cardReadingControl.setVisibility(View.GONE);
         btnPlayPause = view.findViewById(R.id.btn_play_pause);
         tvChapterName = view.findViewById(R.id.tv_chapter_name);
         ivReadingIcon = view.findViewById(R.id.iv_reading_icon);
@@ -150,8 +160,14 @@ public class WritingFragment extends BaseFragment {
             @Override
             public void onComplete() {
                 requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(requireContext(), "朗读完成", Toast.LENGTH_SHORT).show();
-                    stopReading();
+                    // 尝试自动读取下一章
+                    if (tryReadNextChapter()) {
+                        // 成功加载下一章，继续朗读
+                    } else {
+                        // 没有更多章节，显示完成提示
+                        Toast.makeText(requireContext(), "朗读完成", Toast.LENGTH_SHORT).show();
+                        stopReading();
+                    }
                 });
             }
             @Override
@@ -306,6 +322,11 @@ public class WritingFragment extends BaseFragment {
      * 渲染所有卷
      */
     private void renderVolumes() {
+        // 阅读模式下隐藏添加卷按钮，显示朗读控制栏
+        // 编辑模式下显示添加卷按钮，隐藏朗读控制栏
+        btnAddVolume.setVisibility(isEditMode ? View.VISIBLE : View.GONE);
+        cardReadingControl.setVisibility(isEditMode ? View.GONE : View.VISIBLE);
+
         // 清除除btn_add_volume之外的所有视图
         List<View> viewsToRemove = new ArrayList<>();
         
@@ -352,10 +373,11 @@ public class WritingFragment extends BaseFragment {
      * 创建卷视图
      */
     private View createVolumeView(Volume volume, int volumeIndex) {
+        if (!isEditMode) {
+            return createVolumeReadView(volume, volumeIndex);
+        }
         View volumeView = LayoutInflater.from(requireContext())
             .inflate(R.layout.item_volume, layoutContent, false);
-
-        // 设置卷标题
         TextView tvVolumePrefix = volumeView.findViewById(R.id.tv_volume_prefix);
         TextView tvVolumeName = volumeView.findViewById(R.id.tv_volume_name);
         EditText etVolumeName = volumeView.findViewById(R.id.et_volume_name);
@@ -364,27 +386,28 @@ public class WritingFragment extends BaseFragment {
         tvVolumeName.setText(volume.getTitle());
         etVolumeName.setText(volume.getTitle());
 
+        // 获取章节容器
+        LinearLayout layoutChaptersEdit = volumeView.findViewById(R.id.layout_chapters_edit);
+        LinearLayout layoutChaptersContainer = volumeView.findViewById(R.id.layout_chapters_container);
+        // 编辑模式
+        tvVolumeName.setVisibility(View.VISIBLE);
+        etVolumeName.setVisibility(View.GONE);
         // 双击编辑卷名
         setupInlineEdit(tvVolumeName, etVolumeName, volume, false);
-
-        // 章节容器
-        LinearLayout layoutChapters = volumeView.findViewById(R.id.layout_chapters_container);
-
+        // 显示编辑容器
+        layoutChaptersEdit.setVisibility(View.VISIBLE);
         // 添加章节按钮
         Button btnAddChapter = volumeView.findViewById(R.id.btn_add_chapter);
-        btnAddChapter.setOnClickListener(v -> addNewChapter(layoutChapters, volume));
-
+        btnAddChapter.setOnClickListener(v -> addNewChapter(layoutChaptersContainer, volume));
         // 更多操作按钮
         ImageView btnMoreVolume = volumeView.findViewById(R.id.btn_more_volume);
         btnMoreVolume.setOnClickListener(v -> showVolumeMenu(volume, volumeIndex, volumeView));
-
-        // 渲染所有章节
+        // 渲染所有编辑模式章节
         for (int i = 0; i < volume.getChapters().size(); i++) {
             Chapter chapter = volume.getChapters().get(i);
             View chapterView = createChapterView(chapter, volume, i + 1);
-            layoutChapters.addView(chapterView);
+            layoutChaptersContainer.addView(chapterView);
         }
-        
         return volumeView;
     }
 
@@ -392,6 +415,9 @@ public class WritingFragment extends BaseFragment {
      * 创建章节视图
      */
     private View createChapterView(Chapter chapter, Volume volume, int chapterIndex) {
+        if (!isEditMode) {
+            return createChapterReadView(chapter, chapterIndex);
+        }
         View chapterView = LayoutInflater.from(requireContext())
             .inflate(R.layout.item_chapter, layoutContent, false);
 
@@ -441,6 +467,43 @@ public class WritingFragment extends BaseFragment {
         }
 
         return chapterView;
+    }
+    /**
+     * 创建阅读模式章节视图
+     */
+    private View createChapterReadView(Chapter chapter, int chapterIndex) {
+        View chapterView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_chapter_read, layoutContent, false);
+        TextView tvChapterReadTitle = chapterView.findViewById(R.id.tv_chapter_read_title);
+        tvChapterReadTitle.setText("第" + chapterIndex + "章 · " + chapter.getTitle());
+        TextView tvChapterReadContent = chapterView.findViewById(R.id.tv_chapter_read_content);
+        TextView tvChapterReadEmpty = chapterView.findViewById(R.id.tv_chapter_read_empty);
+        if (!TextUtils.isEmpty(chapter.getContent())) {
+            tvChapterReadContent.setText(chapter.getContent());
+            tvChapterReadContent.setVisibility(View.VISIBLE);
+            tvChapterReadEmpty.setVisibility(View.GONE);
+        } else {
+            tvChapterReadContent.setVisibility(View.GONE);
+            tvChapterReadEmpty.setVisibility(View.VISIBLE);
+        }
+        return chapterView;
+    }
+
+    /**
+     * 创建阅读模式卷视图
+     */
+    private View createVolumeReadView(Volume volume, int volumeIndex) {
+        View volumeView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_volume_read, layoutContent, false);
+        TextView tvVolumeReadTitle = volumeView.findViewById(R.id.tv_volume_read_title);
+        tvVolumeReadTitle.setText("第" + (volumeIndex + 1) + "卷 · " + volume.getTitle());
+        LinearLayout layoutChaptersRead = volumeView.findViewById(R.id.layout_chapters_read);
+        for (int i = 0; i < volume.getChapters().size(); i++) {
+            Chapter chapter = volume.getChapters().get(i);
+            View chapterView = createChapterReadView(chapter, i + 1);
+            layoutChaptersRead.addView(chapterView);
+        }
+        return volumeView;
     }
 
     private void loadWritingReferenceData() {
@@ -726,6 +789,30 @@ public class WritingFragment extends BaseFragment {
                 .replace("：", "")
                 .replace(":", "")
                 .trim();
+    }
+
+    /**
+     * 设置模式切换FAB
+     */
+    private void setupModeSwitchButton() {
+        fabSwitchMode.setOnClickListener(v -> toggleMode());
+        updateModeSwitchUI();
+    }
+
+    private void toggleMode() {
+        isEditMode = !isEditMode;
+        updateModeSwitchUI();
+        renderVolumes();
+    }
+
+    private void updateModeSwitchUI() {
+        if (isEditMode) {
+            fabSwitchMode.setImageResource(R.drawable.ic_menu_book);
+            fabSwitchMode.setContentDescription(getString(R.string.btn_switch_read_mode));
+        } else {
+            fabSwitchMode.setImageResource(R.drawable.ic_edit);
+            fabSwitchMode.setContentDescription(getString(R.string.btn_switch_edit_mode));
+        }
     }
 
     /**
@@ -1600,5 +1687,38 @@ public class WritingFragment extends BaseFragment {
         tvChapterName.setText(chapterTitle);
         tvChapterName.setTextColor(getResources().getColor(R.color.text_primary, null));
         readingController.start();
+    }
+
+    /**
+     * 尝试读取下一章
+     * @return true 如果成功加载下一章，false 如果没有更多章节
+     */
+    private boolean tryReadNextChapter() {
+        if (volumes == null || volumes.isEmpty()) return false;
+        
+        // 检查当前索引是否有效
+        if (currentReadingVolumeIndex < 0 || currentReadingChapterIndex < 0) return false;
+        if (currentReadingVolumeIndex >= volumes.size()) return false;
+        
+        Volume currentVolume = volumes.get(currentReadingVolumeIndex);
+        int nextChapterIndex = currentReadingChapterIndex + 1;
+        
+        // 先检查当前卷是否有下一章
+        if (nextChapterIndex < currentVolume.getChapters().size()) {
+            startReadingChapter(currentReadingVolumeIndex, nextChapterIndex);
+            return true;
+        }
+        
+        // 当前卷没有更多章节，查找下一卷
+        for (int i = currentReadingVolumeIndex + 1; i < volumes.size(); i++) {
+            Volume nextVolume = volumes.get(i);
+            if (!nextVolume.getChapters().isEmpty()) {
+                startReadingChapter(i, 0);
+                return true;
+            }
+        }
+        
+        // 没有更多章节
+        return false;
     }
 }
