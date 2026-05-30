@@ -126,6 +126,11 @@ public class SettingsFragment extends BaseFragment {
         new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.theme_mode)
                 .setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+                    // 切换主题前保存当前Tab，避免跳回首页
+                    // Activity重建时自动恢复Tab状态
+                    if (getActivity() instanceof com.example.storyteller.ui.activity.MainActivity) {
+                        ((com.example.storyteller.ui.activity.MainActivity) getActivity()).saveCurrentTab();
+                    }
                     themeManager.setThemeMode(which);
                     updateThemeModeDisplay();
                     Toast.makeText(requireContext(),
