@@ -8,7 +8,9 @@
         android:id="@+id/scroll_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:paddingBottom="180dp"
+        android:clipToPadding="false">
 
     <LinearLayout
         android:id="@+id/layout_content"
@@ -94,10 +96,18 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
-            android:layout_marginBottom="32dp"
+            android:layout_marginBottom="16dp"
             android:text="@string/btn_add_volume"
             android:textAllCaps="false"
             android:textColor="@color/colorPrimary" />
+
+        <!-- 阅读模式底部空白区域，防止内容被朗读控制栏遮挡 -->
+        <View
+            android:id="@+id/view_reading_bottom_spacer"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:visibility="gone" />
+
 
     </LinearLayout>
     </androidx.core.widget.NestedScrollView>
