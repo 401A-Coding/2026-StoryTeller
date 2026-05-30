@@ -931,10 +931,16 @@ public class AgentCommandExecutor {
         // 同时更新故事内容（从所有章节构建完整内容）
         StringBuilder fullContent = new StringBuilder();
         int totalWordCount = 0; // 计算总字数
-        for (Volume volume : volumes) {
-            for (Chapter chapter : volume.getChapters()) {
+        for (int volIdx = 0; volIdx < volumes.size(); volIdx++) {
+            Volume volume = volumes.get(volIdx);
+            // 添加卷标题
+            if (!TextUtils.isEmpty(volume.getTitle())) {
+                fullContent.append("# 第").append(volIdx + 1).append("卷 ").append(volume.getTitle()).append("\n\n");
+            }
+            for (int chapIdx = 0; chapIdx < volume.getChapters().size(); chapIdx++) {
+                Chapter chapter = volume.getChapters().get(chapIdx);
                 if (!TextUtils.isEmpty(chapter.getTitle())) {
-                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                    fullContent.append("## 第").append(chapIdx + 1).append("章 ").append(chapter.getTitle()).append("\n\n");
                 }
                 if (!TextUtils.isEmpty(chapter.getContent())) {
                     fullContent.append(chapter.getContent()).append("\n\n");

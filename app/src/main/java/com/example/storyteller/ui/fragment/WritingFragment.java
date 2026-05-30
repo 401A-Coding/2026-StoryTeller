@@ -1312,11 +1312,17 @@ public class WritingFragment extends BaseFragment {
         
         // 同时更新完整内容（从所有章节构建）
         StringBuilder fullContent = new StringBuilder();
-        for (Volume volume : volumes) {
-            for (Chapter chapter : volume.getChapters()) {
-                // 添加章节标题
+        for (int volIdx = 0; volIdx < volumes.size(); volIdx++) {
+            Volume volume = volumes.get(volIdx);
+            // 添加卷标题
+            if (!TextUtils.isEmpty(volume.getTitle())) {
+                fullContent.append("# 第").append(volIdx + 1).append("卷 ").append(volume.getTitle()).append("\n\n");
+            }
+            for (int chapIdx = 0; chapIdx < volume.getChapters().size(); chapIdx++) {
+                Chapter chapter = volume.getChapters().get(chapIdx);
+                // 添加章节标题（含序号）
                 if (!TextUtils.isEmpty(chapter.getTitle())) {
-                    fullContent.append("## ").append(chapter.getTitle()).append("\n\n");
+                    fullContent.append("## 第").append(chapIdx + 1).append("章 ").append(chapter.getTitle()).append("\n\n");
                 }
                 // 添加章节内容
                 if (!TextUtils.isEmpty(chapter.getContent())) {
