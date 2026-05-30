@@ -121,6 +121,19 @@
                                 android:scaleType="centerCrop"
                                 android:visibility="gone" />
 
+                            <ImageButton
+                                android:id="@+id/btn_more_menu"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_gravity="end|top"
+                                android:layout_marginEnd="8dp"
+                                android:layout_marginTop="8dp"
+                                android:background="@drawable/bg_circle_transparent"
+                                android:contentDescription="@string/desc_more"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_more_vert"
+                                app:tint="@color/white" />
+
                         </FrameLayout>
                     </com.google.android.material.card.MaterialCardView>
 

@@ -1,16 +1,22 @@
 package com.example.storyteller.ui.fragment;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
+import android.util.Log;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -28,17 +34,23 @@ import com.example.storyteller.utils.JsonUtils;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Locale;
 
 public class HomeFragment extends BaseFragment {
 
+    private static final String TAG = "HomeFragment";
+
     private TextView tvCurrentNovelTitle;
     private TextView tvCurrentNovelStats;
     private TextView tvCurrentNovelLastEdit;
     private Button btnPrimaryAction;
     private View btnSwitchNovel;
+    private ImageButton btnMoreMenu;
+    private ActivityResultLauncher<Intent> selectCoverLauncher;
     private ImageView ivCurrentCoverImage;
     private View vCurrentCoverBackground;
     private TextView tvRecentTitle;
@@ -54,9 +66,23 @@ public class HomeFragment extends BaseFragment {
 
     @Override
     protected void initView(View view) {
+        selectCoverLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri imageUri = result.getData().getData();
+                    if (imageUri != null) {
+                        saveCoverImage(imageUri);
+                    }
+                }
+            }
+        );
+
         btnPrimaryAction = view.findViewById(R.id.btn_continue_edit);
         btnSwitchNovel = view.findViewById(R.id.btn_switch_novel);
         btnSwitchNovel.setOnClickListener(v -> showSwitchNovelDialog());
+        btnMoreMenu = view.findViewById(R.id.btn_more_menu);
+        btnMoreMenu.setOnClickListener(v -> showCurrentNovelMoreMenu());
 
         tvCurrentNovelTitle = view.findViewById(R.id.tv_current_novel_title);
         tvCurrentNovelStats = view.findViewById(R.id.tv_current_novel_stats);
@@ -84,7 +110,7 @@ public class HomeFragment extends BaseFragment {
     }
 
     private void refreshCurrentNovel() {
-        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null || btnPrimaryAction == null || btnSwitchNovel == null) {
+        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null || btnPrimaryAction == null || btnSwitchNovel == null || btnMoreMenu == null) {
             return;
         }
 
@@ -97,6 +123,7 @@ public class HomeFragment extends BaseFragment {
             tvCurrentNovelLastEdit.setText(R.string.home_current_novel_last_edit_empty);
             configurePrimaryAction(false);
             btnSwitchNovel.setVisibility(View.GONE);
+            btnMoreMenu.setVisibility(View.GONE);
             bindCurrentCover(null);
             return;
         }
@@ -108,6 +135,7 @@ public class HomeFragment extends BaseFragment {
         tvCurrentNovelLastEdit.setText(getString(R.string.home_current_novel_last_edit_format, formatLastEditTime(story.getLastEditTime())));
         configurePrimaryAction(true);
         btnSwitchNovel.setVisibility(View.VISIBLE);
+        btnMoreMenu.setVisibility(View.VISIBLE);
         bindCurrentCover(story);
     }
 
@@ -204,6 +232,166 @@ public class HomeFragment extends BaseFragment {
         Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
         intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, storyId);
         startActivity(intent);
+    }
+
+    private void showCurrentNovelMoreMenu() {
+        if (currentStory == null) {
+            refreshCurrentNovel();
+            if (currentStory == null) {
+                Toast.makeText(requireContext(), "暂无可操作的当前小说", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(requireContext(), btnMoreMenu);
+        popupMenu.getMenu().add("⭐ " + (currentStory.isCollected() ? "取消收藏" : "收藏"));
+        popupMenu.getMenu().add("📷 上传封面");
+        popupMenu.getMenu().add("📝 修改分类");
+        popupMenu.getMenu().add("🗑️ 删除故事");
+
+        popupMenu.setOnMenuItemClickListener(item -> {
+            String title = String.valueOf(item.getTitle());
+            if (title.contains("收藏")) {
+                toggleFavoriteCurrentStory();
+                return true;
+            } else if (title.contains("上传封面")) {
+                selectCoverImage();
+                return true;
+            } else if (title.contains("修改分类")) {
+                showCategoryChangeDialog(currentStory);
+                return true;
+            } else if (title.contains("删除")) {
+                showDeleteConfirmDialog(currentStory);
+                return true;
+            }
+            return false;
+        });
+
+        popupMenu.show();
+    }
+
+    private void toggleFavoriteCurrentStory() {
+        if (currentStory == null || storyDao == null) {
+            return;
+        }
+
+        boolean newCollected = !currentStory.isCollected();
+        storyDao.updateStoryCollected(currentStory.getId(), newCollected);
+        currentStory.setCollected(newCollected);
+
+        Toast.makeText(requireContext(), newCollected ? "已收藏" : "已取消收藏", Toast.LENGTH_SHORT).show();
+        refreshCurrentNovel();
+    }
+
+    private void selectCoverImage() {
+        if (currentStory == null) {
+            return;
+        }
+
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        if (selectCoverLauncher != null) {
+            selectCoverLauncher.launch(Intent.createChooser(intent, "选择封面图片"));
+        }
+    }
+
+    private void saveCoverImage(Uri imageUri) {
+        if (currentStory == null || storyDao == null) {
+            return;
+        }
+
+        try {
+            InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
+            if (inputStream == null) {
+                Toast.makeText(requireContext(), "无法读取图片", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            File coverDir = new File(requireContext().getFilesDir(), "covers");
+            if (!coverDir.exists() && !coverDir.mkdirs()) {
+                Toast.makeText(requireContext(), "无法创建封面目录", Toast.LENGTH_SHORT).show();
+                inputStream.close();
+                return;
+            }
+
+            String fileName = "cover_" + currentStory.getId() + "_" + System.currentTimeMillis() + ".jpg";
+            File coverFile = new File(coverDir, fileName);
+
+            FileOutputStream outputStream = new FileOutputStream(coverFile);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+            outputStream.close();
+            inputStream.close();
+
+            String coverPath = coverFile.getAbsolutePath();
+            currentStory.setCoverPath(coverPath);
+            storyDao.updateStoryCoverPath(currentStory.getId(), coverPath);
+
+            Toast.makeText(requireContext(), "封面已更新", Toast.LENGTH_SHORT).show();
+            refreshCurrentNovel();
+        } catch (Exception e) {
+            Log.w(TAG, "保存封面失败", e);
+            Toast.makeText(requireContext(), "保存封面失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showCategoryChangeDialog(Story story) {
+        if (story == null || storyDao == null) {
+            return;
+        }
+
+        String[] categories = {"创作中", "已完成"};
+        new AlertDialog.Builder(requireContext())
+            .setTitle("修改分类")
+            .setItems(categories, (dialog, which) -> {
+                String newCategory = categories[which];
+                storyDao.updateStoryCategory(story.getId(), newCategory);
+                story.setCategory(newCategory);
+
+                Toast.makeText(requireContext(), "已修改为：" + newCategory, Toast.LENGTH_SHORT).show();
+                refreshCurrentNovel();
+            })
+            .show();
+    }
+
+    private void showDeleteConfirmDialog(Story story) {
+        if (story == null || storyDao == null) {
+            return;
+        }
+
+        new AlertDialog.Builder(requireContext())
+            .setTitle("删除故事")
+            .setMessage("确定要删除《" + story.getTitle() + "》吗？")
+            .setPositiveButton("删除", (dialog, which) -> {
+                String currentSelectedId = PrefsUtils.getInstance(requireContext()).getString(StoryAdapter.PREF_SELECTED_STORY_ID, "");
+                boolean isDeletingSelectedStory = !TextUtils.isEmpty(currentSelectedId) && currentSelectedId.equals(String.valueOf(story.getId()));
+
+                int result = storyDao.deleteStory(story.getId());
+                if (result > 0) {
+                    if (isDeletingSelectedStory) {
+                        Story fallbackStory = storyDao.getLatestStory();
+                        if (fallbackStory != null) {
+                            persistSelectedStory(fallbackStory);
+                            currentStory = fallbackStory;
+                        } else {
+                            clearSelectedStory();
+                            currentStory = null;
+                        }
+                    }
+                    Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
+                    refreshCurrentNovel();
+                    loadRecentStories();
+                } else {
+                    Toast.makeText(requireContext(), "删除失败", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("取消", null)
+            .show();
     }
 
     private void bindCurrentCover(Story story) {
