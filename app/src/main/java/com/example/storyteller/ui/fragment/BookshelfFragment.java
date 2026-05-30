@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.TextUtils;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,6 +21,7 @@ import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.dialog.CreateStoryDialog;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 
 import java.io.File;
@@ -186,12 +186,12 @@ public class BookshelfFragment extends BaseFragment {
         if (storyDao == null || adapter == null) {
             return;
         }
-        
+
         // 强制重新获取数据库连接，确保读取最新数据
         storyDao = new StoryDao(requireContext());
-        
+
         List<Story> filteredStories = getFilteredStories();
-        
+
         adapter.setData(filteredStories);
 
         // 更新作品数量
@@ -505,72 +505,50 @@ public class BookshelfFragment extends BaseFragment {
      * 显示创建小说弹窗
      */
     private void showCreateStoryDialog() {
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_create_story, null);
+        CreateStoryDialog dialog = CreateStoryDialog.newInstance();
+        dialog.setOnCreateStoryListener(this::createStory);
+        dialog.show(getParentFragmentManager(), "create_story_dialog");
+    }
 
-        AlertDialog dialog = new AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .create();
+    /**
+     * 处理创建小说
+     */
+    private void createStory(String title, String seriesName, String description) {
+        Story newStory = new Story(title, "", "创作", System.currentTimeMillis());
+        if (!TextUtils.isEmpty(description)) {
+            newStory.setDescription(description);
+        }
+        if (!TextUtils.isEmpty(seriesName)) {
+            newStory.setSeriesName(seriesName);
+        }
 
-        EditText etTitle = dialogView.findViewById(R.id.et_story_title);
-        EditText etSeriesName = dialogView.findViewById(R.id.et_series_name);
-        EditText etDescription = dialogView.findViewById(R.id.et_story_description);
+        java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
+        com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "新卷名");
+        com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "新章节", "");
+        volume.addChapter(chapter);
+        volumes.add(volume);
 
-        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
-        dialogView.findViewById(R.id.btn_create).setOnClickListener(v -> {
-            String title = etTitle.getText().toString().trim();
-            if (TextUtils.isEmpty(title)) {
-                Toast.makeText(requireContext(), "请输入小说标题", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
+        newStory.setStructure(structureJson);
 
-            String seriesName = etSeriesName.getText().toString().trim();
-            String description = etDescription.getText().toString().trim();
+        long id = storyDao.insertStory(newStory);
 
-            // Create empty story
-            Story newStory = new Story(title, "", "创作", System.currentTimeMillis());
-            if (!TextUtils.isEmpty(description)) {
-                newStory.setDescription(description);
-            }
-            if (!TextUtils.isEmpty(seriesName)) {
-                newStory.setSeriesName(seriesName);
-            }
+        if (id > 0) {
+            com.example.storyteller.utils.PreferenceManager preferenceManager =
+                com.example.storyteller.utils.PreferenceManager.getInstance(requireContext());
+            preferenceManager.copyGlobalPreferenceToStory((int) id);
 
-            // Initialize with one volume and one chapter
-            java.util.List<com.example.storyteller.model.Volume> volumes = new java.util.ArrayList<>();
-            com.example.storyteller.model.Volume volume = new com.example.storyteller.model.Volume(1, "新卷名");
-            com.example.storyteller.model.Chapter chapter = new com.example.storyteller.model.Chapter(1, "新章节", "");
-            volume.addChapter(chapter);
-            volumes.add(volume);
+            Toast.makeText(requireContext(), "创建成功", Toast.LENGTH_SHORT).show();
+            refreshStories();
 
-            // Save structure as JSON
-            String structureJson = com.example.storyteller.utils.JsonUtils.toJson(volumes);
-            newStory.setStructure(structureJson);
+            PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
+            PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, title);
 
-            long id = storyDao.insertStory(newStory);
-
-            if (id > 0) {
-                // 复制全局偏好到新小说
-                com.example.storyteller.utils.PreferenceManager preferenceManager = 
-                    com.example.storyteller.utils.PreferenceManager.getInstance(requireContext());
-                preferenceManager.copyGlobalPreferenceToStory((int) id);
-                
-                Toast.makeText(requireContext(), "创建成功", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-                refreshStories();
-
-                // Set as current selected story
-                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_ID, String.valueOf(id));
-                PrefsUtils.getInstance(requireContext()).putString(StoryAdapter.PREF_SELECTED_STORY_TITLE, title);
-
-                // Navigate directly to workspace page
-                Intent intent = new Intent(requireContext(), com.example.storyteller.ui.activity.StoryWorkspaceActivity.class);
-                intent.putExtra(com.example.storyteller.ui.activity.StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);
-                startActivity(intent);
-            } else {
-                Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        dialog.show();
+            Intent intent = new Intent(requireContext(), com.example.storyteller.ui.activity.StoryWorkspaceActivity.class);
+            intent.putExtra(com.example.storyteller.ui.activity.StoryWorkspaceActivity.EXTRA_STORY_ID, (int) id);
+            startActivity(intent);
+        } else {
+            Toast.makeText(requireContext(), "创建失败", Toast.LENGTH_SHORT).show();
+        }
     }
 }
