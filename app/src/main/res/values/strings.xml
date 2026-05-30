@@ -164,6 +164,8 @@
     <string name="hint_start_writing">开始写作…</string>
     <string name="btn_add_chapter">+ 添加章节</string>
     <string name="btn_add_volume">+ 添加新卷</string>
+    <string name="btn_switch_read_mode">阅读模式</string>
+    <string name="btn_switch_edit_mode">编辑模式</string>
     <string name="writing_empty_hint">暂无内容
 
 点击下方按钮添加第一卷</string>
@@ -177,6 +179,7 @@
     <string name="writing_reference_chapter_title">本章参考</string>
     <string name="writing_reference_chapter_plot_format">剧情梳理：%1$s</string>
     <string name="writing_reference_chapter_characters_format">人物参考：%1$s</string>
+    <string name="writing_empty_chapter_content">本章暂无内容</string>
     <string name="home_current_novel_label">当前小说</string>
     <string name="home_story_category_default">创作中</string>
     <string name="home_current_novel_empty_title">未选择小说</string>
