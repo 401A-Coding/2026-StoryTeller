@@ -177,6 +177,7 @@
     <string name="writing_reference_chapter_plot_format">剧情梳理：%1$s</string>
     <string name="writing_reference_chapter_characters_format">人物参考：%1$s</string>
     <string name="home_current_novel_label">当前小说</string>
+    <string name="home_story_category_default">创作中</string>
     <string name="home_current_novel_empty_title">未选择小说</string>
     <string name="home_current_novel_stats_empty">暂无卷章与字数信息</string>
     <string name="home_current_novel_last_edit_format">上次修改时间：%1$s</string>

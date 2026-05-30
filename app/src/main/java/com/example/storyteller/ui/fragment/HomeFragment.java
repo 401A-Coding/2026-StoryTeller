@@ -51,6 +51,7 @@ public class HomeFragment extends BaseFragment {
     private View btnSwitchNovel;
     private ImageButton btnMoreMenu;
     private ActivityResultLauncher<Intent> selectCoverLauncher;
+    private TextView tvCurrentCoverCategory;
     private ImageView ivCurrentCoverImage;
     private View vCurrentCoverBackground;
     private TextView tvRecentTitle;
@@ -87,6 +88,7 @@ public class HomeFragment extends BaseFragment {
         tvCurrentNovelTitle = view.findViewById(R.id.tv_current_novel_title);
         tvCurrentNovelStats = view.findViewById(R.id.tv_current_novel_stats);
         tvCurrentNovelLastEdit = view.findViewById(R.id.tv_current_novel_last_edit);
+        tvCurrentCoverCategory = view.findViewById(R.id.tv_current_cover_category);
         ivCurrentCoverImage = view.findViewById(R.id.iv_current_cover_image);
         vCurrentCoverBackground = view.findViewById(R.id.v_current_cover_background);
 
@@ -110,7 +112,7 @@ public class HomeFragment extends BaseFragment {
     }
 
     private void refreshCurrentNovel() {
-        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null || btnPrimaryAction == null || btnSwitchNovel == null || btnMoreMenu == null) {
+        if (storyDao == null || tvCurrentNovelTitle == null || tvCurrentNovelStats == null || tvCurrentNovelLastEdit == null || btnPrimaryAction == null || btnSwitchNovel == null || btnMoreMenu == null || tvCurrentCoverCategory == null) {
             return;
         }
 
@@ -121,6 +123,7 @@ public class HomeFragment extends BaseFragment {
             tvCurrentNovelTitle.setText(R.string.home_current_novel_empty_title);
             tvCurrentNovelStats.setText(R.string.home_current_novel_stats_empty);
             tvCurrentNovelLastEdit.setText(R.string.home_current_novel_last_edit_empty);
+            tvCurrentCoverCategory.setVisibility(View.GONE);
             configurePrimaryAction(false);
             btnSwitchNovel.setVisibility(View.GONE);
             btnMoreMenu.setVisibility(View.GONE);
@@ -133,6 +136,8 @@ public class HomeFragment extends BaseFragment {
         tvCurrentNovelTitle.setText(story.getTitle());
         tvCurrentNovelStats.setText(buildStatsText(story));
         tvCurrentNovelLastEdit.setText(getString(R.string.home_current_novel_last_edit_format, formatLastEditTime(story.getLastEditTime())));
+        tvCurrentCoverCategory.setVisibility(View.VISIBLE);
+        tvCurrentCoverCategory.setText(TextUtils.isEmpty(story.getCategory()) ? getString(R.string.home_story_category_default) : story.getCategory());
         configurePrimaryAction(true);
         btnSwitchNovel.setVisibility(View.VISIBLE);
         btnMoreMenu.setVisibility(View.VISIBLE);
@@ -395,7 +400,7 @@ public class HomeFragment extends BaseFragment {
     }
 
     private void bindCurrentCover(Story story) {
-        if (ivCurrentCoverImage == null || vCurrentCoverBackground == null) {
+        if (ivCurrentCoverImage == null || vCurrentCoverBackground == null || tvCurrentCoverCategory == null) {
             return;
         }
 
@@ -418,6 +423,13 @@ public class HomeFragment extends BaseFragment {
         if (!loadedImage) {
             ivCurrentCoverImage.setImageDrawable(null);
             ivCurrentCoverImage.setVisibility(View.GONE);
+        }
+
+        if (story == null) {
+            tvCurrentCoverCategory.setVisibility(View.GONE);
+        } else {
+            tvCurrentCoverCategory.setVisibility(View.VISIBLE);
+            tvCurrentCoverCategory.setText(TextUtils.isEmpty(story.getCategory()) ? getString(R.string.home_story_category_default) : story.getCategory());
         }
 
         GradientDrawable gradient = new GradientDrawable();
