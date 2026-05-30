@@ -22,6 +22,9 @@ import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.GenericContentExtractor;
 import com.example.storyteller.data.remote.MaterialCandidateExtractor;
 import com.example.storyteller.data.remote.NovelCrawler;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.example.storyteller.model.NovelSummary;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.activity.SettingDetailActivity;
@@ -107,7 +110,18 @@ public class MaterialLibraryFragment extends BaseFragment {
         View btnImport = view.findViewById(R.id.btn_import);
         if (btnImport != null) {
             btnImport.setVisibility(View.VISIBLE);
-            btnImport.setOnClickListener(v -> showImportUrlDialog());
+            btnImport.setOnClickListener(v -> {
+                String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.DEEPSEEK);
+                if (apiKey == null || apiKey.isEmpty()) {
+                    ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "DeepSeek", "导入素材");
+                    return;
+                }
+                if (!ModelConfig.isProviderEnabled(requireContext(), ModelConfig.Provider.DEEPSEEK)) {
+                    ModelProviderSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "DeepSeek", "导入素材");
+                    return;
+                }
+                showImportUrlDialog();
+            });
         }
 
         View tvCrawlSection = view.findViewById(R.id.tv_crawl_section);
