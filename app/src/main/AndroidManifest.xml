@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -13,48 +12,46 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.StoryTeller"
-        android:windowLayoutInDisplayCutoutMode="shortEdges">
+        android:theme="@style/Theme.StoryTeller">
         <activity
-            android:name=".ui.activity.MainActivity"
+            android:name=".ui.activity.SplashActivity"
             android:exported="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            android:theme="@style/Theme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.activity.MainActivity"
+            android:exported="true" />
         <activity
             android:name=".ui.activity.StoryWorkspaceActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+            />
         <activity
             android:name=".ui.activity.CharacterActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+            />
         <activity
             android:name=".ui.activity.PlotTreeActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+            />
         <activity
             android:name=".ui.activity.SettingDetailActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+            />
         <activity
             android:name=".ui.activity.AiMemoryActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges"
             android:label="AI记忆管理" />
         <activity
             android:name=".ui.activity.MemoryDetailActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges"
             android:label="记忆详情" />
         <activity
             android:name=".ui.activity.NovelDetailActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" />
+            />
         <activity
             android:name=".ui.activity.DocumentEditorActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges"
             android:label="文档编辑" />
         <activity
             android:name=".ui.activity.PlotGraphActivity"
-            android:windowLayoutInDisplayCutoutMode="shortEdges"
             android:label="关系图" />
         <provider
             android:name="androidx.core.content.FileProvider"

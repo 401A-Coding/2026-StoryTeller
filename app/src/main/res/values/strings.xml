@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">StoryTeller</string>
+    <string name="app_version">v1.0.3</string>
     <string name="tab_home">首页</string>
     <string name="tab_story_management">小说管理</string>
     <string name="tab_creation">创作</string>
@@ -183,7 +184,7 @@
     <string name="home_current_novel_last_edit_format">上次修改时间：%1$s</string>
     <string name="home_current_novel_last_edit_empty">上次修改时间：暂无</string>
     <string name="action_continue_edit">继续编辑</string>
-    <string name="action_create_story">创建故事</string>
+    <string name="action_create_story">创建小说</string>
     <string name="home_recent_title">最近编辑</string>
     <string name="home_current_novel">当前小说：\n《星海旧梦》</string>
     <string name="home_current_novel_format">当前小说：\n《%1$s》</string>
