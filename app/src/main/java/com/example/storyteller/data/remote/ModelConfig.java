@@ -125,7 +125,7 @@ public class ModelConfig {
      */
     public static boolean isProviderEnabled(Context context, Provider provider) {
         android.content.SharedPreferences prefs = context.getSharedPreferences("model_prefs", android.content.Context.MODE_PRIVATE);
-        return prefs.getBoolean("provider_enabled_" + provider.name(), true); // 默认启用
+        return prefs.getBoolean("provider_enabled_" + provider.name(), false); // 默认禁用，需用户显式启用
     }
     
     /**
