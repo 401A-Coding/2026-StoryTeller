@@ -163,10 +163,49 @@ public class AIPanelFragment extends BaseFragment {
             btnAiSettings.setVisibility(View.VISIBLE);
         }
         
+        // 初始化模型选择：根据已启用的提供商自动选择第一个可用模型
+        initializeModelSelection();
+        
         // 如果有预填充消息，自动填入
         if (!TextUtils.isEmpty(prefillMessage)) {
             etMessage.setText(prefillMessage);
         }
+    }
+    
+    /**
+     * 初始化模型选择：根据已启用的提供商自动选择第一个可用模型
+     */
+    private void initializeModelSelection() {
+        // 获取所有可用模型（仅已启用的提供商）
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        java.util.List<ModelConfig.ModelInfo> enabledModels = new java.util.ArrayList<>();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(requireContext(), model.provider)) {
+                enabledModels.add(model);
+            }
+        }
+        
+        // 如果没有启用的模型，使用第一个模型（用户需去设置启用）
+        if (enabledModels.isEmpty()) {
+            currentModel = ModelConfig.DEFAULT_MODEL;
+        } else {
+            // 优先使用当前模型，如果可用则保持；否则使用第一个可用模型
+            boolean currentModelAvailable = false;
+            for (ModelConfig.ModelInfo model : enabledModels) {
+                if (model.modelId.equals(currentModel)) {
+                    currentModelAvailable = true;
+                    break;
+                }
+            }
+            if (!currentModelAvailable) {
+                currentModel = enabledModels.get(0).modelId;
+            }
+        }
+        
+        // 更新按钮显示
+        ModelConfig.ModelInfo model = ModelConfig.getModelInfo(currentModel);
+        String displayName = model != null ? model.displayName : currentModel;
+        btnModelSelector.setText(displayName);
     }
 
     private void setupRecyclerView() {

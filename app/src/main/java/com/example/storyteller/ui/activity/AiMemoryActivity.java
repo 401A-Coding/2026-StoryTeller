@@ -16,6 +16,7 @@ import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.data.local.db.CharacterDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.data.repository.StoryRepository;
 import com.example.storyteller.data.repository.StoryRepositoryImpl;
 import com.example.storyteller.model.AiMemory;
@@ -74,7 +75,7 @@ public class AiMemoryActivity extends BaseActivity {
     private String storyTitle;
     private List<AiMemory> allMemories = new ArrayList<>();
     private String currentFilterType = null; // null表示全部
-    private String currentModel = "flash"; // 默认使用flash模型
+    private String currentModel = ModelConfig.DEFAULT_MODEL; // 默认使用flash模型
 
     @Override
     protected int getLayoutId() {
@@ -176,6 +177,23 @@ public class AiMemoryActivity extends BaseActivity {
 
         // 加载记忆
         loadMemories();
+        
+        // 初始化模型选择：根据已启用的提供商自动选择第一个可用模型
+        initializeModelSelection();
+    }
+    
+    /**
+     * 初始化模型选择：根据已启用的提供商自动选择第一个可用模型
+     */
+    private void initializeModelSelection() {
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(this, model.provider)) {
+                currentModel = model.modelId;
+                break;
+            }
+        }
+        // 如果没有启用的模型，保持 DEFAULT_MODEL（用户需去设置启用）
     }
 
     /**

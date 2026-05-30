@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.google.gson.Gson;
 import java.util.Map;
 
@@ -18,6 +19,20 @@ public class PreferenceExtractor {
     private final ApiClient apiClient;
     private final PromptManager promptManager;
     private final Gson gson = new Gson();
+    
+    /**
+     * 获取第一个已启用的模型
+     */
+    private String getFirstEnabledModel() {
+        java.util.List<ModelConfig.ModelInfo> allModels = ModelConfig.getAllModels();
+        for (ModelConfig.ModelInfo model : allModels) {
+            if (ModelConfig.isProviderEnabled(context, model.provider)) {
+                return model.modelId;
+            }
+        }
+        // 如果没有启用任何模型，使用默认模型（用户需去设置启用）
+        return ModelConfig.DEFAULT_MODEL;
+    }
     
     public PreferenceExtractor(Context context) {
         this.context = context.getApplicationContext();
@@ -52,8 +67,11 @@ public class PreferenceExtractor {
         
         Log.d(TAG, "Starting preference extraction with prompt length: " + prompt.length());
         
+        // 自动选择第一个已启用的模型
+        String modelToUse = getFirstEnabledModel();
+        
         // 调用AI提取
-        apiClient.generateStory(prompt, "flash", context, new ApiClient.Callback() {
+        apiClient.generateStory(prompt, modelToUse, context, new ApiClient.Callback() {
             @Override
             public void onSuccess(String responseText) {
                 try {
