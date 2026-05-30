@@ -155,6 +155,10 @@ public class ArchitectureFragment extends BaseFragment {
                 showMiniMaxApiKeyRequiredDialog();
                 return;
             }
+            if (!isMiniMaxEnabled()) {
+                showMiniMaxProviderDisabledDialog();
+                return;
+            }
             showCoverGenerationDialog();
         });
 
@@ -762,6 +766,24 @@ public class ArchitectureFragment extends BaseFragment {
     private boolean hasMiniMaxApiKey() {
         String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.MINIMAX);
         return !TextUtils.isEmpty(apiKey);
+    }
+
+    private boolean isMiniMaxEnabled() {
+        return ModelConfig.isProviderEnabled(requireContext(), ModelConfig.Provider.MINIMAX);
+    }
+
+    private void showMiniMaxProviderDisabledDialog() {
+        new android.app.AlertDialog.Builder(requireContext())
+            .setTitle("MiniMax 未启用")
+            .setMessage("请先前往设置启用 MiniMax 提供商，再生成封面。")
+            .setNegativeButton("取消", null)
+            .setPositiveButton("去设置", (dialog, which) -> {
+                Intent intent = new Intent(requireContext(), MainActivity.class);
+                intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            })
+            .show();
     }
 
     private void showMiniMaxApiKeyRequiredDialog() {
