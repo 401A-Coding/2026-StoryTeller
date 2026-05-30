@@ -29,8 +29,8 @@ import com.example.storyteller.data.remote.ApiClient;
 import com.example.storyteller.data.remote.ApiKeyManager;
 import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Story;
-import com.example.storyteller.ui.activity.MainActivity;
 import com.example.storyteller.ui.adapter.CoverOptionAdapter;
+import com.example.storyteller.ui.dialog.MiniMaxSettingsDialogHelper;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -152,11 +152,11 @@ public class ArchitectureFragment extends BaseFragment {
         // AI生成封面按钮
         btnGenerateCover.setOnClickListener(v -> {
             if (!hasMiniMaxApiKey()) {
-                showMiniMaxApiKeyRequiredDialog();
+                MiniMaxSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "生成封面");
                 return;
             }
             if (!isMiniMaxEnabled()) {
-                showMiniMaxProviderDisabledDialog();
+                MiniMaxSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "生成封面");
                 return;
             }
             showCoverGenerationDialog();
@@ -772,34 +772,6 @@ public class ArchitectureFragment extends BaseFragment {
         return ModelConfig.isProviderEnabled(requireContext(), ModelConfig.Provider.MINIMAX);
     }
 
-    private void showMiniMaxProviderDisabledDialog() {
-        new android.app.AlertDialog.Builder(requireContext())
-            .setTitle("MiniMax 未启用")
-            .setMessage("请先前往设置启用 MiniMax 提供商，再生成封面。")
-            .setNegativeButton("取消", null)
-            .setPositiveButton("去设置", (dialog, which) -> {
-                Intent intent = new Intent(requireContext(), MainActivity.class);
-                intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-            })
-            .show();
-    }
-
-    private void showMiniMaxApiKeyRequiredDialog() {
-        new android.app.AlertDialog.Builder(requireContext())
-            .setTitle("未配置 MiniMax API Key")
-            .setMessage("请先前往设置配置 MiniMax API Key，再生成封面。")
-            .setNegativeButton("取消", null)
-            .setPositiveButton("去设置", (dialog, which) -> {
-                Intent intent = new Intent(requireContext(), MainActivity.class);
-                intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-            })
-            .show();
-    }
-     
     /**
      * 显示封面生成对话框
      */
