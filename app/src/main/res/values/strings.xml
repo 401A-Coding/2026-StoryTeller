@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">StoryTeller</string>
-    <string name="app_version">v1.0.3</string>
     <string name="tab_home">首页</string>
     <string name="tab_story_management">小说管理</string>
     <string name="tab_creation">创作</string>

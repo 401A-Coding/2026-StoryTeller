@@ -4,14 +4,18 @@ import android.annotation.SuppressLint;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.storyteller.R;
+
+import java.text.MessageFormat;
 
 /**
  * 启动页：显示居中 logo 与应用名称，再跳转到主界面
@@ -67,6 +71,16 @@ public class SplashActivity extends AppCompatActivity {
         View version = findViewById(R.id.splash_app_version);
         View content = findViewById(android.R.id.content);
 
+        // 自动获取并显示当前版本号
+        if (version instanceof TextView) {
+            try {
+                String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                ((TextView) version).setText(MessageFormat.format("v{0}", versionName));
+            } catch (PackageManager.NameNotFoundException e) {
+                ((TextView) version).setText("");
+            }
+        }
+
         content.setAlpha(0f);
         content.animate().alpha(1f).setDuration(220L).start();
 
@@ -93,4 +107,3 @@ public class SplashActivity extends AppCompatActivity {
         entranceSet.start();
     }
 }
-
