@@ -38,18 +38,18 @@
 ### 2. ui（界面层模块）
 
 #### Activity（10个主页面）
-| 类名 | 功能说明 |
-|------|----------|
-| `MainActivity` | 主页面，底部导航 |
+| 类名                       | 功能说明     |
+|--------------------------|----------|
+| `MainActivity`           | 主页面，底部导航 |
 | `StoryWorkspaceActivity` | 小说工作区主容器 |
-| `CharacterActivity` | 角色管理 |
-| `PlotTreeActivity` | 剧情树管理 |
-| `SettingDetailActivity` | 设定详情编辑 |
-| `AiMemoryActivity` | AI记忆管理 |
-| `MemoryDetailActivity` | 记忆详情 |
-| `NovelDetailActivity` | 小说详情页 |
-| `DocumentEditorActivity` | 文档编辑器 |
-| `PlotGraphActivity` | 关系图查看器 |
+| `CharacterActivity`      | 角色管理     |
+| `PlotTreeActivity`       | 剧情树管理    |
+| `SettingDetailActivity`  | 设定详情编辑   |
+| `AiMemoryActivity`       | AI记忆管理   |
+| `MemoryDetailActivity`   | 记忆详情     |
+| `NovelDetailActivity`    | 小说详情页    |
+| `DocumentEditorActivity` | 文档编辑器    |
+| `PlotGraphActivity`      | 关系图查看器   |
 
 #### Fragment（20个功能模块）
 - 导航容器类：`HomeFragment`、`StoryInfoPanelFragment`、`StoryManagementFragment`、`MoreFragment`、`SettingsFragment`
@@ -64,25 +64,25 @@
 #### Dialog（10+弹窗组件）
 
 ### 3. model（数据模型模块 - 17个实体类）
-| 模型 | 说明 |
-|------|------|
-| `Story` | 小说主体，含seriesName字段 |
-| `Volume` | 卷 |
-| `Chapter` | 章节 |
-| `StorySetting` | 设定，支持30个子分类专属属性 |
-| `SettingRelationship` | 设定关系 |
-| `Character` | 角色 |
-| `StoryDocument` | 文档 |
-| `ChatMessage` | 聊天消息 |
-| `AiMemory` | AI记忆 |
-| `UserWritingPreference` | 用户写作偏好 |
-| `ImportedNovel` | 导入的小说 |
-| `NovelSummary` | 小说摘要 |
-| `PlotChapterSummary` | 剧情章节摘要 |
-| `PlotOverviewSummary` | 剧情概览摘要 |
-| `PlotSummarySnapshot` | 剧情摘要快照 |
-| `RelationExtractionResult` | 关系提取结果 |
-| `BehaviorLog` | 行为日志 |
+| 模型                         | 说明                 |
+|----------------------------|--------------------|
+| `Story`                    | 小说主体，含seriesName字段 |
+| `Volume`                   | 卷                  |
+| `Chapter`                  | 章节                 |
+| `StorySetting`             | 设定，支持30个子分类专属属性    |
+| `SettingRelationship`      | 设定关系               |
+| `Character`                | 角色                 |
+| `StoryDocument`            | 文档                 |
+| `ChatMessage`              | 聊天消息               |
+| `AiMemory`                 | AI记忆               |
+| `UserWritingPreference`    | 用户写作偏好             |
+| `ImportedNovel`            | 导入的小说              |
+| `NovelSummary`             | 小说摘要               |
+| `PlotChapterSummary`       | 剧情章节摘要             |
+| `PlotOverviewSummary`      | 剧情概览摘要             |
+| `PlotSummarySnapshot`      | 剧情摘要快照             |
+| `RelationExtractionResult` | 关系提取结果             |
+| `BehaviorLog`              | 行为日志               |
 
 ### 4. data（数据访问与存储模块）
 - **local**：SQLite 数据库（DBHelper）
@@ -90,24 +90,24 @@
 - **repository**：数据仓库接口与实现
 
 ### 5. utils（工具类模块 - 17个）
-| 工具类 | 说明 |
-|--------|------|
-| `AgentCommandExecutor` | Agent 命令执行器（94KB） |
-| `AiMemoryManager` | AI记忆管理器 |
-| `PromptManager` | 提示词管理 |
-| `RelationExtractor` | 关系提取工具 |
-| `SpecificAttributesParser` | 专属属性解析器 |
-| `PreferenceExtractor` | 偏好提取器 |
-| `PreferenceManager` | 偏好管理器 |
-| `ThemeManager` | 主题管理器 |
-| `ThemeColorUtils` | 主题颜色工具 |
-| `ImportedNovelFileManager` | 导入小说文件管理 |
-| `MaterialContentParser` | 素材内容解析 |
-| `DatabaseMigrationUtils` | 数据库迁移工具 |
-| `ConversationMemory` | 对话记忆 |
-| `AudioUtils` | 音频工具 |
-| `JsonUtils` | JSON工具 |
-| `TaskType` | 任务类型枚举 |
+| 工具类                        | 说明                |
+|----------------------------|-------------------|
+| `AgentCommandExecutor`     | Agent 命令执行器（94KB） |
+| `AiMemoryManager`          | AI记忆管理器           |
+| `PromptManager`            | 提示词管理             |
+| `RelationExtractor`        | 关系提取工具            |
+| `SpecificAttributesParser` | 专属属性解析器           |
+| `PreferenceExtractor`      | 偏好提取器             |
+| `PreferenceManager`        | 偏好管理器             |
+| `ThemeManager`             | 主题管理器             |
+| `ThemeColorUtils`          | 主题颜色工具            |
+| `ImportedNovelFileManager` | 导入小说文件管理          |
+| `MaterialContentParser`    | 素材内容解析            |
+| `DatabaseMigrationUtils`   | 数据库迁移工具           |
+| `ConversationMemory`       | 对话记忆              |
+| `AudioUtils`               | 音频工具              |
+| `JsonUtils`                | JSON工具            |
+| `TaskType`                 | 任务类型枚举            |
 
 ---
 
@@ -115,14 +115,14 @@
 
 项目采用六大顶层分类、30个子分类的设定体系：
 
-| 大类 | 子分类 |
-|------|--------|
+| 大类        | 子分类                                          |
+|-----------|----------------------------------------------|
 | **世界观设定** | 地理环境、时代背景、历史背景、文明种族、文化习俗、社会制度、政治势力、科技发展、物品资源 |
-| **角色设定** | 主要角色、次要角色、反派角色、组织阵营 |
-| **地点设定** | 国家地区、城市、村庄、自然景观、关键场景、建筑设施、特殊空间 |
-| **剧情设定** | 主线剧情、支线剧情、关键事件、悬念伏笔、章节规划、矛盾冲突、时间线 |
-| **规则体系** | 力量体系、魔法/超能力、战斗系统、经济体系、时间规则、限制条件 |
-| **创作控制** | 主题内核、语言风格、情感基调、叙事视角 |
+| **角色设定**  | 主要角色、次要角色、反派角色、组织阵营                          |
+| **地点设定**  | 国家地区、城市、村庄、自然景观、关键场景、建筑设施、特殊空间               |
+| **剧情设定**  | 主线剧情、支线剧情、关键事件、悬念伏笔、章节规划、矛盾冲突、时间线            |
+| **规则体系**  | 力量体系、魔法/超能力、战斗系统、经济体系、时间规则、限制条件              |
+| **创作控制**  | 主题内核、语言风格、情感基调、叙事视角                          |
 
 详细设计参见 [SpecificAttributes_Design_v3.md](./SpecificAttributes_Design_v3.md)
 
@@ -136,17 +136,17 @@
 - **Java**：11
 
 ### 核心依赖
-| 库 | 版本 | 用途 |
-|---|------|------|
-| Material | 1.14.0 | Material Design 组件 |
-| OkHttp | 5.3.2 | HTTP 网络请求 |
-| Gson | 2.14.0 | JSON 解析 |
-| Glide | 4.16.0 | 图片加载 |
-| Markwon | 4.6.2 | Markdown 渲染 |
-| Jsoup | 1.18.3 | HTML 解析/网页爬取 |
-| ZXing | 3.5.3 | 二维码生成 |
+| 库               | 版本            | 用途                   |
+|-----------------|---------------|----------------------|
+| Material        | 1.14.0        | Material Design 组件   |
+| OkHttp          | 5.3.2         | HTTP 网络请求            |
+| Gson            | 2.14.0        | JSON 解析              |
+| Glide           | 4.16.0        | 图片加载                 |
+| Markwon         | 4.6.2         | Markdown 渲染          |
+| Jsoup           | 1.18.3        | HTML 解析/网页爬取         |
+| ZXing           | 3.5.3         | 二维码生成                |
 | security-crypto | 1.1.0-alpha06 | SharedPreferences 加密 |
-| vis.js | (WebView) | 关系图可视化 |
+| vis.js          | (WebView)     | 关系图可视化               |
 
 ---
 
@@ -158,7 +158,7 @@
 | 1.0.1 | 2026.05.29 | 更新首页布局                       |
 | 1.0.2 | 2026.05.29 | 配置构建发布工作流                    |
 | 1.0.3 | 2026.05.30 | 实现朗读功能                       |
-|1.0.4| 2026.05.30 | 最新版本，增加阅读模式，更换应用图标，添加模型校验与提示 |
+| 1.0.4 | 2026.05.30 | 最新版本，增加阅读模式，更换应用图标，添加模型校验与提示 |
 
 ---
 
