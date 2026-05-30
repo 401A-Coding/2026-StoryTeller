@@ -16,8 +16,11 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.data.local.db.StoryDao;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.WorkspacePagerAdapter;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.example.storyteller.ui.fragment.AIPanelFragment;
 import com.example.storyteller.ui.fragment.ArchitectureFragment;
 import com.example.storyteller.ui.fragment.StoryInfoPanelFragment;
@@ -134,7 +137,36 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         findViewById(R.id.btn_save).setOnClickListener(v -> saveCurrentWork());
 
         // AI助手按钮 - 打开右侧AI面板
-        fabAI.setOnClickListener(v -> openAIPanel());
+        fabAI.setOnClickListener(v -> {
+            if (!hasAnyProviderApiKey()) {
+                ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(this, "使用 AI 助手");
+                return;
+            }
+            if (!hasAnyProviderEnabled()) {
+                ModelProviderSettingsDialogHelper.showProviderDisabledDialog(this, "使用 AI 助手");
+                return;
+            }
+            openAIPanel();
+        });
+    }
+
+    private boolean hasAnyProviderEnabled() {
+        for (ModelConfig.Provider provider : ModelConfig.Provider.values()) {
+            if (ModelConfig.isProviderEnabled(this, provider)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAnyProviderApiKey() {
+        for (ModelConfig.Provider provider : ModelConfig.Provider.values()) {
+            String apiKey = ApiKeyManager.getApiKey(this, provider);
+            if (!TextUtils.isEmpty(apiKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

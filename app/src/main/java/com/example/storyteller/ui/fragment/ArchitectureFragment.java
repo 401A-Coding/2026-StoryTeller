@@ -30,7 +30,7 @@ import com.example.storyteller.data.remote.ApiKeyManager;
 import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.CoverOptionAdapter;
-import com.example.storyteller.ui.dialog.MiniMaxSettingsDialogHelper;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -152,11 +152,11 @@ public class ArchitectureFragment extends BaseFragment {
         // AI生成封面按钮
         btnGenerateCover.setOnClickListener(v -> {
             if (!hasMiniMaxApiKey()) {
-                MiniMaxSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "生成封面");
+                ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "MiniMax", "生成封面");
                 return;
             }
             if (!isMiniMaxEnabled()) {
-                MiniMaxSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "生成封面");
+                ModelProviderSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "MiniMax", "生成封面");
                 return;
             }
             showCoverGenerationDialog();

@@ -34,7 +34,7 @@ import com.example.storyteller.data.remote.ApiKeyManager;
 import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
-import com.example.storyteller.ui.dialog.MiniMaxSettingsDialogHelper;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.example.storyteller.ui.dialog.SettingImageSelectionDialog;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.example.storyteller.utils.SpecificAttributesParser;
@@ -2182,12 +2182,12 @@ public class SettingDetailActivity extends AppCompatActivity {
             
             @Override
             public void onGenerateRequested() {
-                if (!isMiniMaxEnabled()) {
-                    MiniMaxSettingsDialogHelper.showProviderDisabledDialog(SettingDetailActivity.this, "生成配图");
+                if (!hasMiniMaxApiKey()) {
+                    ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(SettingDetailActivity.this,"MiniMax", "生成配图");
                     return;
                 }
-                if (!hasMiniMaxApiKey()) {
-                    MiniMaxSettingsDialogHelper.showApiKeyRequiredDialog(SettingDetailActivity.this, "生成配图");
+                if (!isMiniMaxEnabled()) {
+                    ModelProviderSettingsDialogHelper.showProviderDisabledDialog(SettingDetailActivity.this,"MiniMax", "生成配图");
                     return;
                 }
                 // 显示加载状态
