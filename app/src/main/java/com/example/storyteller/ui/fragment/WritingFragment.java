@@ -160,8 +160,14 @@ public class WritingFragment extends BaseFragment {
             @Override
             public void onComplete() {
                 requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(requireContext(), "朗读完成", Toast.LENGTH_SHORT).show();
-                    stopReading();
+                    // 尝试自动读取下一章
+                    if (tryReadNextChapter()) {
+                        // 成功加载下一章，继续朗读
+                    } else {
+                        // 没有更多章节，显示完成提示
+                        Toast.makeText(requireContext(), "朗读完成", Toast.LENGTH_SHORT).show();
+                        stopReading();
+                    }
                 });
             }
             @Override
@@ -1681,5 +1687,38 @@ public class WritingFragment extends BaseFragment {
         tvChapterName.setText(chapterTitle);
         tvChapterName.setTextColor(getResources().getColor(R.color.text_primary, null));
         readingController.start();
+    }
+
+    /**
+     * 尝试读取下一章
+     * @return true 如果成功加载下一章，false 如果没有更多章节
+     */
+    private boolean tryReadNextChapter() {
+        if (volumes == null || volumes.isEmpty()) return false;
+        
+        // 检查当前索引是否有效
+        if (currentReadingVolumeIndex < 0 || currentReadingChapterIndex < 0) return false;
+        if (currentReadingVolumeIndex >= volumes.size()) return false;
+        
+        Volume currentVolume = volumes.get(currentReadingVolumeIndex);
+        int nextChapterIndex = currentReadingChapterIndex + 1;
+        
+        // 先检查当前卷是否有下一章
+        if (nextChapterIndex < currentVolume.getChapters().size()) {
+            startReadingChapter(currentReadingVolumeIndex, nextChapterIndex);
+            return true;
+        }
+        
+        // 当前卷没有更多章节，查找下一卷
+        for (int i = currentReadingVolumeIndex + 1; i < volumes.size(); i++) {
+            Volume nextVolume = volumes.get(i);
+            if (!nextVolume.getChapters().isEmpty()) {
+                startReadingChapter(i, 0);
+                return true;
+            }
+        }
+        
+        // 没有更多章节
+        return false;
     }
 }
