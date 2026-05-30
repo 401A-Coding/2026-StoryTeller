@@ -26,7 +26,10 @@ import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.activity.MainActivity;
 import com.example.storyteller.ui.adapter.CoverOptionAdapter;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
@@ -147,7 +150,13 @@ public class ArchitectureFragment extends BaseFragment {
         decorationView = view.findViewById(R.id.view_decoration);
 
         // AI生成封面按钮
-        btnGenerateCover.setOnClickListener(v -> showCoverGenerationDialog());
+        btnGenerateCover.setOnClickListener(v -> {
+            if (!hasMiniMaxApiKey()) {
+                showMiniMaxApiKeyRequiredDialog();
+                return;
+            }
+            showCoverGenerationDialog();
+        });
 
         // 设置状态下拉框
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(
@@ -749,7 +758,26 @@ public class ArchitectureFragment extends BaseFragment {
     }
     
     // ==================== AI生成封面功能 ====================
-    
+
+    private boolean hasMiniMaxApiKey() {
+        String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.MINIMAX);
+        return !TextUtils.isEmpty(apiKey);
+    }
+
+    private void showMiniMaxApiKeyRequiredDialog() {
+        new android.app.AlertDialog.Builder(requireContext())
+            .setTitle("未配置 MiniMax API Key")
+            .setMessage("请先前往设置配置 MiniMax API Key，再生成封面。")
+            .setNegativeButton("取消", null)
+            .setPositiveButton("去设置", (dialog, which) -> {
+                Intent intent = new Intent(requireContext(), MainActivity.class);
+                intent.putExtra(MainActivity.EXTRA_TARGET_TAB, MainActivity.TAB_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            })
+            .show();
+    }
+     
     /**
      * 显示封面生成对话框
      */

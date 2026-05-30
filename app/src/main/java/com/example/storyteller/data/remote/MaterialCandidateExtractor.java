@@ -262,6 +262,7 @@ public class MaterialCandidateExtractor {
         return settings;
     }
 
+    @Deprecated
     private String buildContent(String category, String summary, String detail, List<String> tags) {
         StringBuilder builder = new StringBuilder();
         builder.append("【分类】").append(category).append("\n");
@@ -273,6 +274,7 @@ public class MaterialCandidateExtractor {
         return builder.toString();
     }
 
+    @Deprecated
     private String buildContentWithSubCategory(String category, String subCategory, String summary, String detail, List<String> tags) {
         StringBuilder builder = new StringBuilder();
         builder.append("【分类】").append(category).append("\n");
