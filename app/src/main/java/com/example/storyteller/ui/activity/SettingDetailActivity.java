@@ -30,8 +30,11 @@ import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.example.storyteller.ui.dialog.SettingImageSelectionDialog;
 import com.example.storyteller.utils.SettingCategoryConfig;
 import com.example.storyteller.utils.SpecificAttributesParser;
@@ -2179,6 +2182,14 @@ public class SettingDetailActivity extends AppCompatActivity {
             
             @Override
             public void onGenerateRequested() {
+                if (!hasMiniMaxApiKey()) {
+                    ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(SettingDetailActivity.this,"MiniMax", "生成配图");
+                    return;
+                }
+                if (!isMiniMaxEnabled()) {
+                    ModelProviderSettingsDialogHelper.showProviderDisabledDialog(SettingDetailActivity.this,"MiniMax", "生成配图");
+                    return;
+                }
                 // 显示加载状态
                 if (currentImageDialog != null) {
                     currentImageDialog.showLoading(true);
@@ -2279,7 +2290,16 @@ public class SettingDetailActivity extends AppCompatActivity {
     }
     
     private static final int REQUEST_PICK_IMAGE = 1001;
-    
+
+    private boolean hasMiniMaxApiKey() {
+        String apiKey = ApiKeyManager.getApiKey(this, ModelConfig.Provider.MINIMAX);
+        return !TextUtils.isEmpty(apiKey);
+    }
+
+    private boolean isMiniMaxEnabled() {
+        return ModelConfig.isProviderEnabled(this, ModelConfig.Provider.MINIMAX);
+    }
+
     /**
      * 显示删除配图确认对话框
      */

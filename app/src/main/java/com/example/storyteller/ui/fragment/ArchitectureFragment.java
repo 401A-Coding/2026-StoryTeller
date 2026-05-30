@@ -26,8 +26,11 @@ import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.adapter.CoverOptionAdapter;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -147,7 +150,17 @@ public class ArchitectureFragment extends BaseFragment {
         decorationView = view.findViewById(R.id.view_decoration);
 
         // AI生成封面按钮
-        btnGenerateCover.setOnClickListener(v -> showCoverGenerationDialog());
+        btnGenerateCover.setOnClickListener(v -> {
+            if (!hasMiniMaxApiKey()) {
+                ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "MiniMax", "生成封面");
+                return;
+            }
+            if (!isMiniMaxEnabled()) {
+                ModelProviderSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "MiniMax", "生成封面");
+                return;
+            }
+            showCoverGenerationDialog();
+        });
 
         // 设置状态下拉框
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(
@@ -749,7 +762,16 @@ public class ArchitectureFragment extends BaseFragment {
     }
     
     // ==================== AI生成封面功能 ====================
-    
+
+    private boolean hasMiniMaxApiKey() {
+        String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.MINIMAX);
+        return !TextUtils.isEmpty(apiKey);
+    }
+
+    private boolean isMiniMaxEnabled() {
+        return ModelConfig.isProviderEnabled(requireContext(), ModelConfig.Provider.MINIMAX);
+    }
+
     /**
      * 显示封面生成对话框
      */

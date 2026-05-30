@@ -31,12 +31,15 @@ import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.SettingRelationshipDao;
 import com.example.storyteller.data.local.db.StorySettingDao;
+import com.example.storyteller.data.remote.ApiKeyManager;
+import com.example.storyteller.data.remote.ModelConfig;
 import com.example.storyteller.model.RelationExtractionResult;
 import com.example.storyteller.model.SettingRelationship;
 import com.example.storyteller.model.StorySetting;
 import com.example.storyteller.ui.activity.SettingDetailActivity;
 import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import com.example.storyteller.ui.dialog.ExtractionResultDialogFragment;
+import com.example.storyteller.ui.dialog.ModelProviderSettingsDialogHelper;
 import com.example.storyteller.utils.RelationExtractor;
 import com.example.storyteller.utils.ThemeColorUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -537,6 +540,19 @@ public class PlotGraphFragment extends BaseFragment {
     // ==================== AI 关系提取功能 ====================
     
     private void startAiRelationExtraction() {
+        // 先校验 DeepSeek API Key
+        String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.DEEPSEEK);
+        if (TextUtils.isEmpty(apiKey)) {
+            ModelProviderSettingsDialogHelper.showApiKeyRequiredDialog(requireContext(), "DeepSeek", "分析关系");
+            return;
+        }
+
+        // 再校验 DeepSeek 是否启用
+        if (!ModelConfig.isProviderEnabled(requireContext(), ModelConfig.Provider.DEEPSEEK)) {
+            ModelProviderSettingsDialogHelper.showProviderDisabledDialog(requireContext(), "DeepSeek", "分析关系");
+            return;
+        }
+
         FrameLayout layoutLoading = requireView().findViewById(R.id.layout_loading);
         TextView tvLoadingMessage = requireView().findViewById(R.id.tv_loading_message);
         if (layoutLoading != null) {
