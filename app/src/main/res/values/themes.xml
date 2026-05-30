@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.StoryTeller" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- 自定义 colorPrimary 与 colors.xml 保持一致 -->
@@ -21,6 +21,13 @@
         <item name="android:windowBackground">@android:color/white</item>
     </style>
     
+    <!-- 启动页主题：无标题栏并设置背景，避免启动时闪烁 -->
+    <style name="Theme.Splash" parent="Base.Theme.StoryTeller">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/background_primary</item>
+    </style>
+
     <!-- 通用Dialog样式 -->
     <style name="DialogTheme" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowNoTitle">true</item>
