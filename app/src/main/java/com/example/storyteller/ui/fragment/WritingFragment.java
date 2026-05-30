@@ -64,6 +64,7 @@ public class WritingFragment extends BaseFragment {
     // 朗读控制栏控件
     private View cardReadingControl;  // 悬浮卡片
     private View layoutReadingControl;  // 内部布局
+    private View viewReadingBottomSpacer;  // 阅读模式底部空白区域
     private ImageButton btnPlayPause;
     private TextView tvChapterName;
     private ImageView ivReadingIcon;
@@ -119,8 +120,10 @@ public class WritingFragment extends BaseFragment {
         // 初始化朗读控制栏控件
         cardReadingControl = view.findViewById(R.id.card_reading_control);
         layoutReadingControl = view.findViewById(R.id.layout_reading_content);
+        viewReadingBottomSpacer = view.findViewById(R.id.view_reading_bottom_spacer);
         // 编辑模式下朗读控制栏默认隐藏
         cardReadingControl.setVisibility(View.GONE);
+        viewReadingBottomSpacer.setVisibility(View.GONE);
         btnPlayPause = view.findViewById(R.id.btn_play_pause);
         tvChapterName = view.findViewById(R.id.tv_chapter_name);
         ivReadingIcon = view.findViewById(R.id.iv_reading_icon);
@@ -293,7 +296,8 @@ public class WritingFragment extends BaseFragment {
                 int childId = child.getId();
                 if (childId != R.id.btn_add_volume
                         && childId != R.id.tv_empty_hint
-                        && childId != R.id.card_writing_reference) {
+                        && childId != R.id.card_writing_reference
+                        && childId != R.id.view_reading_bottom_spacer) {
                     viewsToRemove.add(child);
                 }
             }
@@ -326,15 +330,17 @@ public class WritingFragment extends BaseFragment {
         // 编辑模式下显示添加卷按钮，隐藏朗读控制栏
         btnAddVolume.setVisibility(isEditMode ? View.VISIBLE : View.GONE);
         cardReadingControl.setVisibility(isEditMode ? View.GONE : View.VISIBLE);
+        viewReadingBottomSpacer.setVisibility(isEditMode ? View.GONE : View.VISIBLE);
 
-        // 清除除btn_add_volume之外的所有视图
+        // 清除除btn_add_volume和view_reading_bottom_spacer之外的所有视图
         List<View> viewsToRemove = new ArrayList<>();
         
         for (int i = 0; i < layoutContent.getChildCount(); i++) {
             View child = layoutContent.getChildAt(i);
             if (child.getId() != R.id.btn_add_volume
                     && child.getId() != R.id.tv_empty_hint
-                    && child.getId() != R.id.card_writing_reference) {
+                    && child.getId() != R.id.card_writing_reference
+                    && child.getId() != R.id.view_reading_bottom_spacer) {
                 viewsToRemove.add(child);
             }
         }
