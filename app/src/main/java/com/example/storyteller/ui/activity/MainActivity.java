@@ -1,6 +1,8 @@
 package com.example.storyteller.ui.activity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
+
 import com.example.storyteller.R;
 import com.example.storyteller.base.BaseActivity;
 import com.example.storyteller.ui.fragment.HomeFragment;
@@ -60,8 +62,60 @@ public class MainActivity extends BaseActivity {
         // 初始化故事字数统计（仅在首次启动或数据库升级后执行）
         DatabaseMigrationUtils.initializeWordCounts(this);
         
-        String targetTab = getIntent() != null ? getIntent().getStringExtra(EXTRA_TARGET_TAB) : null;
-        bottomNav.setSelectedItemId(getMenuIdForTab(targetTab));
+        // 检查是否有最近保存的Tab状态（5秒内）
+        // 如果有，说明是配置变更（如主题切换）导致的Activity重建，恢复Tab
+        // 如果没有，说明是冷启动，显示首页
+        SharedPreferences prefs = getSharedPreferences("main_activity_prefs", MODE_PRIVATE);
+        long savedTime = prefs.getLong("tab_save_time", 0);
+        long currentTime = System.currentTimeMillis();
+        
+        if (currentTime - savedTime < 5000) {
+            restoreSelectedTab();
+        } else {
+            // 清除保存的Tab状态
+            prefs.edit().putInt("last_selected_tab", 0).apply();
+            String targetTab = getIntent() != null ? getIntent().getStringExtra(EXTRA_TARGET_TAB) : null;
+            bottomNav.setSelectedItemId(getMenuIdForTab(targetTab));
+        }
+    }
+    
+    /**
+     * 保存当前选中的 Tab 到 Preference
+     * 在切换主题前调用
+     */
+    public void saveCurrentTab() {
+        int selectedId = bottomNav.getSelectedItemId();
+        int tabIndex = 0;
+        if (selectedId == R.id.menu_story_management) {
+            tabIndex = 1;
+        } else if (selectedId == R.id.menu_settings) {
+            tabIndex = 2;
+        }
+        SharedPreferences prefs = getSharedPreferences("main_activity_prefs", MODE_PRIVATE);
+        prefs.edit()
+                .putInt("last_selected_tab", tabIndex)
+                .putLong("tab_save_time", System.currentTimeMillis())
+                .apply();
+    }
+    
+    /**
+     * 恢复之前选中的 Tab
+     */
+    private void restoreSelectedTab() {
+        int tabIndex = getSharedPreferences("main_activity_prefs", MODE_PRIVATE)
+                .getInt("last_selected_tab", 0);
+        int menuId;
+        switch (tabIndex) {
+            case 1:
+                menuId = R.id.menu_story_management;
+                break;
+            case 2:
+                menuId = R.id.menu_settings;
+                break;
+            default:
+                menuId = R.id.menu_home;
+        }
+        bottomNav.setSelectedItemId(menuId);
     }
 
     @Override
