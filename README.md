@@ -33,11 +33,13 @@
 ## 二、项目结构
 
 ### 1. base（基础类模块）
+
 - `BaseActivity`、`BaseFragment`：统一 Activity/Fragment 基类，封装通用逻辑
 
 ### 2. ui（界面层模块）
 
 #### Activity（10个主页面）
+
 | 类名                       | 功能说明     |
 |--------------------------|----------|
 | `MainActivity`           | 主页面，底部导航 |
@@ -52,6 +54,7 @@
 | `PlotGraphActivity`      | 关系图查看器   |
 
 #### Fragment（20个功能模块）
+
 - 导航容器类：`HomeFragment`、`StoryInfoPanelFragment`、`StoryManagementFragment`、`MoreFragment`、`SettingsFragment`
 - 目录列表类：`StorySettingsListFragment`、`BookshelfFragment`、`ReferenceLibraryFragment`、`MaterialLibraryFragment`
 - 工作区类：`WritingFragment`、`ArchitectureFragment`、`OutlineFragment`、`CharactersFragment`
@@ -61,9 +64,11 @@
 - 其他：`AboutFragment`、`HelpFragment`、`FeedbackFragment`、`MyCreationsFragment`
 
 #### Adapter（20+列表适配器）
+
 #### Dialog（10+弹窗组件）
 
 ### 3. model（数据模型模块 - 17个实体类）
+
 | 模型                         | 说明                 |
 |----------------------------|--------------------|
 | `Story`                    | 小说主体，含seriesName字段 |
@@ -85,11 +90,13 @@
 | `BehaviorLog`              | 行为日志               |
 
 ### 4. data（数据访问与存储模块）
+
 - **local**：SQLite 数据库（DBHelper）
 - **remote**：API 客户端（多模型支持）、素材提取、网络爬虫（Jsoup）
 - **repository**：数据仓库接口与实现
 
 ### 5. utils（工具类模块 - 17个）
+
 | 工具类                        | 说明                |
 |----------------------------|-------------------|
 | `AgentCommandExecutor`     | Agent 命令执行器（94KB） |
@@ -131,11 +138,13 @@
 ## 四、技术栈与依赖
 
 ### 构建系统
+
 - **AGP**：9.2.1
 - **Gradle**：8.x
 - **Java**：11
 
 ### 核心依赖
+
 | 库               | 版本            | 用途                   |
 |-----------------|---------------|----------------------|
 | Material        | 1.14.0        | Material Design 组件   |
@@ -179,10 +188,10 @@ git tag v1.1.0
 git push origin v1.1.0
 ```
 
-
 ### GitHub Actions 工作流程
 
 推送 tag 后自动执行：
+
 1. 解密 keystore（从 Secrets 获取）
 2. 构建 Release APK（签名）
 3. 创建 GitHub Release（草稿模式）
@@ -199,20 +208,18 @@ git push origin v1.1.0
    [Convert]::ToBase64String((Get-Content -Path "keystore.jks" -Encoding Byte)) -replace '\r?\n' | Set-Content keystore_b64.txt
    ```
 3. **添加 GitHub Secrets**：
-   - `KEY_STORE_FILE`：Base64 编码的 keystore 内容
-   - `KEY_STORE_PASSWORD`：Keystore 密码
-   - `KEY_PASSWORD`：密钥密码
+    - `KEY_STORE_FILE`：Base64 编码的 keystore 内容
+    - `KEY_STORE_PASSWORD`：Keystore 密码
+    - `KEY_PASSWORD`：密钥密码
 
 ### Workflow 文件
 
 - `.github/workflows/android.yml`：CI 检查（PR/推送时构建 debug）
 - `.github/workflows/release.yml`：Release 发布（推送 tag 时构建 release）
 
-
 ---
 
 ## 七、提交规范（GitHub）
-
 
 - 每周功能合并到 `main`
 - 功能分支命名：`feature/模块名`

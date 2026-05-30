@@ -9,18 +9,30 @@
 ## 一、世界观设定
 
 ### 1.1 地理环境
+
 ```json
 {
   "area": "面积描述",
-  "terrain": ["山地", "平原", "水域"],
+  "terrain": [
+    "山地",
+    "平原",
+    "水域"
+  ],
   "climate": "气候类型",
-  "resources": ["矿藏", "灵植"],
+  "resources": [
+    "矿藏",
+    "灵植"
+  ],
   "dangerLevel": 5,
   "coordinates": "坐标位置",
-  "features": ["险峻地形", "天然屏障"],
+  "features": [
+    "险峻地形",
+    "天然屏障"
+  ],
   "strategicValue": "战略价值描述"
 }
 ```
+
 | 字段             | 类型         | 说明        |
 |----------------|------------|-----------|
 | area           | TEXT       | 面积描述      |
@@ -33,16 +45,22 @@
 | strategicValue | TEXT_MULTI | 战略价值      |
 
 ### 1.2 时代背景
+
 ```json
 {
   "eraName": "时代名称",
   "timePeriod": "时间段",
   "techLevel": "科技水平",
   "culturalLevel": "文化程度",
-  "mainConflicts": ["冲突1", "冲突2"],
+  "mainConflicts": [
+    "冲突1",
+    "冲突2"
+  ],
   "socialMood": "社会氛围"
 }
+
 ```
+
 | 字段            | 类型       | 说明                      |
 |---------------|----------|-------------------------|
 | eraName       | TEXT     | 时代名称                    |
@@ -53,17 +71,30 @@
 | socialMood    | TEXT     | 社会氛围                    |
 
 ### 1.3 历史背景
+
 ```json
 {
   "majorEvents": [
-    {"year": -500, "event": "创世", "significance": 10},
-    {"year": 0, "event": "大灾变", "significance": 9}
+    {
+      "year": -500,
+      "event": "创世",
+      "significance": 10
+    },
+    {
+      "year": 0,
+      "event": "大灾变",
+      "significance": 9
+    }
   ],
-  "keyFigures": ["人物1", "人物2"],
+  "keyFigures": [
+    "人物1",
+    "人物2"
+  ],
   "historicalImpact": "历史影响描述",
   "legacy": "遗留影响"
 }
 ```
+
 | 字段               | 类型         | 说明                 |
 |------------------|------------|--------------------|
 | majorEvents      | TEXT_MULTI | 重大事件（格式：年份:事件:重要性） |
@@ -72,18 +103,26 @@
 | legacy           | TEXT_MULTI | 遗留影响               |
 
 ### 1.4 文明种族
+
 ```json
 {
   "raceName": "种族名称",
   "origin": "起源",
-  "physicalTraits": ["特征1", "特征2"],
-  "culturalTraits": ["文化1", "文化2"],
+  "physicalTraits": [
+    "特征1",
+    "特征2"
+  ],
+  "culturalTraits": [
+    "文化1",
+    "文化2"
+  ],
   "language": "语言特点",
   "religion": "宗教信仰",
   "population": "人口规模",
   "status": "现状：兴旺/衰落/灭绝"
 }
 ```
+
 | 字段             | 类型       | 说明                  |
 |----------------|----------|---------------------|
 | raceName       | TEXT     | 种族名称                |
@@ -96,16 +135,33 @@
 | status         | SELECT   | 现状：兴旺/平稳/衰落/濒危/灭绝   |
 
 ### 1.5 文化习俗
+
 ```json
 {
-  "festivals": ["节日1", "节日2"],
-  "traditions": ["传统1", "传统2"],
-  "taboos": ["禁忌1", "禁忌2"],
-  "culturalValues": ["价值观1", "价值观2"],
-  "artForms": ["艺术形式1", "艺术形式2"],
+  "festivals": [
+    "节日1",
+    "节日2"
+  ],
+  "traditions": [
+    "传统1",
+    "传统2"
+  ],
+  "taboos": [
+    "禁忌1",
+    "禁忌2"
+  ],
+  "culturalValues": [
+    "价值观1",
+    "价值观2"
+  ],
+  "artForms": [
+    "艺术形式1",
+    "艺术形式2"
+  ],
   "dietaryHabits": "饮食习惯"
 }
 ```
+
 | 字段             | 类型       | 说明    |
 |----------------|----------|-------|
 | festivals      | TAG_LIST | 节日    |
@@ -116,17 +172,26 @@
 | dietaryHabits  | TEXT     | 饮食习惯  |
 
 ### 1.6 社会制度
+
 ```json
 {
   "governmentType": "政体类型",
-  "socialHierarchy": ["阶层1", "阶层2", "阶层3"],
-  "laws": ["法律1", "法律2"],
+  "socialHierarchy": [
+    "阶层1",
+    "阶层2",
+    "阶层3"
+  ],
+  "laws": [
+    "法律1",
+    "法律2"
+  ],
   "justiceSystem": "司法制度",
   "classMobility": "阶级流动性",
   "corruption": 3,
   "stability": 7
 }
 ```
+
 | 字段              | 类型         | 说明                         |
 |-----------------|------------|----------------------------|
 | governmentType  | SELECT     | 政体：君主制/贵族制/共和制/民主制/神权制/独裁制 |
@@ -138,6 +203,7 @@
 | stability       | SLIDER     | 稳定程度 1-10                  |
 
 ### 1.7 政治势力
+
 ```json
 {
   "factionName": "势力名称",
@@ -147,11 +213,18 @@
   "militaryStrength": "军事力量",
   "economicStrength": "经济实力",
   "politicalIdeology": "政治理念",
-  "allies": ["盟友1", "盟友2"],
-  "enemies": ["敌人1", "敌人2"],
+  "allies": [
+    "盟友1",
+    "盟友2"
+  ],
+  "enemies": [
+    "敌人1",
+    "敌人2"
+  ],
   "influence": 7
 }
 ```
+
 | 字段                | 类型       | 说明                     |
 |-------------------|----------|------------------------|
 | factionName       | TEXT     | 势力名称                   |
@@ -166,16 +239,26 @@
 | influence         | SLIDER   | 影响力 1-10               |
 
 ### 1.8 科技发展
+
 ```json
 {
   "techLevel": "科技等级",
-  "mainTechnologies": ["技术1", "技术2"],
-  "forbiddenTechs": ["禁忌技术1"],
+  "mainTechnologies": [
+    "技术1",
+    "技术2"
+  ],
+  "forbiddenTechs": [
+    "禁忌技术1"
+  ],
   "researchDirection": "研究方向",
-  "techFeatures": ["科技特色1", "特色2"],
+  "techFeatures": [
+    "科技特色1",
+    "特色2"
+  ],
   "developmentStage": "发展阶段"
 }
 ```
+
 | 字段                | 类型         | 说明                |
 |-------------------|------------|-------------------|
 | techLevel         | TEXT       | 科技等级描述            |
@@ -186,6 +269,7 @@
 | developmentStage  | SELECT     | 发展阶段：萌芽/发展中/成熟/衰退 |
 
 ### 1.9 物品资源
+
 ```json
 {
   "itemName": "物品名称",
@@ -194,10 +278,16 @@
   "source": "来源",
   "usage": "用途",
   "value": "价值",
-  "sideEffects": ["副作用1"],
-  "relatedLocations": ["产地1", "产地2"]
+  "sideEffects": [
+    "副作用1"
+  ],
+  "relatedLocations": [
+    "产地1",
+    "产地2"
+  ]
 }
 ```
+
 | 字段               | 类型         | 说明                     |
 |------------------|------------|------------------------|
 | itemName         | TEXT       | 物品名称                   |
@@ -214,29 +304,53 @@
 ## 二、角色设定
 
 ### 2.1 主要角色
+
 ```json
 {
   "roleType": "protagonist",
   "age": 18,
   "gender": "male",
   "appearance": "外貌描述",
-  "personalityTraits": ["冷静", "机智"],
-  "goals": ["目标1", "目标2"],
-  "internalConflicts": ["内心冲突1"],
-  "secrets": ["秘密1"],
-  "weaknesses": ["弱点1"],
-  "strengths": ["优势1"],
+  "personalityTraits": [
+    "冷静",
+    "机智"
+  ],
+  "goals": [
+    "目标1",
+    "目标2"
+  ],
+  "internalConflicts": [
+    "内心冲突1"
+  ],
+  "secrets": [
+    "秘密1"
+  ],
+  "weaknesses": [
+    "弱点1"
+  ],
+  "strengths": [
+    "优势1"
+  ],
   "backgroundStory": "背景故事",
   "relationships": [
-    {"character": "林雪", "relation": "妹妹", "description": "关系描述"}
+    {
+      "character": "林雪",
+      "relation": "妹妹",
+      "description": "关系描述"
+    }
   ],
   "characterArc": "角色成长弧光",
-  "signatureItems": ["标志性物品1"],
-  "quotes": ["经典台词1"],
+  "signatureItems": [
+    "标志性物品1"
+  ],
+  "quotes": [
+    "经典台词1"
+  ],
   "currentStatus": "活跃",
   "plotImportance": 10
 }
 ```
+
 | 字段                | 类型         | 说明                                                        |
 |-------------------|------------|-----------------------------------------------------------|
 | roleType          | SELECT     | 角色类型：protagonist:主角/antagonist:反派/supporting:配角/mentor:导师 |
@@ -258,21 +372,28 @@
 | plotImportance    | SLIDER     | 剧情重要性 1-10                                                |
 
 ### 2.2 次要角色
+
 ```json
 {
   "roleType": "supporting",
   "age": 25,
   "gender": "female",
   "appearance": "外貌描述",
-  "personalityTraits": ["热心", "善良"],
+  "personalityTraits": [
+    "热心",
+    "善良"
+  ],
   "mainFunction": "在剧情中的作用",
   "relationshipToProtagonist": "与主角关系",
-  "keyScenes": ["关键场景1"],
+  "keyScenes": [
+    "关键场景1"
+  ],
   "developmentPotential": "发展空间",
   "screenTime": 5,
   "status": "活跃"
 }
 ```
+
 | 字段                        | 类型         | 说明                                       |
 |---------------------------|------------|------------------------------------------|
 | roleType                  | SELECT     | 角色类型：supporting:配角/mentor:导师/sidekick:跟班 |
@@ -288,26 +409,44 @@
 | status                    | SELECT     | 现状：活跃/退场/死亡                              |
 
 ### 2.3 反派角色
+
 ```json
 {
   "roleType": "antagonist",
   "age": 35,
   "gender": "male",
   "appearance": "外貌描述",
-  "personalityTraits": ["冷酷", "狡猾"],
+  "personalityTraits": [
+    "冷酷",
+    "狡猾"
+  ],
   "evilType": "邪恶类型",
-  "goals": ["目标1", "目标2"],
-  "methods": ["手段1"],
-  "strengths": ["优势1"],
-  "weaknesses": ["弱点1"],
+  "goals": [
+    "目标1",
+    "目标2"
+  ],
+  "methods": [
+    "手段1"
+  ],
+  "strengths": [
+    "优势1"
+  ],
+  "weaknesses": [
+    "弱点1"
+  ],
   "relationships": [
-    {"character": "主角", "relation": "宿敌", "description": "关系描述"}
+    {
+      "character": "主角",
+      "relation": "宿敌",
+      "description": "关系描述"
+    }
   ],
   "motive": "动机",
   "threatLevel": 8,
   "currentStatus": "活跃"
 }
 ```
+
 | 字段                | 类型         | 说明                       |
 |-------------------|------------|--------------------------|
 | roleType          | SELECT     | 角色类型：antagonist:反派       |
@@ -326,22 +465,34 @@
 | currentStatus     | SELECT     | 现状：活跃/退场/死亡              |
 
 ### 2.4 组织阵营
+
 ```json
 {
   "groupName": "组织名称",
   "groupType": "组织类型",
   "scale": "规模",
   "leader": "首领",
-  "coreMembers": ["核心成员1", "成员2"],
-  "commonTraits": ["共同特征1"],
+  "coreMembers": [
+    "核心成员1",
+    "成员2"
+  ],
+  "commonTraits": [
+    "共同特征1"
+  ],
   "hierarchy": "内部层级",
-  "goals": ["目标1", "目标2"],
+  "goals": [
+    "目标1",
+    "目标2"
+  ],
   "codeOfConduct": "行事准则",
-  "resources": ["资源1"],
+  "resources": [
+    "资源1"
+  ],
   "influence": 7,
   "alignment": "阵营倾向"
 }
 ```
+
 | 字段            | 类型         | 说明                          |
 |---------------|------------|-----------------------------|
 | groupName     | TEXT       | 组织名称                        |
@@ -362,6 +513,7 @@
 ## 三、地点设定
 
 ### 3.1 国家地区
+
 ```json
 {
   "countryName": "国家名称",
@@ -369,19 +521,31 @@
   "population": "人口",
   "governmentType": "政体",
   "capital": "首都",
-  "mainCities": ["主要城市1"],
-  "terrain": ["地形1", "地形2"],
+  "mainCities": [
+    "主要城市1"
+  ],
+  "terrain": [
+    "地形1",
+    "地形2"
+  ],
   "climate": "气候",
-  "resources": ["资源1"],
+  "resources": [
+    "资源1"
+  ],
   "economy": "经济状况",
   "military": "军事实力",
   "culture": "文化特色",
-  "allies": ["盟友"],
-  "enemies": ["敌国"],
+  "allies": [
+    "盟友"
+  ],
+  "enemies": [
+    "敌国"
+  ],
   "stability": 7,
   "nationalStrength": 8
 }
 ```
+
 | 字段               | 类型         | 说明                 |
 |------------------|------------|--------------------|
 | countryName      | TEXT       | 国家名称               |
@@ -402,22 +566,33 @@
 | nationalStrength | SLIDER     | 国力 1-10            |
 
 ### 3.2 城市
+
 ```json
 {
   "cityName": "城市名称",
   "cityType": "城市类型",
   "population": "人口",
   "location": "位置",
-  "mainDistricts": ["区域1", "区域2"],
-  "features": ["特色1"],
+  "mainDistricts": [
+    "区域1",
+    "区域2"
+  ],
+  "features": [
+    "特色1"
+  ],
   "economy": "经济",
   "culture": "文化",
-  "famousBuildings": ["著名建筑1"],
-  "notableResidents": ["知名居民1"],
+  "famousBuildings": [
+    "著名建筑1"
+  ],
+  "notableResidents": [
+    "知名居民1"
+  ],
   "dangerLevel": 3,
   "prosperity": 8
 }
 ```
+
 | 字段               | 类型         | 说明                        |
 |------------------|------------|---------------------------|
 | cityName         | TEXT       | 城市名称                      |
@@ -434,21 +609,31 @@
 | prosperity       | SLIDER     | 繁华程度 1-10                 |
 
 ### 3.3 村庄
+
 ```json
 {
   "villageName": "村庄名称",
   "location": "位置",
   "population": "人口",
   "mainIndustry": "主要产业",
-  "features": ["特色1"],
-  "customs": ["习俗1"],
-  "notableNPCs": ["知名NPC1"],
-  "relationships": ["与主角关系"],
+  "features": [
+    "特色1"
+  ],
+  "customs": [
+    "习俗1"
+  ],
+  "notableNPCs": [
+    "知名NPC1"
+  ],
+  "relationships": [
+    "与主角关系"
+  ],
   "development": "发展状况",
   "dangerLevel": 2,
   "isolation": 5
 }
 ```
+
 | 字段            | 类型         | 说明                      |
 |---------------|------------|-------------------------|
 | villageName   | TEXT       | 村庄名称                    |
@@ -464,19 +649,28 @@
 | isolation     | SLIDER     | 封闭程度 1-10               |
 
 ### 3.4 自然景观
+
 ```json
 {
   "landscapeName": "景观名称",
   "landscapeType": "景观类型",
   "location": "位置",
-  "features": ["特征1", "特征2"],
+  "features": [
+    "特征1",
+    "特征2"
+  ],
   "dangerLevel": 7,
-  "resources": ["资源1"],
-  "legends": ["传说1"],
+  "resources": [
+    "资源1"
+  ],
+  "legends": [
+    "传说1"
+  ],
   "visitors": "访客情况",
   "ecology": "生态环境"
 }
 ```
+
 | 字段            | 类型         | 说明                           |
 |---------------|------------|------------------------------|
 | landscapeName | TEXT       | 景观名称                         |
@@ -490,19 +684,27 @@
 | ecology       | TEXT_MULTI | 生态环境                         |
 
 ### 3.5 关键场景
+
 ```json
 {
   "sceneName": "场景名称",
   "sceneType": "场景类型",
   "location": "位置",
   "atmosphere": "氛围",
-  "keyItems": ["关键物品1"],
-  "importantEvents": ["重要事件1"],
-  "associatedCharacters": ["关联角色1"],
+  "keyItems": [
+    "关键物品1"
+  ],
+  "importantEvents": [
+    "重要事件1"
+  ],
+  "associatedCharacters": [
+    "关联角色1"
+  ],
   "function": "剧情功能",
   "accessibility": "可达性"
 }
 ```
+
 | 字段                   | 类型         | 说明                     |
 |----------------------|------------|------------------------|
 | sceneName            | TEXT       | 场景名称                   |
@@ -516,21 +718,29 @@
 | accessibility        | SELECT     | 可达性：自由出入/需要许可/隐藏/危险    |
 
 ### 3.6 建筑设施
+
 ```json
 {
   "buildingName": "建筑名称",
   "buildingType": "建筑类型",
   "location": "位置",
   "size": "规模",
-  "features": ["特色1"],
+  "features": [
+    "特色1"
+  ],
   "defense": "防御能力",
-  "facilities": ["设施1"],
+  "facilities": [
+    "设施1"
+  ],
   "owner": "所有者",
-  "staff": ["人员1"],
+  "staff": [
+    "人员1"
+  ],
   "function": "功能",
   "security": 8
 }
 ```
+
 | 字段           | 类型         | 说明                           |
 |--------------|------------|------------------------------|
 | buildingName | TEXT       | 建筑名称                         |
@@ -546,6 +756,7 @@
 | security     | SLIDER     | 安保程度 1-10                    |
 
 ### 3.7 特殊空间
+
 ```json
 {
   "spaceName": "空间名称",
@@ -553,13 +764,22 @@
   "entryCondition": "进入条件",
   "size": "空间大小",
   "timeFlow": "时间流速",
-  "rules": ["规则1"],
-  "dangers": ["危险1"],
-  "treasures": ["宝物1"],
-  "keyFeatures": ["关键特征1"],
+  "rules": [
+    "规则1"
+  ],
+  "dangers": [
+    "危险1"
+  ],
+  "treasures": [
+    "宝物1"
+  ],
+  "keyFeatures": [
+    "关键特征1"
+  ],
   "origin": "起源"
 }
 ```
+
 | 字段             | 类型         | 说明                         |
 |----------------|------------|----------------------------|
 | spaceName      | TEXT       | 空间名称                       |
@@ -578,20 +798,29 @@
 ## 四、剧情设定
 
 ### 4.1 主线剧情
+
 ```json
 {
   "plotType": "main_storyline",
   "storyArc": "起承转合",
   "keyTurningPoints": [
-    {"chapter": 10, "event": "第一次觉醒", "significance": 9}
+    {
+      "chapter": 10,
+      "event": "第一次觉醒",
+      "significance": 9
+    }
   ],
   "centralConflict": "核心冲突",
   "resolution": "结局走向",
-  "themes": ["主题1", "主题2"],
+  "themes": [
+    "主题1",
+    "主题2"
+  ],
   "pacing": "节奏",
   "length": "预计篇幅"
 }
 ```
+
 | 字段               | 类型         | 说明                                |
 |------------------|------------|-----------------------------------|
 | plotType         | SELECT     | 剧情类型：main_storyline:主线/subplot:支线 |
@@ -604,6 +833,7 @@
 | length           | SELECT     | 篇幅：短篇/中篇/长篇/超长篇                   |
 
 ### 4.2 支线剧情
+
 ```json
 {
   "plotType": "subplot",
@@ -612,11 +842,15 @@
   "purpose": "支线作用",
   "startChapter": 15,
   "endChapter": 30,
-  "keyCharacters": ["角色1", "角色2"],
+  "keyCharacters": [
+    "角色1",
+    "角色2"
+  ],
   "resolutionImpact": "对主线影响",
   "status": "进行中"
 }
 ```
+
 | 字段               | 类型         | 说明                 |
 |------------------|------------|--------------------|
 | plotType         | SELECT     | 剧情类型：subplot:支线    |
@@ -630,18 +864,26 @@
 | status           | SELECT     | 状态：待开启/进行中/已完成/已放弃 |
 
 ### 4.3 关键事件
+
 ```json
 {
   "eventName": "事件名称",
   "eventType": "battle",
   "chapterNumber": "第25章",
-  "participants": ["角色1", "角色2"],
+  "participants": [
+    "角色1",
+    "角色2"
+  ],
   "outcome": "事件结果",
-  "consequences": ["后果1", "后果2"],
+  "consequences": [
+    "后果1",
+    "后果2"
+  ],
   "significance": 9,
   "description": "详细描述"
 }
 ```
+
 | 字段            | 类型         | 说明                                                                                     |
 |---------------|------------|----------------------------------------------------------------------------------------|
 | eventName     | TEXT       | 事件名称                                                                                   |
@@ -654,6 +896,7 @@
 | description   | TEXT_MULTI | 详细描述                                                                                   |
 
 ### 4.4 悬念伏笔
+
 ```json
 {
   "suspenseName": "悬念名称",
@@ -663,11 +906,15 @@
   "setupDescription": "埋设描述",
   "resolveChapterNumber": "",
   "resolveDescription": "回收描述",
-  "clueList": ["线索1", "线索2"],
+  "clueList": [
+    "线索1",
+    "线索2"
+  ],
   "expectedReveal": "预期揭示方式",
   "readerExpectation": 9
 }
 ```
+
 | 字段                   | 类型         | 说明                                                       |
 |----------------------|------------|----------------------------------------------------------|
 | suspenseName         | TEXT       | 悬念名称                                                     |
@@ -682,6 +929,7 @@
 | readerExpectation    | SLIDER     | 读者期待度 1-10                                               |
 
 ### 4.5 章节规划
+
 ```json
 {
   "chapterNumber": "第1章",
@@ -690,11 +938,16 @@
   "pov": "视角人物",
   "mainContent": "主要内容",
   "wordCount": 3000,
-  "keyPlotPoints": ["要点1"],
-  "foreshadowing": ["伏笔1"],
+  "keyPlotPoints": [
+    "要点1"
+  ],
+  "foreshadowing": [
+    "伏笔1"
+  ],
   "mood": "氛围"
 }
 ```
+
 | 字段            | 类型         | 说明                           |
 |---------------|------------|------------------------------|
 | chapterNumber | TEXT       | 章节序号                         |
@@ -708,11 +961,15 @@
 | mood          | TEXT       | 章节氛围                         |
 
 ### 4.6 矛盾冲突
+
 ```json
 {
   "conflictName": "冲突名称",
   "conflictType": "冲突类型",
-  "parties": ["冲突方1", "冲突方2"],
+  "parties": [
+    "冲突方1",
+    "冲突方2"
+  ],
   "coreIssue": "核心问题",
   "intensity": 8,
   "history": "冲突历史",
@@ -721,6 +978,7 @@
   "impactOnPlot": "对剧情影响"
 }
 ```
+
 | 字段                  | 类型         | 说明                     |
 |---------------------|------------|------------------------|
 | conflictName        | TEXT       | 冲突名称                   |
@@ -734,6 +992,7 @@
 | impactOnPlot        | TEXT_MULTI | 对剧情影响                  |
 
 ### 4.7 时间线
+
 ```json
 {
   "eventName": "事件名称",
@@ -741,13 +1000,22 @@
   "absoluteTime": "绝对时间",
   "relativeTime": "相对时间",
   "location": "发生地点",
-  "participants": ["参与者"],
-  "causes": ["起因"],
+  "participants": [
+    "参与者"
+  ],
+  "causes": [
+    "起因"
+  ],
   "process": "过程",
-  "results": ["结果"],
-  "connections": ["关联事件"]
+  "results": [
+    "结果"
+  ],
+  "connections": [
+    "关联事件"
+  ]
 }
 ```
+
 | 字段           | 类型         | 说明               |
 |--------------|------------|------------------|
 | eventName    | TEXT       | 事件名称             |
@@ -766,20 +1034,34 @@
 ## 五、规则体系
 
 ### 5.1 力量体系
+
 ```json
 {
   "systemName": "体系名称",
   "systemType": "体系类型",
-  "progressionPath": ["等级1", "等级2", "等级3"],
-  "requirements": ["晋升条件1"],
-  "coreAbilities": ["核心能力1"],
+  "progressionPath": [
+    "等级1",
+    "等级2",
+    "等级3"
+  ],
+  "requirements": [
+    "晋升条件1"
+  ],
+  "coreAbilities": [
+    "核心能力1"
+  ],
   "limitations": "限制条件",
   "sideEffects": "副作用",
-  "famousPractitioners": ["知名修炼者1"],
-  "cultivationResources": ["修炼资源1"],
+  "famousPractitioners": [
+    "知名修炼者1"
+  ],
+  "cultivationResources": [
+    "修炼资源1"
+  ],
   "battleStyle": "战斗风格"
 }
 ```
+
 | 字段                   | 类型         | 说明                     |
 |----------------------|------------|------------------------|
 | systemName           | TEXT       | 体系名称                   |
@@ -794,20 +1076,35 @@
 | battleStyle          | TEXT_MULTI | 战斗风格                   |
 
 ### 5.2 魔法或超能力
+
 ```json
 {
   "powerName": "能力名称",
   "powerType": "能力类型",
   "source": "能量来源",
   "castingMethod": "施展方式",
-  "effects": ["效果1", "效果2"],
-  "limitations": ["限制1"],
-  "requirements": ["前置条件1"],
-  "sideEffects": ["副作用1"],
-  "countermeasures": ["克制方法1"],
-  "famousUsers": ["知名使用者1"]
+  "effects": [
+    "效果1",
+    "效果2"
+  ],
+  "limitations": [
+    "限制1"
+  ],
+  "requirements": [
+    "前置条件1"
+  ],
+  "sideEffects": [
+    "副作用1"
+  ],
+  "countermeasures": [
+    "克制方法1"
+  ],
+  "famousUsers": [
+    "知名使用者1"
+  ]
 }
 ```
+
 | 字段              | 类型         | 说明                        |
 |-----------------|------------|---------------------------|
 | powerName       | TEXT       | 能力名称                      |
@@ -822,18 +1119,35 @@
 | famousUsers     | TAG_LIST   | 知名使用者                     |
 
 ### 5.3 战斗系统
+
 ```json
 {
   "systemName": "战斗系统名称",
-  "battleRules": ["规则1", "规则2"],
-  "victoryConditions": ["胜利条件1"],
-  "attackTypes": ["攻击类型1"],
-  "defenseTypes": ["防御类型1"],
-  "supportTypes": ["辅助类型1"],
-  "specialMechanics": ["特殊机制1"],
-  "balanceFactors": ["平衡因素1"]
+  "battleRules": [
+    "规则1",
+    "规则2"
+  ],
+  "victoryConditions": [
+    "胜利条件1"
+  ],
+  "attackTypes": [
+    "攻击类型1"
+  ],
+  "defenseTypes": [
+    "防御类型1"
+  ],
+  "supportTypes": [
+    "辅助类型1"
+  ],
+  "specialMechanics": [
+    "特殊机制1"
+  ],
+  "balanceFactors": [
+    "平衡因素1"
+  ]
 }
 ```
+
 | 字段                | 类型         | 说明   |
 |-------------------|------------|------|
 | systemName        | TEXT       | 系统名称 |
@@ -846,19 +1160,27 @@
 | balanceFactors    | TEXT_MULTI | 平衡因素 |
 
 ### 5.4 经济体系
+
 ```json
 {
   "currencyName": "货币名称",
   "exchangeRate": "汇率",
   "wealthDistribution": "财富分布",
   "economicCycle": "经济周期",
-  "mainIndustries": ["主要产业1"],
-  "tradeRoutes": ["贸易路线1"],
-  "economicFactors": ["经济因素1"],
+  "mainIndustries": [
+    "主要产业1"
+  ],
+  "tradeRoutes": [
+    "贸易路线1"
+  ],
+  "economicFactors": [
+    "经济因素1"
+  ],
   "wealthGap": 7,
   "economicStability": 6
 }
 ```
+
 | 字段                 | 类型         | 说明                  |
 |--------------------|------------|---------------------|
 | currencyName       | TEXT       | 货币名称                |
@@ -872,6 +1194,7 @@
 | economicStability  | SLIDER     | 经济稳定性 1-10          |
 
 ### 5.5 时间规则
+
 ```json
 {
   "timeSystemName": "时间系统名称",
@@ -879,11 +1202,18 @@
   "timeMeasurement": "时间计量",
   "timeManipulation": "时间操控",
   "paradoxHandling": "悖论处理",
-  "timelineBranches": ["时间线分支1"],
-  "keyTemporalEvents": ["关键时间事件1"],
-  "rules": ["时间规则1"]
+  "timelineBranches": [
+    "时间线分支1"
+  ],
+  "keyTemporalEvents": [
+    "关键时间事件1"
+  ],
+  "rules": [
+    "时间规则1"
+  ]
 }
 ```
+
 | 字段                | 类型         | 说明                     |
 |-------------------|------------|------------------------|
 | timeSystemName    | TEXT       | 时间系统名称                 |
@@ -896,18 +1226,24 @@
 | rules             | TAG_LIST   | 时间规则                   |
 
 ### 5.6 限制条件
+
 ```json
 {
   "ruleName": "规则名称",
   "ruleType": "规则类型",
-  "affectedEntities": ["适用对象1"],
+  "affectedEntities": [
+    "适用对象1"
+  ],
   "restriction": "限制内容",
   "punishment": "违规惩罚",
-  "exceptions": ["例外情况1"],
+  "exceptions": [
+    "例外情况1"
+  ],
   "reason": "设立原因",
   "enforcement": "执行机制"
 }
 ```
+
 | 字段               | 类型         | 说明                  |
 |------------------|------------|---------------------|
 | ruleName         | TEXT       | 规则名称                |
@@ -924,18 +1260,26 @@
 ## 六、创作控制
 
 ### 6.1 主题内核
+
 ```json
 {
   "themeName": "主题名称",
   "themeCategory": "主题类别",
   "coreMessage": "核心信息",
-  "symbolicElements": ["象征元素1"],
-  "philosophicalQuestions": ["哲学问题1"],
-  "moralDilemmas": ["道德困境1"],
+  "symbolicElements": [
+    "象征元素1"
+  ],
+  "philosophicalQuestions": [
+    "哲学问题1"
+  ],
+  "moralDilemmas": [
+    "道德困境1"
+  ],
   "explorationDepth": 8,
   "presentationBalance": 7
 }
 ```
+
 | 字段                     | 类型         | 说明                                                                                                 |
 |------------------------|------------|----------------------------------------------------------------------------------------------------|
 | themeName              | TEXT       | 主题名称                                                                                               |
@@ -948,18 +1292,28 @@
 | presentationBalance    | SLIDER     | 呈现平衡 1-10                                                                                          |
 
 ### 6.2 语言风格
+
 ```json
 {
   "writingStyle": "写作风格",
-  "languageFeatures": ["语言特色1"],
+  "languageFeatures": [
+    "语言特色1"
+  ],
   "sentenceStructure": "句式特点",
-  "rhetoricalDevices": ["修辞手法1"],
+  "rhetoricalDevices": [
+    "修辞手法1"
+  ],
   "dialogueStyle": "对话风格",
   "narrationType": "叙述类型",
-  "referenceWorks": ["参考作品1"],
-  "avoidElements": ["避免元素1"]
+  "referenceWorks": [
+    "参考作品1"
+  ],
+  "avoidElements": [
+    "避免元素1"
+  ]
 }
 ```
+
 | 字段                | 类型         | 说明                           |
 |-------------------|------------|------------------------------|
 | writingStyle      | SELECT     | 写作风格：简洁/华丽/诗意/写实/古典/现代/幽默/严肃 |
@@ -972,18 +1326,29 @@
 | avoidElements     | TAG_LIST   | 避免的元素                        |
 
 ### 6.3 情感基调
+
 ```json
 {
   "overallTone": "整体基调",
-  "emotionalRange": ["情感1", "情感2"],
+  "emotionalRange": [
+    "情感1",
+    "情感2"
+  ],
   "pacing": "节奏",
   "atmosphere": "氛围",
-  "emotionalPeaks": ["情感高潮1"],
-  "emotionalValleys": ["情感低谷1"],
-  "climacticMoments": ["高潮时刻1"],
+  "emotionalPeaks": [
+    "情感高潮1"
+  ],
+  "emotionalValleys": [
+    "情感低谷1"
+  ],
+  "climacticMoments": [
+    "高潮时刻1"
+  ],
   "resolutionMood": "结局情绪"
 }
 ```
+
 | 字段               | 类型         | 说明                                                                                          |
 |------------------|------------|---------------------------------------------------------------------------------------------|
 | overallTone      | SELECT     | 整体基调：serious:严肃/humorous:幽默/dark:黑暗/romantic:浪漫/tragic:悲情/comedic:喜剧/melancholic:忧郁/epic:史诗 |
@@ -996,6 +1361,7 @@
 | resolutionMood   | TEXT_MULTI | 结局情绪                                                                                        |
 
 ### 6.4 叙事视角
+
 ```json
 {
   "narrativePerspective": "叙事视角",
@@ -1005,9 +1371,12 @@
   "limitedKnowledge": "已知限制",
   "povAdvantages": "视角优势",
   "povLimitations": "视角局限",
-  "multiplePovs": ["多视角人物1"]
+  "multiplePovs": [
+    "多视角人物1"
+  ]
 }
 ```
+
 | 字段                   | 类型         | 说明                           |
 |----------------------|------------|------------------------------|
 | narrativePerspective | SELECT     | 叙事视角：第一人称/第三人称全知/第三人称限知/第二人称 |
@@ -1020,6 +1389,7 @@
 | multiplePovs         | TAG_LIST   | 多视角人物（如果是多视角叙事）              |
 
 ### 6.5 节奏控制
+
 ```json
 {
   "overallPacing": "整体节奏",
@@ -1032,6 +1402,7 @@
   "tensionMaintained": "张力维持"
 }
 ```
+
 | 字段                | 类型     | 说明                                             |
 |-------------------|--------|------------------------------------------------|
 | overallPacing     | SELECT | 整体节奏：slow:慢热/gradual:渐入佳境/steady:平稳推进/fast:快节奏 |
