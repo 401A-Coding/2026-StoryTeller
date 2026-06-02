@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 22;  // 版本22：添加设定配图功能
+    private static final int DB_VERSION = 23;  // 版本23：添加剧情版本树存储
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -20,6 +20,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_STRUCTURE = "structure";  // 存储卷-章结构的JSON数据
     public static final String COL_STORY_DESCRIPTION = "description";  // 小说简介
     public static final String COL_STORY_PLOT_SUMMARY = "plot_summary_json";  // 剧情梳理结果快照
+    public static final String COL_STORY_PLOT_TREE = "plot_tree_json";  // 剧情版本树工作区
     public static final String COL_STORY_CATEGORY = "category";  // 书架分类：全部/创作中/已完成/已收藏
     public static final String COL_STORY_COVER_COLOR = "cover_color";  // 封面颜色
     public static final String COL_STORY_COVER_PATH = "cover_path";  // 封面图片路径
@@ -213,6 +214,7 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_STRUCTURE + " TEXT, "
                 + COL_STORY_DESCRIPTION + " TEXT, "
                 + COL_STORY_PLOT_SUMMARY + " TEXT, "
+                + COL_STORY_PLOT_TREE + " TEXT, "
                 + COL_STORY_CATEGORY + " TEXT DEFAULT '创作中', "
                 + COL_STORY_COVER_COLOR + " TEXT DEFAULT '#1976D2', "
                 + COL_STORY_COVER_PATH + " TEXT, "
@@ -438,6 +440,14 @@ public class DBHelper extends SQLiteOpenHelper {
             // 版本22：添加设定配图字段
             try {
                 db.execSQL("ALTER TABLE " + TABLE_STORY_SETTING + " ADD COLUMN " + COL_STORY_SETTING_IMAGE_PATH + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+        }
+        if (oldVersion < 23) {
+            // 版本23：添加剧情版本树字段
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_PLOT_TREE + " TEXT");
             } catch (Exception e) {
                 // 字段可能已存在
             }
