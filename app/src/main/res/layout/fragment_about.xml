@@ -27,7 +27,7 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@mipmap/ic_launcher"
-            android:background="@drawable/ic_launcher_background"
+            android:background="@color/ic_launcher_background"
             android:contentDescription="@null" />
 
         <TextView
