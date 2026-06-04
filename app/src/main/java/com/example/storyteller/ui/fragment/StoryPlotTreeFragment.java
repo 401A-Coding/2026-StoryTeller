@@ -305,6 +305,13 @@ public class StoryPlotTreeFragment extends BaseFragment {
         for (PlotTreeEvent event : branch.getEvents()) {
             rows.add(TimelineRow.shared(new Cell(event, BRANCH_COLORS_INT[0])));
         }
+        // 未导出的非主线分支：在所有事件下方显示走向说明占位卡片
+        if (!branch.isMainline() && !TextUtils.isEmpty(branch.getDescription())
+                && !branch.hasExportedChild()) {
+            List<Cell> cells = new ArrayList<>();
+            cells.add(Cell.placeholder(branch.getDescription(), BRANCH_COLORS_INT[0]));
+            rows.add(TimelineRow.split(cells));
+        }
         return rows;
     }
 
@@ -385,7 +392,8 @@ public class StoryPlotTreeFragment extends BaseFragment {
             int fp = forkPosMap.getOrDefault(b.getId(), -1);
             String origin = fp >= 0 && fp < mlEvents.size()
                     ? "分叉自：" + safeText(mlEvents.get(fp).getTitle()) : "";
-            headers.add(new ColumnHeader(b.getName(), BRANCH_COLORS_INT[colIdx % BRANCH_COLORS_INT.length], origin));
+            headers.add(new ColumnHeader(b.getName(), BRANCH_COLORS_INT[colIdx % BRANCH_COLORS_INT.length],
+                    origin, b.getDescription()));
             colIdx++;
         }
 
@@ -400,7 +408,11 @@ public class StoryPlotTreeFragment extends BaseFragment {
         for (PlotTreeBranch dbgB : branchList) {
             int dbgFp = forkPosMap.getOrDefault(dbgB.getId(), -1);
             int dbgEc = dbgB.getEvents() != null ? dbgB.getEvents().size() : 0;
-            android.util.Log.d("PlotTree", "Branch id=" + dbgB.getId() + " name=" + dbgB.getName() + " srcEvId=" + dbgB.getSourceEventId() + " forkPos=" + dbgFp + " evCount=" + dbgEc);
+            android.util.Log.d("PlotTree", "Branch id=" + dbgB.getId() + " name=" + dbgB.getName()
+                    + " srcEvId=" + dbgB.getSourceEventId() + " forkPos=" + dbgFp + " evCount=" + dbgEc
+                    + " desc=[" + dbgB.getDescription() + "]"
+                    + " descEmpty=" + TextUtils.isEmpty(dbgB.getDescription())
+                    + " exported=" + dbgB.hasExportedChild());
             if (dbgB.getEvents() != null) {
                 for (int ei2 = 0; ei2 < dbgB.getEvents().size(); ei2++) {
                     android.util.Log.d("PlotTree", "  brEv[" + ei2 + "] id=" + dbgB.getEvents().get(ei2).getId() + " title=" + dbgB.getEvents().get(ei2).getTitle());
@@ -417,22 +429,55 @@ public class StoryPlotTreeFragment extends BaseFragment {
         }
 
         int maxDepth = Math.max(mlEvents.size(), maxBranchLen);
+        // 为末尾分支的占位卡片预留行数（占位在 fp+1，可能超出 mlEvents.size()）
+        int depthExtendCount = 0;
+        for (PlotTreeBranch b : branchList) {
+            int fp = forkPosMap.getOrDefault(b.getId(), -1);
+            if (fp >= 0 && !TextUtils.isEmpty(b.getDescription()) && !b.hasExportedChild()) {
+                int needed = fp + 2;
+                if (needed > maxDepth) {
+                    android.util.Log.d("PlotTree", "DEPTH_EXTEND branch=" + b.getName() + " fp=" + fp + " needed=" + needed + " oldMax=" + maxDepth);
+                    maxDepth = needed;
+                    depthExtendCount++;
+                } else {
+                    maxDepth = Math.max(maxDepth, needed);
+                }
+            }
+        }
+        android.util.Log.d("PlotTree", "maxDepth=" + maxDepth + " (ml=" + mlEvents.size() + " br=" + maxBranchLen + " extended=" + depthExtendCount + ")");
+        // 跟踪已显示占位的分支，兜底确保所有未导出分支都可见
+        Set<Integer> placeholderShown = new HashSet<>();
         for (int depth = 0; depth < maxDepth; depth++) {
             if (forkPositions.contains(depth)) {
-                PlotTreeEvent forkEvent = mlEvents.get(depth);
-                Cell cell = new Cell(forkEvent, BRANCH_COLORS_INT[0]);
-                List<ForkTarget> targets = new ArrayList<>();
+                // 检测是否有分支的占位行（fp+1）恰好被此分叉深度吞掉
+                boolean placeholderConflict = false;
                 for (PlotTreeBranch b : branchList) {
                     int fp = forkPosMap.getOrDefault(b.getId(), -1);
-                    if (fp == depth) {
-                        Integer bc = colMap.get(b.getId());
-                        if (bc != null) {
-                            targets.add(new ForkTarget(b.getName(), BRANCH_COLORS_INT[bc % BRANCH_COLORS_INT.length]));
-                        }
+                    if (fp >= 0 && depth == fp + 1 && !TextUtils.isEmpty(b.getDescription())
+                            && !b.hasExportedChild()) {
+                        placeholderConflict = true;
+                        break;
                     }
                 }
-                rows.add(TimelineRow.fork(cell, targets.isEmpty() ? null : targets, forkEvent.getId()));
-                continue;
+                if (!placeholderConflict) {
+                    // 无冲突：使用标准FORK行并跳过后续SPLIT逻辑
+                    PlotTreeEvent forkEvent = mlEvents.get(depth);
+                    Cell cell = new Cell(forkEvent, BRANCH_COLORS_INT[0]);
+                    List<ForkTarget> targets = new ArrayList<>();
+                    for (PlotTreeBranch b : branchList) {
+                        int fp = forkPosMap.getOrDefault(b.getId(), -1);
+                        if (fp == depth) {
+                            Integer bc = colMap.get(b.getId());
+                            if (bc != null) {
+                                targets.add(new ForkTarget(b.getName(), BRANCH_COLORS_INT[bc % BRANCH_COLORS_INT.length]));
+                            }
+                        }
+                    }
+                    rows.add(TimelineRow.fork(cell, targets.isEmpty() ? null : targets, forkEvent.getId()));
+                    continue;
+                }
+                // 有冲突：使用SPLIT行（主线事件 + 分支占位共存），不跳过
+                android.util.Log.d("PlotTree", "FORK_CONFLICT depth=" + depth + " using SPLIT row for placeholder");
             }
 
             List<Cell> cells = new ArrayList<>();
@@ -455,13 +500,26 @@ public class StoryPlotTreeFragment extends BaseFragment {
                         int fp = forkPosMap.getOrDefault(branchForCol.getId(), -1);
                         int eventIdx = depth;
                         android.util.Log.d("PlotTree", "SPLIT depth=" + depth + " col=" + c + " fp=" + fp + " eIdx=" + eventIdx + " evSize=" + (branchForCol.getEvents() != null ? branchForCol.getEvents().size() : 0));
-                        if (fp >= 0 && depth > fp && eventIdx >= 0
+                        // 分支第一个事件行：如果有走向说明且尚未导出，显示占位卡片（无论事件列表中是否有内容）
+                        if (fp >= 0 && depth == fp + 1 && !TextUtils.isEmpty(branchForCol.getDescription())
+                                && !branchForCol.hasExportedChild()) {
+                            cells.add(Cell.placeholder(branchForCol.getDescription(),
+                                    BRANCH_COLORS_INT[c % BRANCH_COLORS_INT.length]));
+                            activeCount++;
+                            placeholderShown.add(branchForCol.getId());
+                        } else if (fp >= 0 && depth > fp && eventIdx >= 0
                                 && branchForCol.getEvents() != null
                                 && eventIdx < branchForCol.getEvents().size()) {
                             cells.add(new Cell(branchForCol.getEvents().get(eventIdx),
                                     BRANCH_COLORS_INT[c % BRANCH_COLORS_INT.length]));
                             activeCount++;
                         } else {
+                            if (fp >= 0 && depth == fp + 1) {
+                                android.util.Log.d("PlotTree", "NO_PLACEHOLDER branch=" + branchForCol.getName()
+                                        + " fp=" + fp + " depth=" + depth
+                                        + " descEmpty=" + TextUtils.isEmpty(branchForCol.getDescription())
+                                        + " exported=" + branchForCol.hasExportedChild());
+                            }
                             cells.add(Cell.empty());
                         }
                     } else {
@@ -469,7 +527,46 @@ public class StoryPlotTreeFragment extends BaseFragment {
                     }
                 }
             }
-            rows.add(TimelineRow.split(cells));
+            TimelineRow splitRow = TimelineRow.split(cells);
+            // 若此行是分叉深度（有占位冲突），携带forkTargets以绘制分支引导线
+            if (forkPositions.contains(depth)) {
+                List<ForkTarget> targets = new ArrayList<>();
+                for (PlotTreeBranch b : branchList) {
+                    int fp = forkPosMap.getOrDefault(b.getId(), -1);
+                    if (fp == depth) {
+                        Integer bc = colMap.get(b.getId());
+                        if (bc != null) {
+                            targets.add(new ForkTarget(b.getName(), BRANCH_COLORS_INT[bc % BRANCH_COLORS_INT.length]));
+                        }
+                    }
+                }
+                if (!targets.isEmpty()) splitRow.forkTargets = targets;
+            }
+            rows.add(splitRow);
+        }
+        // 兜底：为 forkPos 未能正确匹配主线、尚未显示占位的未导出分支在最底部添加占位行
+        android.util.Log.d("PlotTree", "FALLBACK_CHECK placeholderShown=" + placeholderShown);
+        List<Cell> fallbackCells = new ArrayList<>();
+        for (int c = 0; c < totalCols; c++) fallbackCells.add(Cell.empty());
+        boolean hasFallback = false;
+        for (PlotTreeBranch b : branchList) {
+            if (!TextUtils.isEmpty(b.getDescription()) && !b.hasExportedChild()
+                    && !placeholderShown.contains(b.getId())) {
+                Integer bc = colMap.get(b.getId());
+                android.util.Log.d("PlotTree", "FALLBACK_CANDIDATE branch=" + b.getName()
+                        + " desc=[" + b.getDescription() + "] col=" + bc);
+                if (bc != null && bc < totalCols) {
+                    fallbackCells.set(bc, Cell.placeholder(b.getDescription(),
+                            BRANCH_COLORS_INT[bc % BRANCH_COLORS_INT.length]));
+                    hasFallback = true;
+                }
+            }
+        }
+        if (hasFallback) {
+            android.util.Log.d("PlotTree", "FALLBACK_ADDED extra row with placeholders");
+            rows.add(TimelineRow.split(fallbackCells));
+        } else {
+            android.util.Log.d("PlotTree", "FALLBACK_NONE no extra row needed");
         }
         return rows;
     }
@@ -820,31 +917,137 @@ public class StoryPlotTreeFragment extends BaseFragment {
         EditText etDescr = buildEditText("新分支走向说明");
         layout.addView(etName); layout.addView(etDescr);
         etName.setText(safeText(event.getTitle()) + " 分支");
-        new AlertDialog.Builder(requireContext())
+
+        ProgressBar pbSuggest = new ProgressBar(requireContext());
+        pbSuggest.setVisibility(View.GONE); pbSuggest.setPadding(0, 8, 0, 0);
+        layout.addView(pbSuggest);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
                 .setTitle("从当前事件创建分支").setView(layout).setNegativeButton("取消", null)
-                .setPositiveButton("创建", (dialog, which) -> {
-                    PlotTreeBranch activeBranch = getActiveBranch();
-                    if (activeBranch == null) return;
-                    String branchName = trimToEmpty(etName.getText() == null ? null : etName.getText().toString());
-                    if (TextUtils.isEmpty(branchName)) { Toast.makeText(requireContext(), "请输入分支名称", Toast.LENGTH_SHORT).show(); return; }
-                    PlotTreeBranch newBranch = new PlotTreeBranch();
-                    newBranch.setId(currentSnapshot.getNextBranchId());
-                    currentSnapshot.setNextBranchId(currentSnapshot.getNextBranchId() + 1);
-                    newBranch.setName(branchName);
-                    newBranch.setDescription(trimToEmpty(etDescr.getText() == null ? null : etDescr.getText().toString()));
-                    newBranch.setMainline(false);
-                    newBranch.setSourceBranchId(activeBranch.getId());
-                    newBranch.setSourceEventId(event.getId());
-                    List<PlotTreeEvent> copied = new ArrayList<>();
-                    for (int i = 0; i <= position && i < activeBranch.getEvents().size(); i++)
-                        copied.add(copyEvent(activeBranch.getEvents().get(i)));
-                    newBranch.setEvents(copied);
-                    currentSnapshot.getBranches().add(newBranch);
-                    if (activeBranch.getChildBranchIds() == null) activeBranch.setChildBranchIds(new ArrayList<>());
-                    activeBranch.getChildBranchIds().add(newBranch.getId());
-                    currentSnapshot.setActiveBranchId(newBranch.getId());
-                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
-                }).show();
+                .setNeutralButton("AI建议", null)
+                .setPositiveButton("创建", null).create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                pbSuggest.setVisibility(View.VISIBLE);
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                requestBranchSuggestions(event, etDescr, pbSuggest, dialog);
+            });
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                PlotTreeBranch activeBranch = getActiveBranch();
+                if (activeBranch == null) return;
+                String branchName = trimToEmpty(etName.getText() == null ? null : etName.getText().toString());
+                if (TextUtils.isEmpty(branchName)) { Toast.makeText(requireContext(), "请输入分支名称", Toast.LENGTH_SHORT).show(); return; }
+                PlotTreeBranch newBranch = new PlotTreeBranch();
+                newBranch.setId(currentSnapshot.getNextBranchId());
+                currentSnapshot.setNextBranchId(currentSnapshot.getNextBranchId() + 1);
+                newBranch.setName(branchName);
+                newBranch.setDescription(trimToEmpty(etDescr.getText() == null ? null : etDescr.getText().toString()));
+                android.util.Log.d("PlotTree", "CREATE_BRANCH id=" + newBranch.getId()
+                        + " name=" + branchName
+                        + " desc=[" + newBranch.getDescription() + "]"
+                        + " descEmpty=" + TextUtils.isEmpty(newBranch.getDescription())
+                        + " exported=" + newBranch.hasExportedChild()
+                        + " srcEvId=" + event.getId());
+                newBranch.setMainline(false);
+                newBranch.setSourceBranchId(activeBranch.getId());
+                newBranch.setSourceEventId(event.getId());
+                List<PlotTreeEvent> copied = new ArrayList<>();
+                for (int i = 0; i <= position && i < activeBranch.getEvents().size(); i++)
+                    copied.add(copyEvent(activeBranch.getEvents().get(i)));
+                newBranch.setEvents(copied);
+                currentSnapshot.getBranches().add(newBranch);
+                if (activeBranch.getChildBranchIds() == null) activeBranch.setChildBranchIds(new ArrayList<>());
+                activeBranch.getChildBranchIds().add(newBranch.getId());
+                currentSnapshot.setActiveBranchId(newBranch.getId());
+                persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
+
+    private void requestBranchSuggestions(PlotTreeEvent event, EditText etDescr,
+                                          ProgressBar pb, AlertDialog dialog) {
+        if (currentStory == null || event == null) return;
+
+        // Build nearby events context
+        StringBuilder nearby = new StringBuilder();
+        PlotTreeBranch activeBranch = getActiveBranch();
+        if (activeBranch != null && activeBranch.getEvents() != null) {
+            int eventIdx = -1;
+            for (int i = 0; i < activeBranch.getEvents().size(); i++) {
+                if (activeBranch.getEvents().get(i).getId() == event.getId()) { eventIdx = i; break; }
+            }
+            if (eventIdx >= 0) {
+                int start = Math.max(0, eventIdx - 2);
+                int end = Math.min(activeBranch.getEvents().size(), eventIdx + 3);
+                for (int i = start; i < end; i++) {
+                    PlotTreeEvent ev = activeBranch.getEvents().get(i);
+                    nearby.append(i == eventIdx ? ">>> 【分叉点】" : "- ");
+                    nearby.append(safeText(ev.getTitle()));
+                    if (!TextUtils.isEmpty(ev.getSummary())) nearby.append("：").append(ev.getSummary());
+                    nearby.append("\n");
+                }
+            }
+        }
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("story_title", safeText(currentStory.getTitle()));
+        variables.put("event_title", safeText(event.getTitle()));
+        variables.put("event_summary", safeText(event.getSummary()));
+        variables.put("nearby_events", nearby.toString());
+
+        String prompt = promptManager.getTaskPrompt(TaskType.BRANCH_SUGGEST.getCode(), variables);
+        if (TextUtils.isEmpty(prompt)) {
+            pb.setVisibility(View.GONE);
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+            return;
+        }
+
+        ApiClient.getInstance().generateStory(prompt, "flash", requireContext(),
+                new ApiClient.RequestOptions().setMaxTokens(300), new ApiClient.Callback() {
+            @Override
+            public void onSuccess(String responseText) {
+                requireActivity().runOnUiThread(() -> {
+                    pb.setVisibility(View.GONE);
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                    showSuggestionPicker(etDescr, responseText);
+                });
+            }
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    pb.setVisibility(View.GONE);
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                    Toast.makeText(requireContext(), "AI建议获取失败", Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    private void showSuggestionPicker(EditText etDescr, String responseText) {
+        List<String> suggestions = new ArrayList<>();
+        for (String line : responseText.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("-") || trimmed.startsWith("-")) {
+                String s = trimmed.replaceFirst("^[-\\s]+", "").trim();
+                if (!TextUtils.isEmpty(s)) suggestions.add(s);
+            }
+        }
+        if (suggestions.isEmpty()) {
+            Toast.makeText(requireContext(), "未解析到建议", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(requireContext())
+                .setTitle("选择一条AI建议作为走向说明")
+                .setItems(suggestions.toArray(new String[0]), (d, which) -> {
+                    etDescr.setText(suggestions.get(which));
+                }).setNegativeButton("取消", null).show();
     }
     private void showBranchSwitchDialog() {
         if (currentSnapshot == null || currentSnapshot.getBranches() == null || currentSnapshot.getBranches().isEmpty()) return;
@@ -951,6 +1154,10 @@ public class StoryPlotTreeFragment extends BaseFragment {
         Story exportedStory = storyDao.getStoryById(targetStoryId);
         if (exportedStory != null && branchEventPos >= 0) {
             String trimmed = trimStructureToEventPos(currentStory.getStructure(), branchEventPos + 1);
+            // 走向说明作为新章节插入在分叉点之后
+            if (!TextUtils.isEmpty(branch.getDescription())) {
+                trimmed = appendDescriptionChapter(trimmed, branch.getDescription());
+            }
             exportedStory.setStructure(trimmed);
             exportedStory.setWordCount(countWordsInStructure(trimmed));
             storyDao.updateStory(exportedStory);
@@ -969,6 +1176,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
         storyDao.updatePlotTree(targetStoryId, gson.toJson(exported));
         branch.setExportedStoryId(targetStoryId);
         branch.setUpdateTime(System.currentTimeMillis()); persistSnapshot();
+        loadAllBranchOverviews(); refreshDisplay();
         new AlertDialog.Builder(requireContext())
                 .setTitle("导出成功")
                 .setMessage("已将当前分支导出为新作品《" + title + "》。\n\n章节已裁剪到分支点，可前往新作品从分支点继续创作。")
@@ -1019,6 +1227,27 @@ public class StoryPlotTreeFragment extends BaseFragment {
                 if (chapterCount > eventPos) break;
             }
             return gson.toJson(trimmedVolumes);
+        } catch (Exception ignored) { return structureJson; }
+    }
+
+    private String appendDescriptionChapter(String structureJson, String description) {
+        if (TextUtils.isEmpty(structureJson) || TextUtils.isEmpty(description)) return structureJson;
+        try {
+            List<Volume> volumes = gson.fromJson(structureJson, VOLUME_LIST_TYPE);
+            if (volumes == null || volumes.isEmpty()) {
+                Volume newVol = new Volume();
+                newVol.setTitle("走向说明");
+                Chapter descCh = new Chapter();
+                descCh.setTitle(description); descCh.setContent("");
+                newVol.addChapter(descCh);
+                volumes = new ArrayList<>(); volumes.add(newVol);
+                return gson.toJson(volumes);
+            }
+            Volume lastVol = volumes.get(volumes.size() - 1);
+            Chapter descCh = new Chapter();
+            descCh.setTitle(description); descCh.setContent("");
+            lastVol.addChapter(descCh);
+            return gson.toJson(volumes);
         } catch (Exception ignored) { return structureJson; }
     }
 

@@ -39,11 +39,17 @@ public class PlotTreeTimelineAdapter extends RecyclerView.Adapter<PlotTreeTimeli
         public String branchName;
         public int branchColor;
         public String forkOrigin;
+        public String description;  // 走向说明
 
         public ColumnHeader(String branchName, int branchColor, String forkOrigin) {
+            this(branchName, branchColor, forkOrigin, "");
+        }
+
+        public ColumnHeader(String branchName, int branchColor, String forkOrigin, String description) {
             this.branchName = branchName;
             this.branchColor = branchColor;
             this.forkOrigin = forkOrigin;
+            this.description = description != null ? description : "";
         }
     }
 
@@ -58,12 +64,23 @@ public class PlotTreeTimelineAdapter extends RecyclerView.Adapter<PlotTreeTimeli
     }
 
     public static class Cell {
-        public PlotTreeEvent event;  // null for empty cells
+        public PlotTreeEvent event;  // null for empty cells or placeholder cells
         public int branchColor;
+        public String description;   // 走向说明（占位卡片使用）
+        public boolean isPlaceholder; // 是否为走向说明占位卡片
 
         public Cell(PlotTreeEvent event, int branchColor) {
             this.event = event;
             this.branchColor = branchColor;
+            this.isPlaceholder = false;
+        }
+
+        /** Create a placeholder cell that shows branch direction description */
+        public static Cell placeholder(String description, int branchColor) {
+            Cell c = new Cell(null, branchColor);
+            c.description = description;
+            c.isPlaceholder = true;
+            return c;
         }
 
         public static Cell empty() {
