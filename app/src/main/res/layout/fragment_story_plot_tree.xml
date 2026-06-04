@@ -63,6 +63,21 @@
 
             </androidx.core.widget.NestedScrollView>
         </HorizontalScrollView>
+
+        <!-- 左侧浮动按钮 -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_marginBottom="44dp"
+            android:layout_marginStart="16dp"
+            android:contentDescription="刷新剧情树"
+            android:src="@drawable/ic_refresh"
+            app:backgroundTint="@color/colorPrimary"
+            app:fabSize="mini"
+            app:tint="@android:color/white" />
+
     </FrameLayout>
 
     <!-- Bottom Toolbar -->
@@ -83,12 +98,9 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="分支"
+            android:text="切换"
             android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/btn_ai_summary"
@@ -98,23 +110,7 @@
             android:gravity="center"
             android:text="梳理"
             android:textColor="@color/link_color"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/btn_export"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="刷新"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/btn_overflow"
@@ -122,11 +118,8 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="更多"
+            android:text="编辑"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="14sp" />
     </LinearLayout>
 </LinearLayout>

@@ -34,9 +34,7 @@ import com.example.storyteller.utils.JsonUtils;
 import com.example.storyteller.utils.ReadingController;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 写作Fragment - 卷章编辑器
@@ -46,7 +44,6 @@ public class WritingFragment extends BaseFragment {
 
     private static final String ARG_STORY_ID = "arg_story_id";
     private static final int MAX_REFERENCE_TEXT_LENGTH = 180;
-    private static final int MAX_CHARACTER_REFERENCE_COUNT = 4;
 
     // UI Components
     private LinearLayout layoutContent;
@@ -84,7 +81,6 @@ public class WritingFragment extends BaseFragment {
     private CharacterDao characterDao;
     private int volumeCount = 0;
     private final List<Character> storyCharacters = new ArrayList<>();
-    private final Map<String, Character> characterIndex = new LinkedHashMap<>();
     private PlotSummarySnapshot currentPlotSnapshot;
 
     // 标记是否有正在编辑的EditText（用于防止切换Tab时自动保存）
@@ -253,7 +249,6 @@ public class WritingFragment extends BaseFragment {
         currentStory = storyRepository.getStoryById(storyId);
         if (currentStory == null) {
             storyCharacters.clear();
-            characterIndex.clear();
             currentPlotSnapshot = null;
             bindWritingReferenceCard();
             Toast.makeText(requireContext(), "加载作品失败", Toast.LENGTH_SHORT).show();
@@ -517,7 +512,6 @@ public class WritingFragment extends BaseFragment {
 
     private void loadWritingReferenceData() {
         storyCharacters.clear();
-        characterIndex.clear();
         currentPlotSnapshot = null;
 
         if (currentStory == null) {
@@ -530,16 +524,6 @@ public class WritingFragment extends BaseFragment {
                 : characterDao.getCharactersByStoryId(currentStory.getId());
         if (cachedCharacters != null) {
             storyCharacters.addAll(cachedCharacters);
-        }
-
-        for (Character character : storyCharacters) {
-            if (character == null) {
-                continue;
-            }
-            String normalizedName = normalizeName(character.getName());
-            if (!TextUtils.isEmpty(normalizedName) && !characterIndex.containsKey(normalizedName)) {
-                characterIndex.put(normalizedName, character);
-            }
         }
 
         if (!TextUtils.isEmpty(currentStory.getPlotSummaryJson())) {
@@ -606,38 +590,22 @@ public class WritingFragment extends BaseFragment {
     private void bindChapterReference(View chapterView, Volume volume, Chapter chapter, int chapterIndex) {
         View cardReference = chapterView.findViewById(R.id.card_chapter_reference);
         TextView tvPlot = chapterView.findViewById(R.id.tv_chapter_reference_plot);
-        TextView tvCharacters = chapterView.findViewById(R.id.tv_chapter_reference_characters);
-        if (cardReference == null || tvPlot == null || tvCharacters == null) {
+        if (cardReference == null || tvPlot == null) {
             return;
         }
 
         PlotChapterSummary chapterSummary = findChapterSummary(volume, chapterIndex, chapter == null ? "" : chapter.getTitle());
         String plotReference = buildChapterPlotReference(chapterSummary);
-        String characterReference = buildChapterCharacterReference(chapterSummary);
 
-        if (TextUtils.isEmpty(plotReference) && TextUtils.isEmpty(characterReference)) {
+        if (TextUtils.isEmpty(plotReference)) {
             cardReference.setVisibility(View.GONE);
             tvPlot.setVisibility(View.GONE);
-            tvCharacters.setVisibility(View.GONE);
             return;
         }
 
         cardReference.setVisibility(View.VISIBLE);
-        if (!TextUtils.isEmpty(plotReference)) {
-            tvPlot.setVisibility(View.VISIBLE);
-            tvPlot.setText(getString(R.string.writing_reference_chapter_plot_format, plotReference));
-        } else {
-            tvPlot.setVisibility(View.GONE);
-            tvPlot.setText("");
-        }
-
-        if (!TextUtils.isEmpty(characterReference)) {
-            tvCharacters.setVisibility(View.VISIBLE);
-            tvCharacters.setText(getString(R.string.writing_reference_chapter_characters_format, characterReference));
-        } else {
-            tvCharacters.setVisibility(View.GONE);
-            tvCharacters.setText("");
-        }
+        tvPlot.setVisibility(View.VISIBLE);
+        tvPlot.setText(getString(R.string.writing_reference_chapter_plot_format, plotReference));
     }
 
     private PlotChapterSummary findChapterSummary(Volume volume, int chapterIndex, String chapterTitle) {
@@ -708,47 +676,6 @@ public class WritingFragment extends BaseFragment {
                     .append(truncateText(joinNonEmpty(summary.getKeyEvents(), "；"), MAX_REFERENCE_TEXT_LENGTH));
         }
         return builder.toString().trim();
-    }
-
-    private String buildChapterCharacterReference(PlotChapterSummary summary) {
-        if (summary == null || summary.getCharacters() == null || summary.getCharacters().isEmpty()) {
-            return "";
-        }
-
-        List<String> lines = new ArrayList<>();
-        int count = 0;
-        for (String rawName : summary.getCharacters()) {
-            String name = safeTrim(rawName);
-            if (TextUtils.isEmpty(name)) {
-                continue;
-            }
-            Character character = characterIndex.get(normalizeName(name));
-            if (character != null) {
-                String profile = safeTrim(character.getProfile());
-                if (TextUtils.isEmpty(profile)) {
-                    profile = truncateText(safeTrim(character.getDetail()), 60);
-                }
-                if (!TextUtils.isEmpty(profile)) {
-                    lines.add("• " + character.getName() + "：" + profile);
-                } else {
-                    lines.add("• " + character.getName());
-                }
-            } else {
-                lines.add("• " + name);
-            }
-            count++;
-            if (count >= MAX_CHARACTER_REFERENCE_COUNT) {
-                break;
-            }
-        }
-
-        if (lines.isEmpty()) {
-            return "";
-        }
-        if (summary.getCharacters().size() > count) {
-            lines.add("• 其余人物可在人物画像中查看");
-        }
-        return truncateText(joinNonEmpty(lines, "\n"), MAX_REFERENCE_TEXT_LENGTH * 2);
     }
 
     private String joinNonEmpty(List<String> values, String delimiter) {

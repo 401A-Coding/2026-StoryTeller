@@ -199,7 +199,7 @@ public class MoreFragment extends BaseFragment {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         sb.append("---\n");
         sb.append("**导出时间**：").append(sdf.format(new Date())).append("\n");
-        sb.append("**导出工具**：StoryTeller\n");
+        sb.append("**导出工具**：").append(getString(R.string.app_name)).append("\n");
 
         return sb.toString();
     }
@@ -542,7 +542,8 @@ public class MoreFragment extends BaseFragment {
         headerPaint.setTextSize(22);
         headerPaint.setTextAlign(Paint.Align.CENTER);
         headerPaint.setAntiAlias(true);
-        String shareInfo = "来自StoryTeller的分享 · " + getCurrentDate();
+        String appName = getString(R.string.app_name);
+        String shareInfo = "来自" + appName + "的分享 · " + getCurrentDate();
         canvas.drawText(shareInfo, cardWidth / 2f, contentTop + 25, headerPaint);
 
         // ========== 封面阴影 ==========
@@ -683,7 +684,7 @@ public class MoreFragment extends BaseFragment {
         appNamePaint.setColor(0xFF222222);
         appNamePaint.setTextSize(28);
         appNamePaint.setAntiAlias(true);
-        canvas.drawText("StoryTeller", margin, dividerY + 55, appNamePaint); // 增加间距
+        canvas.drawText(getString(R.string.app_name), margin, dividerY + 55, appNamePaint); // 增加间距
 
         Paint appTipPaint = new Paint();
         appTipPaint.setColor(0xFF777777);
