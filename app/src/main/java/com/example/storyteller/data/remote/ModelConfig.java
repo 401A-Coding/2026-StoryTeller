@@ -45,12 +45,15 @@ public class ModelConfig {
             "pro", Provider.DEEPSEEK, "deepseek-v4-pro", "Pro", "DeepSeek-V4-Pro")
         );
         
-        // MiniMax 模型（仅保留 2.5 和 2.7）
+        // MiniMax 模型（2.5 / 2.7 / M3）
         PRESET_MODELS.put("m2.5", new ModelInfo(
             "m2.5", Provider.MINIMAX, "MiniMax-M2.5", "M2.5", "MiniMax-M2.5")
         );
         PRESET_MODELS.put("m2.7", new ModelInfo(
             "m2.7", Provider.MINIMAX, "MiniMax-M2.7", "M2.7", "MiniMax-M2.7")
+        );
+        PRESET_MODELS.put("m3", new ModelInfo(
+            "m3", Provider.MINIMAX, "MiniMax-M3", "M3", "MiniMax-M3")
         );
     }
     
