@@ -53,7 +53,12 @@ public enum TaskType {
     /**
      * 剧情树轻量梳理（全部章节一次性摘要）
      */
-    PLOT_TREE_SUMMARY("plot_tree_summary", "剧情树轻量梳理");
+    PLOT_TREE_SUMMARY("plot_tree_summary", "剧情树轻量梳理"),
+
+    /**
+     * 分支走向AI建议
+     */
+    BRANCH_SUGGEST("branch_suggest", "分支走向AI建议");
     
     private final String code;
     private final String description;

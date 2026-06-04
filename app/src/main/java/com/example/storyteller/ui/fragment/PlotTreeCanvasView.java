@@ -445,16 +445,58 @@ public class PlotTreeCanvasView extends View {
     }
 
     private void drawSplitRow(Canvas canvas, TimelineRow row, float rowY, int colCount, float colW) {
+        int placeholderCount = 0;
         for (int c = 0; c < colCount; c++) {
             float left = c * colW + cardMargin;
             float right = (c + 1) * colW - cardMargin;
-            if (c < row.cells.size() && row.cells.get(c) != null && row.cells.get(c).event != null) {
+            if (c < row.cells.size() && row.cells.get(c) != null) {
                 Cell cell = row.cells.get(c);
-                drawCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
-                        cell.event.getTitle(), cell.event.getSummary(), cell.branchColor);
+                if (cell.isPlaceholder) {
+                    drawPlaceholderCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
+                            cell.description, cell.branchColor);
+                    placeholderCount++;
+                } else if (cell.event != null) {
+                    drawCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
+                            cell.event.getTitle(), cell.event.getSummary(), cell.branchColor);
+                } else {
+                    float cx = left + (right - left) / 2f;
+                    canvas.drawLine(cx, rowY, cx, rowY + cardHeight, dashLinePaint);
+                }
             } else {
                 float cx = left + (right - left) / 2f;
                 canvas.drawLine(cx, rowY, cx, rowY + cardHeight, dashLinePaint);
+            }
+        }
+        if (placeholderCount > 0) {
+            android.util.Log.d("PlotTree", "CANVAS drawSplitRow placeholderCount=" + placeholderCount + " rowY=" + rowY);
+        }
+        // 分叉引导线：若此行有forkTargets（占位冲突替换FORK行场景），在主线卡片右侧绘制
+        if (row.forkTargets != null && !row.forkTargets.isEmpty()) {
+            Map<String, ForkTarget> targetMap = new HashMap<>();
+            for (ForkTarget ft : row.forkTargets) targetMap.put(ft.branchName, ft);
+            for (int c = 1; c < colCount; c++) {
+                ColumnHeader h = columnHeaders.get(c);
+                ForkTarget ft = targetMap.get(h.branchName);
+                float colCenterX = c * colW + colW / 2f;
+                float cy = rowY + cardHeight / 2f;
+                if (ft != null) {
+                    Paint arrowLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    arrowLine.setStyle(Paint.Style.STROKE);
+                    arrowLine.setStrokeWidth(lineWidth * 2);
+                    arrowLine.setColor(ft.branchColor);
+                    float axStart = cardMargin + cardWidth + cardMargin;
+                    canvas.drawLine(axStart, cy, colCenterX, cy, arrowLine);
+                    arrowPaint.setColor(ft.branchColor);
+                    Path head = new Path();
+                    head.moveTo(colCenterX, cy);
+                    head.lineTo(colCenterX - arrowSize, cy - arrowSize);
+                    head.lineTo(colCenterX - arrowSize, cy + arrowSize);
+                    head.close();
+                    canvas.drawPath(head, arrowPaint);
+                    forkLabelPaint.setColor(ft.branchColor);
+                    Paint.FontMetrics fm = forkLabelPaint.getFontMetrics();
+                    canvas.drawText(ft.branchName, colCenterX, cy - fm.descent - arrowSize - 2f * density, forkLabelPaint);
+                }
             }
         }
     }
@@ -484,6 +526,47 @@ public class PlotTreeCanvasView extends View {
             String es = ellipsize(summaryPaint, summary, maxWidth);
             canvas.drawText(es, textX, ty + tfm.descent - tfm.ascent + 4f * density, summaryPaint);
         }
+    }
+
+    private void drawPlaceholderCard(Canvas canvas, RectF rect, String description, int branchColor) {
+        // 半透明背景
+        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bgPaint.setColor((branchColor & 0x00FFFFFF) | 0x20000000);
+        bgPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(rect, cardRadius, cardRadius, bgPaint);
+
+        // 左侧彩色条
+        RectF bar = new RectF(rect.left, rect.top + cardRadius,
+                rect.left + colorBarWidth, rect.bottom - cardRadius);
+        Paint barPaint = new Paint();
+        barPaint.setColor(branchColor);
+        barPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(bar, colorBarWidth / 2f, colorBarWidth / 2f, barPaint);
+
+        // 虚线边框
+        Paint dashStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dashStroke.setStyle(Paint.Style.STROKE);
+        dashStroke.setStrokeWidth(1f * density);
+        dashStroke.setColor((branchColor & 0x00FFFFFF) | 0x80000000);
+        dashStroke.setPathEffect(new DashPathEffect(new float[]{6f * density, 4f * density}, 0));
+        canvas.drawRoundRect(rect, cardRadius, cardRadius, dashStroke);
+
+        // "走向：" 标签
+        float textX = rect.left + colorBarWidth + cardPadding;
+        float maxWidth = rect.width() - colorBarWidth - cardPadding * 2;
+        Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        labelPaint.setTextSize(10f * density);
+        labelPaint.setColor(branchColor);
+        labelPaint.setFakeBoldText(true);
+        canvas.drawText("走向", textX, rect.top + cardPadding + 10f * density, labelPaint);
+
+        // 说明文字
+        float descMax = maxWidth - labelPaint.measureText("走向") - 4f * density;
+        float descX = textX + labelPaint.measureText("走向") + 4f * density;
+        String descText = ellipsize(summaryPaint,
+                TextUtils.isEmpty(description) ? "暂无" : description, descMax);
+        Paint.FontMetrics dfm = summaryPaint.getFontMetrics();
+        canvas.drawText(descText, descX, rect.top + cardPadding - dfm.ascent, summaryPaint);
     }
 
     private void drawConnectingLines(Canvas canvas, float colW, float rowH) {
@@ -529,8 +612,18 @@ public class PlotTreeCanvasView extends View {
                 }
                 return false;
             case TimelineRow.TYPE_SPLIT:
-                return col < row.cells.size() && row.cells.get(col) != null
-                        && row.cells.get(col).event != null;
+                if (col < row.cells.size() && row.cells.get(col) != null) {
+                    Cell c = row.cells.get(col);
+                    if (c.event != null || c.isPlaceholder) return true;
+                }
+                // 也检查forkTargets（SPLIT行替换FORK行时携带的引导线目标）
+                if (col < columnHeaders.size() && row.forkTargets != null) {
+                    ColumnHeader h = columnHeaders.get(col);
+                    for (ForkTarget ft : row.forkTargets) {
+                        if (ft.branchName.equals(h.branchName)) return true;
+                    }
+                }
+                return false;
         }
         return false;
     }
