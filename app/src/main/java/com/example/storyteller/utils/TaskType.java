@@ -47,7 +47,13 @@ public enum TaskType {
     /**
      * 批量章节速记（极简模式）
      */
-    BATCH_QUICK_NOTE("batch_quick_note", "批量章节速记");
+    BATCH_QUICK_NOTE("batch_quick_note", "批量章节速记"),
+
+    // ==================== 剧情树工作区 ====================
+    /**
+     * 剧情树轻量梳理（全部章节一次性摘要）
+     */
+    PLOT_TREE_SUMMARY("plot_tree_summary", "剧情树轻量梳理");
     
     private final String code;
     private final String description;
