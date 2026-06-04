@@ -2,7 +2,6 @@ package com.example.storyteller.ui.fragment;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -19,6 +18,7 @@ import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.Cell;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ColumnHeader;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ForkTarget;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.TimelineRow;
+import com.example.storyteller.utils.ThemeColorUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -103,6 +103,7 @@ public class PlotTreeCanvasView extends View {
 
     private Paint forkNodeBgPaint;
     private TextPaint forkNodeTextPaint;
+    private Paint borderPaint;   // header border / fork node stroke
 
     public PlotTreeCanvasView(Context context) {
         this(context, null);
@@ -133,24 +134,21 @@ public class PlotTreeCanvasView extends View {
         colorBarWidth = COLOR_BAR_WIDTH_DP * density;
         forkLabelSize = FORK_LABEL_SIZE_DP * density;
 
+        // Create paints (colors set by applyColors)
         cardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         cardBgPaint.setStyle(Paint.Style.FILL);
-        cardBgPaint.setColor(Color.WHITE);
 
         cardStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         cardStrokePaint.setStyle(Paint.Style.STROKE);
         cardStrokePaint.setStrokeWidth(1f * density);
-        cardStrokePaint.setColor(0xFFE0E0E0);
 
         linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeWidth(lineWidth);
-        linePaint.setColor(0xFFBDBDBD);
 
         dashLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         dashLinePaint.setStyle(Paint.Style.STROKE);
         dashLinePaint.setStrokeWidth(lineWidth);
-        dashLinePaint.setColor(0xFFE0E0E0);
         dashLinePaint.setPathEffect(new DashPathEffect(new float[]{4f * density, 4f * density}, 0));
 
         arrowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -159,34 +157,55 @@ public class PlotTreeCanvasView extends View {
         titlePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         titlePaint.setTextSize(14f * density);
         titlePaint.setFakeBoldText(true);
-        titlePaint.setColor(0xFF212121);
 
         summaryPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         summaryPaint.setTextSize(12f * density);
-        summaryPaint.setColor(0xFF757575);
 
         headerPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         headerPaint.setTextSize(12f * density);
         headerPaint.setFakeBoldText(true);
-        headerPaint.setColor(0xFF616161);
 
         forkLabelPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         forkLabelPaint.setTextSize(forkLabelSize);
-        forkLabelPaint.setColor(0xFF757575);
 
         headerBgPaint = new Paint();
         headerBgPaint.setStyle(Paint.Style.FILL);
-        headerBgPaint.setColor(0xFFF5F5F5);
 
         forkNodeBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         forkNodeBgPaint.setStyle(Paint.Style.FILL);
-        forkNodeBgPaint.setColor(0xFFF0F0F0);
 
         forkNodeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         forkNodeTextPaint.setTextSize(14f * density);
         forkNodeTextPaint.setFakeBoldText(true);
-        forkNodeTextPaint.setColor(0xFF9E9E9E);
         forkNodeTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(1f * density);
+
+        applyColors(context);
+    }
+
+    /** Apply theme-aware colors from ThemeColorUtils. Called on init and on theme change. */
+    private void applyColors(Context context) {
+        cardBgPaint.setColor(ThemeColorUtils.getBackgroundCard(context));
+        cardStrokePaint.setColor(ThemeColorUtils.getDivider(context));
+        linePaint.setColor(ThemeColorUtils.getDivider(context));
+        dashLinePaint.setColor(ThemeColorUtils.getDivider(context));
+        titlePaint.setColor(ThemeColorUtils.getTextPrimary(context));
+        summaryPaint.setColor(ThemeColorUtils.getTextSecondary(context));
+        headerPaint.setColor(ThemeColorUtils.getTextSecondary(context));
+        headerBgPaint.setColor(ThemeColorUtils.getBackgroundSecondary(context));
+        forkNodeBgPaint.setColor(ThemeColorUtils.getBackgroundSecondary(context));
+        forkNodeTextPaint.setColor(ThemeColorUtils.getTextHint(context));
+        borderPaint.setColor(ThemeColorUtils.getDivider(context));
+        forkLabelPaint.setColor(ThemeColorUtils.getTextSecondary(context));
+    }
+
+    /** Call when theme changes to update all Canvas-drawn colors. */
+    public void onThemeChanged() {
+        applyColors(getContext());
+        invalidate();
     }
 
     public void setListener(Listener listener) {
@@ -333,10 +352,7 @@ public class PlotTreeCanvasView extends View {
         float colW = cardWidth + cardMargin * 2;
 
         canvas.drawRect(0, 0, getWidth(), headerHeight, headerBgPaint);
-        Paint hBorder = new Paint();
-        hBorder.setColor(0xFFE0E0E0);
-        hBorder.setStrokeWidth(1f * density);
-        canvas.drawLine(0, headerHeight, getWidth(), headerHeight, hBorder);
+        canvas.drawLine(0, headerHeight, getWidth(), headerHeight, borderPaint);
 
         for (int c = 0; c < colCount; c++) {
             ColumnHeader h = columnHeaders.get(c);
@@ -489,11 +505,7 @@ public class PlotTreeCanvasView extends View {
                 float nodeCx = colW / 2f;
                 float nodeCy = curBottom;
                 canvas.drawCircle(nodeCx, nodeCy, forkNodeR, forkNodeBgPaint);
-                Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                strokePaint.setStyle(Paint.Style.STROKE);
-                strokePaint.setColor(0xFFBDBDBD);
-                strokePaint.setStrokeWidth(1f * density);
-                canvas.drawCircle(nodeCx, nodeCy, forkNodeR, strokePaint);
+                canvas.drawCircle(nodeCx, nodeCy, forkNodeR, borderPaint);
                 Paint.FontMetrics fm = forkNodeTextPaint.getFontMetrics();
                 canvas.drawText("+", nodeCx, nodeCy - (fm.ascent + fm.descent) / 2f, forkNodeTextPaint);
             }

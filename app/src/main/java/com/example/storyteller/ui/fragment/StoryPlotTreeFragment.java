@@ -152,6 +152,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
+        if (canvasPlotTree != null) canvasPlotTree.onThemeChanged();
         if (storyId > 0) loadStory();
     }
     private void showOverflowMenu(View anchor) {
