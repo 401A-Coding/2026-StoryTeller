@@ -9,7 +9,9 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.text.TextPaint;
 import android.text.TextUtils;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.util.AttributeSet;
 
 import com.example.storyteller.model.PlotTreeEvent;
@@ -24,6 +26,31 @@ import java.util.List;
 import java.util.Map;
 
 public class PlotTreeCanvasView extends View {
+
+    // ── Listener ────────────────────────────────────────────
+    public interface Listener {
+        void onCardClick(PlotTreeEvent event, int branchColor);
+        void onForkNodeClick(PlotTreeEvent sourceEvent);
+    }
+
+    // ── Hit testing ────────────────────────────────────────
+    private static class HitInfo {
+        static final int TYPE_CARD = 0;
+        static final int TYPE_FORK_NODE = 1;
+        final RectF rect;
+        final int type;
+        final PlotTreeEvent event;
+        final int rowIndex;
+        final int branchColor;
+
+        HitInfo(RectF rect, int type, PlotTreeEvent event, int rowIndex, int branchColor) {
+            this.rect = rect;
+            this.type = type;
+            this.event = event;
+            this.rowIndex = rowIndex;
+            this.branchColor = branchColor;
+        }
+    }
 
     private static final float CARD_WIDTH_DP = 200f;
     private static final float CARD_HEIGHT_DP = 72f;
@@ -65,6 +92,18 @@ public class PlotTreeCanvasView extends View {
     private int totalWidth;
     private int totalHeight;
 
+    private final List<HitInfo> hitInfos = new ArrayList<>();
+    private Listener listener;
+
+    // Touch tracking for click-vs-scroll disambiguation
+    private float downX;
+    private float downY;
+    private int touchSlop;
+    private boolean isClickCandidate;
+
+    private Paint forkNodeBgPaint;
+    private TextPaint forkNodeTextPaint;
+
     public PlotTreeCanvasView(Context context) {
         this(context, null);
     }
@@ -80,6 +119,9 @@ public class PlotTreeCanvasView extends View {
 
     private void init(Context context) {
         density = context.getResources().getDisplayMetrics().density;
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        setClickable(true);
+
         cardWidth = CARD_WIDTH_DP * density;
         cardHeight = CARD_HEIGHT_DP * density;
         cardRadius = CARD_RADIUS_DP * density;
@@ -135,6 +177,20 @@ public class PlotTreeCanvasView extends View {
         headerBgPaint = new Paint();
         headerBgPaint.setStyle(Paint.Style.FILL);
         headerBgPaint.setColor(0xFFF5F5F5);
+
+        forkNodeBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        forkNodeBgPaint.setStyle(Paint.Style.FILL);
+        forkNodeBgPaint.setColor(0xFFF0F0F0);
+
+        forkNodeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        forkNodeTextPaint.setTextSize(14f * density);
+        forkNodeTextPaint.setFakeBoldText(true);
+        forkNodeTextPaint.setColor(0xFF9E9E9E);
+        forkNodeTextPaint.setTextAlign(Paint.Align.CENTER);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     public void setData(List<ColumnHeader> headers, List<TimelineRow> rows) {
@@ -153,6 +209,57 @@ public class PlotTreeCanvasView extends View {
         totalHeight = (int)(headerHeight + rowCount * rowH);
         setMinimumWidth(totalWidth);
         setMinimumHeight(totalHeight);
+        rebuildHitRects(colCount, colW, rowH);
+    }
+
+    private void rebuildHitRects(int colCount, float colW, float rowH) {
+        hitInfos.clear();
+
+        // Fork node hit rects FIRST (before card rects) so they take priority
+        // when a touch overlaps both (fork node overlaps card edges by ~8dp)
+        float forkNodeR = 10f * density;
+        for (int r = 0; r < rows.size() - 1; r++) {
+            TimelineRow cur = rows.get(r);
+            TimelineRow nxt = rows.get(r + 1);
+            if (cur.rowType == TimelineRow.TYPE_FORK || nxt.rowType == TimelineRow.TYPE_FORK) continue;
+            if (!hasColContent(cur, 0) || !hasColContent(nxt, 0)) continue;
+            // Extract the mainline event from the current row
+            PlotTreeEvent curEvent = getEventAt(cur, 0);
+            if (curEvent == null) continue;
+            float cx = colW / 2f;
+            float cy = headerHeight + r * rowH + rowH;
+            RectF nodeRect = new RectF(cx - forkNodeR, cy - forkNodeR, cx + forkNodeR, cy + forkNodeR);
+            hitInfos.add(new HitInfo(nodeRect, HitInfo.TYPE_FORK_NODE, curEvent, r, 0));
+        }
+
+        // Card hit rects
+        for (int r = 0; r < rows.size(); r++) {
+            TimelineRow row = rows.get(r);
+            float rowY = headerHeight + r * rowH + cardMargin;
+            if (row.rowType == TimelineRow.TYPE_SHARED) {
+                if (!row.cells.isEmpty() && row.cells.get(0) != null && row.cells.get(0).event != null) {
+                    Cell cell = row.cells.get(0);
+                    RectF rect = new RectF(cardMargin, rowY, colCount * colW - cardMargin, rowY + cardHeight);
+                    hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                }
+            } else if (row.rowType == TimelineRow.TYPE_FORK) {
+                if (!row.cells.isEmpty() && row.cells.get(0) != null && row.cells.get(0).event != null) {
+                    Cell cell = row.cells.get(0);
+                    RectF rect = new RectF(cardMargin, rowY, colW - cardMargin, rowY + cardHeight);
+                    hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                }
+            } else if (row.rowType == TimelineRow.TYPE_SPLIT) {
+                for (int c = 0; c < colCount; c++) {
+                    if (c < row.cells.size() && row.cells.get(c) != null && row.cells.get(c).event != null) {
+                        Cell cell = row.cells.get(c);
+                        float left = c * colW + cardMargin;
+                        float right = (c + 1) * colW - cardMargin;
+                        RectF rect = new RectF(left, rowY, right, rowY + cardHeight);
+                        hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -160,6 +267,61 @@ public class PlotTreeCanvasView extends View {
         int w = Math.max(totalWidth, getSuggestedMinimumWidth());
         int h = Math.max(totalHeight, getSuggestedMinimumHeight());
         setMeasuredDimension(resolveSize(w, widthMeasureSpec), resolveSize(h, heightMeasureSpec));
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (listener == null) return super.onTouchEvent(event);
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                downX = event.getX();
+                downY = event.getY();
+                isClickCandidate = true;
+                return true;
+
+            case MotionEvent.ACTION_MOVE:
+                if (isClickCandidate) {
+                    float dx = Math.abs(event.getX() - downX);
+                    float dy = Math.abs(event.getY() - downY);
+                    if (dx > touchSlop || dy > touchSlop) {
+                        // Significant movement → this is a scroll, not a click
+                        isClickCandidate = false;
+                        getParent().requestDisallowInterceptTouchEvent(false);
+                    }
+                }
+                return isClickCandidate || super.onTouchEvent(event);
+
+            case MotionEvent.ACTION_UP:
+                if (isClickCandidate) {
+                    float x = event.getX();
+                    float y = event.getY();
+                    for (HitInfo hit : hitInfos) {
+                        if (hit.rect.contains(x, y)) {
+                            if (hit.type == HitInfo.TYPE_CARD) {
+                                listener.onCardClick(hit.event, hit.branchColor);
+                            } else if (hit.type == HitInfo.TYPE_FORK_NODE) {
+                                listener.onForkNodeClick(hit.event);
+                            }
+                            performClick();
+                            return true;
+                        }
+                    }
+                }
+                isClickCandidate = false;
+                return super.onTouchEvent(event);
+
+            case MotionEvent.ACTION_CANCEL:
+                isClickCandidate = false;
+                return super.onTouchEvent(event);
+        }
+
+        return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean performClick() {
+        return super.performClick();
     }
 
     @Override
@@ -309,16 +471,31 @@ public class PlotTreeCanvasView extends View {
     }
 
     private void drawConnectingLines(Canvas canvas, float colW, float rowH) {
+        float forkNodeR = 10f * density;
         for (int r = 0; r < rows.size() - 1; r++) {
             TimelineRow cur = rows.get(r);
             TimelineRow nxt = rows.get(r + 1);
-            float curY = headerHeight + r * rowH + rowH / 2f;
-            float nxtY = headerHeight + (r + 1) * rowH + rowH / 2f;
+            float curBottom = headerHeight + r * rowH + rowH;
+            float nxtTop = headerHeight + (r + 1) * rowH;
             for (int c = 0; c < columnHeaders.size(); c++) {
                 float cx = c * colW + colW / 2f;
                 if (hasColContent(cur, c) && hasColContent(nxt, c)) {
-                    canvas.drawLine(cx, curY, cx, nxtY, linePaint);
+                    canvas.drawLine(cx, curBottom, cx, nxtTop, linePaint);
                 }
+            }
+            // Draw fork node on mainline (col 0) between non-fork rows
+            if (cur.rowType != TimelineRow.TYPE_FORK && nxt.rowType != TimelineRow.TYPE_FORK
+                    && hasColContent(cur, 0) && hasColContent(nxt, 0)) {
+                float nodeCx = colW / 2f;
+                float nodeCy = curBottom;
+                canvas.drawCircle(nodeCx, nodeCy, forkNodeR, forkNodeBgPaint);
+                Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                strokePaint.setStyle(Paint.Style.STROKE);
+                strokePaint.setColor(0xFFBDBDBD);
+                strokePaint.setStrokeWidth(1f * density);
+                canvas.drawCircle(nodeCx, nodeCy, forkNodeR, strokePaint);
+                Paint.FontMetrics fm = forkNodeTextPaint.getFontMetrics();
+                canvas.drawText("+", nodeCx, nodeCy - (fm.ascent + fm.descent) / 2f, forkNodeTextPaint);
             }
         }
     }
@@ -344,6 +521,12 @@ public class PlotTreeCanvasView extends View {
                         && row.cells.get(col).event != null;
         }
         return false;
+    }
+
+    private PlotTreeEvent getEventAt(TimelineRow row, int col) {
+        if (row == null || row.cells == null || col >= row.cells.size()) return null;
+        Cell cell = row.cells.get(col);
+        return cell != null ? cell.event : null;
     }
 
     private String ellipsize(TextPaint paint, String text, float maxWidth) {

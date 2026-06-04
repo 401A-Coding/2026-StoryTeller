@@ -92,7 +92,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
     private Story currentStory;
     private PlotTreeWorkspaceSnapshot currentSnapshot;
     private PlotSummarySnapshot cachedPlotSummary;
-    private int displayMode = MODE_CURRENT_BRANCH;
+    private int displayMode = MODE_ALL_BRANCHES;
     private int summaryGenerationToken = 0;
     private int storyId;
 
@@ -117,10 +117,21 @@ public class StoryPlotTreeFragment extends BaseFragment {
         canvasPlotTree = view.findViewById(R.id.canvas_plot_tree);
 
         view.findViewById(R.id.btn_add_event).setOnClickListener(v -> showEventEditorDialog(null, -1));
-        view.findViewById(R.id.btn_switch_branch).setOnClickListener(v -> showBranchSwitchDialog());
+        view.findViewById(R.id.btn_switch_branch).setOnClickListener(this::showBranchMenu);
         view.findViewById(R.id.btn_ai_summary).setOnClickListener(v -> showAiSummaryDialog());
         view.findViewById(R.id.btn_export).setOnClickListener(v -> refreshPlotTree());
         view.findViewById(R.id.btn_overflow).setOnClickListener(this::showOverflowMenu);
+
+        canvasPlotTree.setListener(new PlotTreeCanvasView.Listener() {
+            @Override
+            public void onCardClick(PlotTreeEvent event, int branchColor) {
+                showCardDetailDialog(event);
+            }
+            @Override
+            public void onForkNodeClick(PlotTreeEvent sourceEvent) {
+                showForkNodeCreateDialog(sourceEvent);
+            }
+        });
     }
 
     @Override
@@ -141,14 +152,26 @@ public class StoryPlotTreeFragment extends BaseFragment {
     }
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(requireContext(), anchor, Gravity.TOP | Gravity.END);
-        popup.getMenu().add(0, 1, 0, displayMode == MODE_ALL_BRANCHES ? "返回单分支" : "查看全部走向");
         popup.getMenu().add(0, 2, 0, "分支操作");
         popup.getMenu().add(0, 5, 0, "导出");
         popup.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
-                case 1: toggleDisplayMode(); return true;
                 case 2: showBranchActionDialog(); return true;
                 case 5: showExportDialog(); return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void showBranchMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor, Gravity.TOP | Gravity.START);
+        popup.getMenu().add(0, 1, 0, "切换分支");
+        popup.getMenu().add(0, 2, 0, displayMode == MODE_ALL_BRANCHES ? "返回单分支" : "查看全部走向");
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: showBranchSwitchDialog(); return true;
+                case 2: toggleDisplayMode(); return true;
             }
             return false;
         });
@@ -309,9 +332,36 @@ public class StoryPlotTreeFragment extends BaseFragment {
                     }
                 }
             }
+            // Second fallback: find the last branch event title that matches mainline
+            // (branch copies events up to the fork point, so the last match is closest to fork)
+            if (forkPos < 0 && b.getEvents() != null && !b.getEvents().isEmpty()) {
+                int bestMatch = -1;
+                for (int ei = 0; ei < b.getEvents().size(); ei++) {
+                    String evTitle = b.getEvents().get(ei).getTitle();
+                    if (evTitle == null || evTitle.isEmpty()) continue;
+                    for (int mi = 0; mi < mlEvents.size(); mi++) {
+                        if (evTitle.equals(mlEvents.get(mi).getTitle())) {
+                            bestMatch = Math.max(bestMatch, mi);
+                            break;
+                        }
+                    }
+                }
+                if (bestMatch >= 0) forkPos = bestMatch;
+            }
+            // Third fallback: default to first mainline event position so branch is visible
+            if (forkPos < 0) {
+                forkPos = 0;
+            }
             forkPosMap.put(b.getId(), forkPos);
         }
         if (branchList.isEmpty()) return buildSingleBranchTimeline(mainline, headers);
+
+        // 分叉越靠下（forkPos越大）的分支离主线越近（col越小），形成树的视觉层次
+        branchList.sort((a, b) -> {
+            int fpA = forkPosMap.getOrDefault(a.getId(), 0);
+            int fpB = forkPosMap.getOrDefault(b.getId(), 0);
+            return Integer.compare(fpB, fpA);
+        });
 
         Map<Integer, Integer> colMap = new LinkedHashMap<>();
         colMap.put(mainline.getId(), 0);
@@ -536,7 +586,8 @@ public class StoryPlotTreeFragment extends BaseFragment {
                 if (childStory != null) {
                     branch.setChildSummary(childStory.getTitle());
                     branch.setChildStoryWordCount(childStory.getWordCount());
-                    loadExportedBranchEvents(branch, childStory);
+                    // 合并而非覆盖：保留分叉点前的事件（ID正确用于fork检测），追加导出故事的新事件
+                    syncExportedBranchEvents(branch, childStory);
                     branch.setChildBranches(loadStoryBranches(childStory));
                 }
             }
@@ -557,18 +608,44 @@ public class StoryPlotTreeFragment extends BaseFragment {
         return result;
     }
 
-    private void loadExportedBranchEvents(PlotTreeBranch branch, Story exportedStory) {
+    /**
+     * 将导出故事的新事件合并到分支中。
+     * 保留分叉点及之前的事件（ID 正确，用于 forkPos 检测），
+     * 仅从导出故事追加分叉点之后的新事件。
+     */
+    private void syncExportedBranchEvents(PlotTreeBranch branch, Story exportedStory) {
         if (TextUtils.isEmpty(exportedStory.getPlotTreeJson())) return;
+        if (branch.getEvents() == null) branch.setEvents(new ArrayList<>());
         try {
             PlotTreeWorkspaceSnapshot es = gson.fromJson(exportedStory.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class);
-            if (es != null && es.getBranches() != null) {
-                for (PlotTreeBranch eb : es.getBranches()) {
-                    if (eb != null && eb.isMainline() && eb.getEvents() != null) {
-                        branch.setEvents(new ArrayList<>(eb.getEvents()));
+            if (es == null || es.getBranches() == null) return;
+            PlotTreeBranch exMainline = null;
+            for (PlotTreeBranch eb : es.getBranches()) {
+                if (eb != null && eb.isMainline()) { exMainline = eb; break; }
+            }
+            if (exMainline == null || exMainline.getEvents() == null || exMainline.getEvents().isEmpty()) return;
+            List<PlotTreeEvent> exEvents = exMainline.getEvents();
+
+            // 定位分叉点：在分支当前事件中查找 sourceEventId 对应的事件
+            int forkPos = -1;
+            List<PlotTreeEvent> curEvents = branch.getEvents();
+            if (curEvents != null && branch.getSourceEventId() > 0) {
+                for (int i = 0; i < curEvents.size(); i++) {
+                    if (curEvents.get(i).getId() == branch.getSourceEventId()) {
+                        forkPos = i;
                         break;
                     }
                 }
             }
+            // 若找不到分叉点（旧数据无 sourceEventId），保留所有现有事件不做合并
+            if (forkPos < 0) return;
+
+            // 保留 forkPos+1 个原有事件（ID 正确），其余用导出故事的新事件替换
+            List<PlotTreeEvent> merged = new ArrayList<>(curEvents.subList(0, Math.min(forkPos + 1, curEvents.size())));
+            for (int i = forkPos + 1; i < exEvents.size(); i++) {
+                merged.add(copyEvent(exEvents.get(i)));
+            }
+            branch.setEvents(merged);
         } catch (Exception ignored) {}
     }
 
@@ -591,6 +668,79 @@ public class StoryPlotTreeFragment extends BaseFragment {
         for (PlotTreeBranch b : currentSnapshot.getBranches()) { if (b != null && b.getId() == branchId) return b; }
         return null;
     }
+
+    /** Find which branch owns the given event, and its position within that branch. */
+    private PlotTreeBranch findEventOwner(PlotTreeEvent event, int[] outPos) {
+        if (event == null || currentSnapshot == null || currentSnapshot.getBranches() == null) return null;
+        for (PlotTreeBranch b : currentSnapshot.getBranches()) {
+            if (b == null || b.getEvents() == null) continue;
+            for (int i = 0; i < b.getEvents().size(); i++) {
+                if (b.getEvents().get(i).getId() == event.getId()) {
+                    outPos[0] = i;
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+    private void showCardDetailDialog(PlotTreeEvent event) {
+        if (event == null) return;
+        int[] posHolder = new int[]{-1};
+        PlotTreeBranch owner = findEventOwner(event, posHolder);
+        if (owner == null) return;
+
+        LinearLayout layout = buildFormLayout();
+        EditText etTitle = buildEditText("事件标题");
+        EditText etSummary = buildEditText("事件摘要 / 主线推进");
+        EditText etNote = buildEditText("补充说明（可选）");
+        EditText etTags = buildEditText("标签，使用顿号/逗号分隔（可选）");
+        layout.addView(etTitle); layout.addView(etSummary); layout.addView(etNote); layout.addView(etTags);
+        etTitle.setText(event.getTitle());
+        etSummary.setText(event.getSummary());
+        etNote.setText(event.getNote());
+        etTags.setText(event.getTags() == null ? "" : TextUtils.join("、", event.getTags()));
+
+        PlotTreeBranch ownerBranch = owner;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
+                .setTitle("剧情事件详情")
+                .setView(layout).setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String title = trimToEmpty(etTitle.getText() == null ? null : etTitle.getText().toString());
+                    String summary = trimToEmpty(etSummary.getText() == null ? null : etSummary.getText().toString());
+                    if (TextUtils.isEmpty(title)) {
+                        Toast.makeText(requireContext(), "请先输入事件标题", Toast.LENGTH_SHORT).show(); return;
+                    }
+                    event.setTitle(title); event.setSummary(summary);
+                    event.setNote(trimToEmpty(etNote.getText() == null ? null : etNote.getText().toString()));
+                    event.setTags(splitTags(etTags.getText() == null ? null : etTags.getText().toString()));
+                    event.setUpdateTime(System.currentTimeMillis());
+                    if (ownerBranch != null) ownerBranch.setUpdateTime(System.currentTimeMillis());
+                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                });
+
+        // 全部走向模式下，提供跳转至该事件所属分支的入口
+        if (displayMode == MODE_ALL_BRANCHES) {
+            builder.setNeutralButton("查看此分支：" + safeText(ownerBranch.getName()), (dialog, which) -> {
+                currentSnapshot.setActiveBranchId(ownerBranch.getId());
+                persistSnapshot();
+                displayMode = MODE_CURRENT_BRANCH;
+                refreshDisplay();
+            });
+        }
+
+        builder.show();
+    }
+
+    private void showForkNodeCreateDialog(PlotTreeEvent sourceEvent) {
+        if (sourceEvent == null) return;
+        // Fork node is always between mainline events — find the event's position
+        int[] posHolder = new int[]{-1};
+        PlotTreeBranch owner = findEventOwner(sourceEvent, posHolder);
+        if (owner == null || posHolder[0] < 0) return;
+        showCreateBranchDialog(sourceEvent, posHolder[0]);
+    }
+
     private void showEventActionDialog(PlotTreeEvent event, int position) {
         if (event == null) return;
         PlotTreeBranch branch = getActiveBranch();
