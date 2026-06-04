@@ -155,12 +155,14 @@ public class NovelDetailActivity extends AppCompatActivity {
 
         // 标题（点击跳转到浏览器打开原书籍URL）
         TextView tvTitle = findViewById(R.id.tv_title);
+        TextView tvLinkHint = findViewById(R.id.tv_link_hint);
         tvTitle.setText(novel.getTitle());
         if (sourceUrl != null && !sourceUrl.isEmpty()) {
             tvTitle.setClickable(true);
             tvTitle.setFocusable(true);
             tvTitle.setTextColor(ThemeColorUtils.getLinkColor(this));
-            tvTitle.setOnClickListener(v -> {
+            tvLinkHint.setVisibility(View.VISIBLE);
+            View.OnClickListener openBrowserListener = v -> {
                 try {
                     android.content.Intent browserIntent = new android.content.Intent(
                         android.content.Intent.ACTION_VIEW,
@@ -170,7 +172,9 @@ public class NovelDetailActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Toast.makeText(this, "无法打开链接", Toast.LENGTH_SHORT).show();
                 }
-            });
+            };
+            tvTitle.setOnClickListener(openBrowserListener);
+            tvLinkHint.setOnClickListener(openBrowserListener);
         }
 
         // 作者
@@ -221,12 +225,6 @@ public class NovelDetailActivity extends AppCompatActivity {
 
         // 章节列表
         setupChapterList();
-
-        // 开始仿写按钮
-        findViewById(R.id.btn_start_imitation).setOnClickListener(v -> {
-            Toast.makeText(this, "仿写功能开发中...", Toast.LENGTH_SHORT).show();
-            // TODO: 跳转到仿写页面
-        });
     }
 
     /**
