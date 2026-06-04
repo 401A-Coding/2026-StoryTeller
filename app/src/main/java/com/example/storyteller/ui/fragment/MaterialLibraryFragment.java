@@ -228,6 +228,22 @@ public class MaterialLibraryFragment extends BaseFragment {
                 exportSettingToGlobal(setting);
             });
 
+            // 来源URL点击回调（打开浏览器查看原书籍）
+            adapter.setOnSourceUrlClickListener(setting -> {
+                String url = setting.getSourceUrl();
+                if (url != null && !url.isEmpty()) {
+                    try {
+                        android.content.Intent browserIntent = new android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(url)
+                        );
+                        startActivity(browserIntent);
+                    } catch (Exception e) {
+                        android.widget.Toast.makeText(requireContext(), "无法打开链接", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+
             // 多选模式监听
             adapter.setOnSelectionModeChangeListener((isInSelectionMode, selectedCount) -> {
                 updateSelectedCount(selectedCount);

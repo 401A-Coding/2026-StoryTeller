@@ -34,6 +34,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     public interface OnSettingClickListener {
         void onSettingClick(StorySetting setting);
     }
+    
+    public interface OnSourceUrlClickListener {
+        void onSourceUrlClick(StorySetting setting);
+    }
 
     public interface OnSettingDeleteListener {
         void onSettingDelete(StorySetting setting, int position);
@@ -58,6 +62,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     private String currentQuery = null;           // 搜索关键词
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     private OnSettingClickListener listener;
+    private OnSourceUrlClickListener sourceUrlListener;
     private OnSettingDeleteListener deleteListener;
     private OnSelectionModeChangeListener selectionModeListener;
     private OnImportListener importListener;
@@ -291,6 +296,20 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
             holder.tvSource.setVisibility(View.GONE);
         }
         
+        // 来源URL链接（仅全局素材且有URL时显示）
+        if (setting.getStoryId() == 0 && setting.getSourceUrl() != null && !setting.getSourceUrl().isEmpty()) {
+            holder.tvSourceUrl.setVisibility(View.VISIBLE);
+            holder.tvSourceUrl.setText("🔗 查看原书籍");
+            holder.tvSourceUrl.setOnClickListener(v -> {
+                if (sourceUrlListener != null) {
+                    sourceUrlListener.onSourceUrlClick(setting);
+                }
+            });
+        } else {
+            holder.tvSourceUrl.setVisibility(View.GONE);
+            holder.tvSourceUrl.setOnClickListener(null);
+        }
+        
         // 标签预览
         loadTagsPreview(holder.chipGroupTagsPreview, setting.getTags());
         
@@ -457,6 +476,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         TextView tvSummary;
         TextView tvTime;
         TextView tvSource;
+        TextView tvSourceUrl;  // 来源URL链接
         ImageView btnMoreMenu;  // 三点菜单
         ImageView btnDelete;  // 删除按钮
         CheckBox cbSelect;  // 多选复选框
@@ -470,6 +490,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
             tvSummary = itemView.findViewById(R.id.tv_setting_summary);
             tvTime = itemView.findViewById(R.id.tv_setting_time);
             tvSource = itemView.findViewById(R.id.tv_setting_source);
+            tvSourceUrl = itemView.findViewById(R.id.tv_setting_source_url);
             btnMoreMenu = itemView.findViewById(R.id.btn_more_menu);
             btnDelete = itemView.findViewById(R.id.btn_delete_setting);
             cbSelect = itemView.findViewById(R.id.cb_select);
