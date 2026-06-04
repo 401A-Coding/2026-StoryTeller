@@ -64,7 +64,7 @@ public class PlotGraphFragment extends BaseFragment {
 
     private WebView webView;
     private int storyId;
-    
+
     private StorySettingDao settingDao;
     private SettingRelationshipDao relationshipDao;
 
@@ -88,16 +88,20 @@ public class PlotGraphFragment extends BaseFragment {
     @Override
     protected void initView(View view) {
         webView = view.findViewById(R.id.webview_graph);
-        
+
         // 搜索框
         EditText etSearch = view.findViewById(R.id.et_search);
         ImageButton btnClearSearch = view.findViewById(R.id.btn_clear_search);
         if (etSearch != null) {
             etSearch.addTextChangedListener(new android.text.TextWatcher() {
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
                 @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
                 @Override
                 public void afterTextChanged(android.text.Editable s) {
                     String keyword = s.toString();
@@ -112,8 +116,8 @@ public class PlotGraphFragment extends BaseFragment {
             etSearch.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
                     // 隐藏键盘
-                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) 
-                        requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
+                            requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
                     if (imm != null) {
                         imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
                     }
@@ -130,25 +134,25 @@ public class PlotGraphFragment extends BaseFragment {
                 }
             });
         }
-        
+
         // 刷新按钮
-        com.google.android.material.floatingactionbutton.FloatingActionButton fabRefresh = 
-            view.findViewById(R.id.fab_refresh);
+        com.google.android.material.floatingactionbutton.FloatingActionButton fabRefresh =
+                view.findViewById(R.id.fab_refresh);
         if (fabRefresh != null) {
             fabRefresh.setOnClickListener(v -> refreshGraph());
         }
-        
+
         // AI分析按钮
-        com.google.android.material.floatingactionbutton.FloatingActionButton fabAiAnalyze = 
-            view.findViewById(R.id.fab_ai_analyze);
+        com.google.android.material.floatingactionbutton.FloatingActionButton fabAiAnalyze =
+                view.findViewById(R.id.fab_ai_analyze);
         if (fabAiAnalyze != null) {
             fabAiAnalyze.setOnClickListener(v -> startAiRelationExtraction());
         }
-        
+
         // 初始化 DAO
         settingDao = new StorySettingDao(requireContext());
         relationshipDao = new SettingRelationshipDao(requireContext());
-        
+
         // 配置 WebView
         setupWebView();
     }
@@ -170,9 +174,9 @@ public class PlotGraphFragment extends BaseFragment {
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        
+
         webView.setBackgroundColor(ThemeColorUtils.getBackgroundPrimary(requireContext()));
-        
+
         // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -180,7 +184,7 @@ public class PlotGraphFragment extends BaseFragment {
                 super.onPageFinished(view, url);
                 // 设置深色模式配色
                 boolean isDarkMode = (view.getContext().getResources().getConfiguration().uiMode
-                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK) 
+                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
                         == android.content.res.Configuration.UI_MODE_NIGHT_YES;
                 String colorScheme = isDarkMode ? "dark" : "light";
                 webView.evaluateJavascript("setColorScheme('" + colorScheme + "')", null);
@@ -188,10 +192,10 @@ public class PlotGraphFragment extends BaseFragment {
                 loadGraphData();
             }
         });
-        
+
         // 添加 JavaScript 接口
         webView.addJavascriptInterface(new JsInterface(), "Android");
-        
+
         // 加载 HTML
         webView.loadUrl("file:///android_asset/plot_graph.html");
     }
@@ -205,28 +209,28 @@ public class PlotGraphFragment extends BaseFragment {
             loadGraphData();
         }
     }
-    
+
     private void loadGraphData() {
         if (storyId == -1) {
             showEmptyHint("无法加载数据");
             return;
         }
-        
+
         // 获取该小说下的所有设定
         List<StorySetting> settings = settingDao.getByStoryId(storyId);
-        
+
         // 获取所有设定ID
         Set<Integer> settingIds = new HashSet<>();
         for (StorySetting setting : settings) {
             settingIds.add(setting.getId());
         }
-        
+
         // 构建ID到设定的映射
         Map<Integer, StorySetting> settingMap = new HashMap<>();
         for (StorySetting setting : settings) {
             settingMap.put(setting.getId(), setting);
         }
-        
+
         // 获取所有关系
         List<SettingRelationship> allRelations = new ArrayList<>();
         for (Integer settingId : settingIds) {
@@ -248,25 +252,25 @@ public class PlotGraphFragment extends BaseFragment {
                 }
             }
         }
-        
+
         // 检查是否有数据
         if (allRelations.isEmpty()) {
             // 仍然显示图，但只有孤立节点
             buildGraphWithoutEdges(settings);
             return;
         }
-        
+
         // 构建图数据
         buildGraphData(settings, allRelations, settingMap);
     }
-    
+
     private void buildGraphWithoutEdges(List<StorySetting> settings) {
         Map<String, Object> graphData = new HashMap<>();
         graphData.put("centerName", "所有设定");
         graphData.put("isGlobal", true);
-        
+
         List<Map<String, Object>> nodes = new ArrayList<>();
-        
+
         // 添加所有设定为孤立节点
         for (StorySetting setting : settings) {
             Map<String, Object> node = new HashMap<>();
@@ -276,35 +280,35 @@ public class PlotGraphFragment extends BaseFragment {
             node.put("isCenter", false);
             nodes.add(node);
         }
-        
+
         graphData.put("nodes", nodes);
         graphData.put("edges", new ArrayList<>());
-        
+
         // 发送到 HTML
         String jsonData = new Gson().toJson(graphData);
         String js = "initGraph(" + jsonData + ")";
         webView.evaluateJavascript(js, null);
     }
-    
+
     private void buildGraphData(List<StorySetting> settings, List<SettingRelationship> relations, Map<Integer, StorySetting> settingMap) {
         Map<String, Object> graphData = new HashMap<>();
         graphData.put("centerName", "所有设定");
         graphData.put("isGlobal", true);
-        
+
         List<Map<String, Object>> nodes = new ArrayList<>();
         List<Map<String, Object>> edges = new ArrayList<>();
-        
+
         // 已添加的节点ID集合
         Set<Integer> addedNodes = new HashSet<>();
-        
+
         // 添加关系
         for (SettingRelationship rel : relations) {
             StorySetting sourceSetting = settingMap.get(rel.getSourceSettingId());
             StorySetting targetSetting = settingMap.get(rel.getTargetSettingId());
-            
+
             boolean sourceDeleted = rel.isSourceSettingDeleted();
             boolean targetDeleted = rel.isTargetSettingDeleted();
-            
+
             // 添加源节点
             if (sourceSetting != null && !addedNodes.contains(sourceSetting.getId())) {
                 Map<String, Object> node = new HashMap<>();
@@ -319,7 +323,7 @@ public class PlotGraphFragment extends BaseFragment {
                 nodes.add(node);
                 addedNodes.add(sourceSetting.getId());
             }
-            
+
             // 添加目标节点
             if (targetSetting != null && !addedNodes.contains(targetSetting.getId())) {
                 Map<String, Object> node = new HashMap<>();
@@ -334,10 +338,10 @@ public class PlotGraphFragment extends BaseFragment {
                 nodes.add(node);
                 addedNodes.add(targetSetting.getId());
             }
-            
+
             // 如果两个设定都不存在（都已删除），跳过这条边
             if (sourceSetting == null && targetSetting == null) continue;
-            
+
             // 添加边
             Map<String, Object> edge = new HashMap<>();
             edge.put("from", rel.getSourceSettingId());
@@ -351,7 +355,7 @@ public class PlotGraphFragment extends BaseFragment {
             }
             edges.add(edge);
         }
-        
+
         // 添加孤立节点（没有参与任何关系的设定）
         for (StorySetting setting : settings) {
             if (!addedNodes.contains(setting.getId())) {
@@ -365,16 +369,16 @@ public class PlotGraphFragment extends BaseFragment {
                 addedNodes.add(setting.getId());
             }
         }
-        
+
         graphData.put("nodes", nodes);
         graphData.put("edges", edges);
-        
+
         // 发送到 HTML
         String jsonData = new Gson().toJson(graphData);
         String js = "initGraph(" + jsonData + ")";
         webView.evaluateJavascript(js, null);
     }
-    
+
     private String buildEdgeTitle(SettingRelationship rel) {
         StringBuilder sb = new StringBuilder();
         sb.append(rel.getTypeDisplayName());
@@ -383,13 +387,13 @@ public class PlotGraphFragment extends BaseFragment {
         }
         return sb.toString();
     }
-    
+
     private String truncateText(String text, int maxLen) {
         if (text == null) return "";
         if (text.length() <= maxLen) return text;
         return text.substring(0, maxLen - 1) + "…";
     }
-    
+
     private void showEmptyHint(String message) {
         String js = "showEmptyHint('" + message + "')";
         webView.evaluateJavascript(js, null);
@@ -409,7 +413,7 @@ public class PlotGraphFragment extends BaseFragment {
                 startActivity(intent);
             });
         }
-        
+
         @JavascriptInterface
         public void onNodeSelected(int settingId) {
             // 单击节点，显示预览弹出卡片
@@ -426,7 +430,7 @@ public class PlotGraphFragment extends BaseFragment {
             });
         }
     }
-    
+
     /**
      * 显示节点预览底部弹出卡片
      */
@@ -435,17 +439,17 @@ public class PlotGraphFragment extends BaseFragment {
         View contentView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_node_preview, null);
         builder.setView(contentView);
         androidx.appcompat.app.AlertDialog dialog = builder.create();
-        
+
         // 使对话框从底部弹出
         if (dialog.getWindow() != null) {
             dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
             dialog.getWindow().setWindowAnimations(com.google.android.material.R.style.Animation_Design_BottomSheetDialog);
         }
-        
+
         // 标题
         TextView tvTitle = contentView.findViewById(R.id.tv_preview_title);
         tvTitle.setText(setting.getTitle());
-        
+
         // 分类
         TextView tvCategory = contentView.findViewById(R.id.tv_preview_category);
         String categoryText = setting.getCategory();
@@ -453,7 +457,7 @@ public class PlotGraphFragment extends BaseFragment {
             categoryText += " · " + setting.getSubCategory();
         }
         tvCategory.setText(categoryText);
-        
+
         // 摘要
         TextView tvSummary = contentView.findViewById(R.id.tv_preview_summary);
         if (!android.text.TextUtils.isEmpty(setting.getSummary())) {
@@ -462,18 +466,19 @@ public class PlotGraphFragment extends BaseFragment {
             tvSummary.setText("暂无摘要");
             tvSummary.setTextColor(ThemeColorUtils.getSecondaryTextColor(requireContext()));
         }
-        
+
         // 关联数量
         TextView tvRelationCount = contentView.findViewById(R.id.tv_preview_relation_count);
         tvRelationCount.setText("· " + relationCount + " 个关联");
         tvRelationCount.setVisibility(View.VISIBLE);
-        
+
         // 标签
         LinearLayout layoutTags = contentView.findViewById(R.id.layout_preview_tags);
         if (!android.text.TextUtils.isEmpty(setting.getTags())) {
             try {
                 List<String> tags = new Gson().fromJson(setting.getTags(),
-                    new TypeToken<List<String>>(){}.getType());
+                        new TypeToken<List<String>>() {
+                        }.getType());
                 if (tags != null && !tags.isEmpty()) {
                     int maxShow = Math.min(tags.size(), 5);
                     for (int i = 0; i < maxShow; i++) {
@@ -500,12 +505,13 @@ public class PlotGraphFragment extends BaseFragment {
                     }
                     layoutTags.setVisibility(View.VISIBLE);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
-        
+
         // 关闭按钮
         contentView.findViewById(R.id.btn_preview_close).setOnClickListener(v -> dialog.dismiss());
-        
+
         // 查看详情按钮
         contentView.findViewById(R.id.btn_preview_detail).setOnClickListener(v -> {
             dialog.dismiss();
@@ -514,7 +520,7 @@ public class PlotGraphFragment extends BaseFragment {
             intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, storyId);
             startActivity(intent);
         });
-        
+
         dialog.show();
     }
 
@@ -538,7 +544,7 @@ public class PlotGraphFragment extends BaseFragment {
     }
 
     // ==================== AI 关系提取功能 ====================
-    
+
     private void startAiRelationExtraction() {
         // 先校验 DeepSeek API Key
         String apiKey = ApiKeyManager.getApiKey(requireContext(), ModelConfig.Provider.DEEPSEEK);
@@ -559,18 +565,19 @@ public class PlotGraphFragment extends BaseFragment {
             if (tvLoadingMessage != null) tvLoadingMessage.setText("正在分析关系...");
             layoutLoading.setVisibility(View.VISIBLE);
         }
-        
+
         RelationExtractor extractor = new RelationExtractor(requireContext(), storyId);
         extractor.extract(new RelationExtractor.ExtractCallback() {
             @Override
-            public void onStart() {}
-            
+            public void onStart() {
+            }
+
             @Override
             public void onSuccess(RelationExtractionResult result) {
                 if (layoutLoading != null) layoutLoading.setVisibility(View.GONE);
                 showExtractionResultDialog(result);
             }
-            
+
             @Override
             public void onError(String error) {
                 if (layoutLoading != null) layoutLoading.setVisibility(View.GONE);
@@ -578,7 +585,7 @@ public class PlotGraphFragment extends BaseFragment {
             }
         });
     }
-    
+
     private void showExtractionResultDialog(RelationExtractionResult result) {
         ExtractionResultDialogFragment dialog = ExtractionResultDialogFragment.newInstance();
         dialog.setData(result);
@@ -597,134 +604,141 @@ public class PlotGraphFragment extends BaseFragment {
         });
         dialog.show(getParentFragmentManager(), "extraction_result");
     }
-    
+
     /**
      * 两阶段保存关系提取结果
      * 第一阶段：创建选中的实体
      * 第二阶段：建立选中的关系（从潜在关系中选择）
      */
     private void applyExtractionResultsTwoStage(RelationExtractionResult result,
-                                                 List<Integer> entityPositions,
-                                                 List<Integer> relationPositions,
-                                                 List<Boolean> isFromPending) {
-        // 第一阶段：创建所有选中的待创建实体，建立名称→ID映射
-        int savedEntities = 0;
-        java.util.Map<String, Long> entityIdMap = new java.util.HashMap<>();
-        
-        android.util.Log.d("PlotGraphFragment", "两阶段保存开始: entityPositions=" + entityPositions);
-        
-        if (result.getPendingEntities() != null) {
-            for (int pos : entityPositions) {
-                if (pos >= 0 && pos < result.getPendingEntities().size()) {
-                    RelationExtractionResult.PendingEntity entity = result.getPendingEntities().get(pos);
-                    android.util.Log.d("PlotGraphFragment", "  创建实体: " + entity.getName());
-                    
-                    StorySetting newSetting = new StorySetting();
-                    newSetting.setStoryId(storyId);
-                    newSetting.setTitle(entity.getName());
-                    // 直接使用AI返回的分类和子分类
-                    String mainCategory = entity.getSuggestedCategory();
-                    if (mainCategory == null || mainCategory.isEmpty()) {
-                        mainCategory = "角色";
-                    }
-                    String subCategory = entity.getSuggestedSubcategory();
-                    if (subCategory == null || subCategory.isEmpty()) {
-                        subCategory = getDefaultSubCategory(mainCategory);
-                    }
-                    newSetting.setCategory(mainCategory);
-                    newSetting.setSubCategory(subCategory);
-                    // 保存简介
-                    newSetting.setSummary(entity.getSummary());
-                    // 保存别名（转换为JSON）
-                    if (entity.getAliases() != null && !entity.getAliases().isEmpty()) {
-                        newSetting.setAliases(new com.google.gson.Gson().toJson(entity.getAliases()));
-                    }
-                    // 保存标签（转换为JSON）
-                    if (entity.getTags() != null && !entity.getTags().isEmpty()) {
-                        newSetting.setTags(new com.google.gson.Gson().toJson(entity.getTags()));
-                    }
-                    newSetting.setCreateTime(System.currentTimeMillis());
-                    newSetting.setUpdateTime(System.currentTimeMillis());
-                    
-                    long newSettingId = settingDao.insert(newSetting);
-                    if (newSettingId > 0) {
-                        entityIdMap.put(entity.getName(), newSettingId);
-                        savedEntities++;
-                    }
-                }
-            }
-        }
-        
-        android.util.Log.d("PlotGraphFragment", "第一阶段完成，已创建 " + savedEntities + " 个实体，映射表: " + entityIdMap);
-        
-        // 第二阶段：保存选中的关系
-        int savedRelations = 0;
-        
-        if (result.getPotentialRelations() != null) {
-            // 获取选中的关系位置（潜在关系Tab）
-            int selectedPotentialCount = 0;
-            for (int i = 0; i < isFromPending.size(); i++) {
-                if (!isFromPending.get(i)) {
-                    selectedPotentialCount++;
-                }
-            }
-            
-            // 遍历所有潜在关系，只保存选中的
-            int relationIndex = 0;
-            for (int i = 0; i < result.getPotentialRelations().size() && i < relationPositions.size(); i++) {
-                int pos = relationPositions.get(i);
-                boolean fromPending = isFromPending.get(i);
-                
-                if (!fromPending && pos >= 0 && pos < result.getPotentialRelations().size()) {
-                    RelationExtractionResult.PotentialRelation rel = result.getPotentialRelations().get(pos);
-                    
-                    // 查找源ID（可能是新建的实体或已有实体）
-                    Long sourceId = entityIdMap.get(rel.getSourceName());
-                    if (sourceId == null) {
-                        StorySetting source = settingDao.getByTitle(rel.getSourceName());
-                        if (source != null) sourceId = (long) source.getId();
-                    }
-                    
-                    // 查找目标ID（可能是新建的实体或已有实体）
-                    Long targetId = entityIdMap.get(rel.getTargetName());
-                    if (targetId == null) {
-                        StorySetting target = settingDao.getByTitle(rel.getTargetName());
-                        if (target != null) targetId = (long) target.getId();
-                    }
-                    
-                    if (sourceId != null && targetId != null) {
-                        // 检查关系是否已存在
-                        if (!isRelationExists(sourceId.intValue(), targetId.intValue(), rel.getRelationshipType())) {
-                            SettingRelationship newRel = new SettingRelationship();
-                            newRel.setStoryId(storyId);
-                            newRel.setSourceSettingId(sourceId.intValue());
-                            newRel.setTargetSettingId(targetId.intValue());
-                            newRel.setRelationshipType(rel.getRelationshipType());
-                            newRel.setDescription(rel.getDescription());
-                            newRel.setDirected(rel.isDirected());
-                            relationshipDao.insert(newRel);
-                            savedRelations++;
+                                                List<Integer> entityPositions,
+                                                List<Integer> relationPositions,
+                                                List<Boolean> isFromPending) {
+        try {
+            // 第一阶段：创建所有选中的待创建实体，建立名称→ID映射
+            int savedEntities = 0;
+            java.util.Map<String, Long> entityIdMap = new java.util.HashMap<>();
+
+            android.util.Log.d("PlotGraphFragment", "两阶段保存开始: entityPositions=" + entityPositions);
+
+            if (result.getPendingEntities() != null) {
+                for (int pos : entityPositions) {
+                    if (pos >= 0 && pos < result.getPendingEntities().size()) {
+                        RelationExtractionResult.PendingEntity entity = result.getPendingEntities().get(pos);
+                        android.util.Log.d("PlotGraphFragment", "  创建实体: " + entity.getName());
+
+                        StorySetting newSetting = new StorySetting();
+                        newSetting.setStoryId(storyId);
+                        newSetting.setTitle(entity.getName());
+                        // 直接使用AI返回的分类和子分类
+                        String mainCategory = entity.getSuggestedCategory();
+                        if (mainCategory == null || mainCategory.isEmpty()) {
+                            mainCategory = "角色";
+                        }
+                        String subCategory = entity.getSuggestedSubcategory();
+                        if (subCategory == null || subCategory.isEmpty()) {
+                            subCategory = getDefaultSubCategory(mainCategory);
+                        }
+                        newSetting.setCategory(mainCategory);
+                        newSetting.setSubCategory(subCategory);
+                        // 保存简介
+                        newSetting.setSummary(entity.getSummary());
+                        // 保存别名（转换为JSON）
+                        if (entity.getAliases() != null && !entity.getAliases().isEmpty()) {
+                            newSetting.setAliases(new com.google.gson.Gson().toJson(entity.getAliases()));
+                        }
+                        // 保存标签（转换为JSON）
+                        if (entity.getTags() != null && !entity.getTags().isEmpty()) {
+                            newSetting.setTags(new com.google.gson.Gson().toJson(entity.getTags()));
+                        }
+                        newSetting.setCreateTime(System.currentTimeMillis());
+                        newSetting.setUpdateTime(System.currentTimeMillis());
+
+                        long newSettingId = settingDao.insert(newSetting);
+                        if (newSettingId > 0) {
+                            entityIdMap.put(entity.getName(), newSettingId);
+                            savedEntities++;
                         }
                     }
                 }
             }
-        }
-        
-        String message = "";
-        if (savedEntities > 0) message += "创建了 " + savedEntities + " 个新实体\n";
-        if (savedRelations > 0) message += "添加了 " + savedRelations + " 条关系";
-        if (message.isEmpty()) {
-            Toast.makeText(requireContext(), "没有需要保存的内容", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(requireContext(), message.trim(), Toast.LENGTH_LONG).show();
-            refreshGraph();
-            // 同时刷新左侧面板的设定列表
-            if (getActivity() instanceof StoryWorkspaceActivity) {
-                ((StoryWorkspaceActivity) getActivity()).refreshSettingsView();
+
+            android.util.Log.d("PlotGraphFragment", "第一阶段完成，已创建 " + savedEntities + " 个实体，映射表: " + entityIdMap);
+
+            // 第二阶段：保存选中的关系
+            int savedRelations = 0;
+
+            if (result.getPotentialRelations() != null) {
+                // 获取选中的关系位置（潜在关系Tab）
+                int selectedPotentialCount = 0;
+                for (int i = 0; i < isFromPending.size(); i++) {
+                    if (!isFromPending.get(i)) {
+                        selectedPotentialCount++;
+                    }
+                }
+
+                // 遍历所有潜在关系，只保存选中的
+                int relationIndex = 0;
+                for (int i = 0; i < result.getPotentialRelations().size() && i < relationPositions.size(); i++) {
+                    int pos = relationPositions.get(i);
+                    boolean fromPending = isFromPending.get(i);
+
+                    if (!fromPending && pos >= 0 && pos < result.getPotentialRelations().size()) {
+                        RelationExtractionResult.PotentialRelation rel = result.getPotentialRelations().get(pos);
+
+                        // 查找源ID（可能是新建的实体或已有实体）
+                        Long sourceId = entityIdMap.get(rel.getSourceName());
+                        if (sourceId == null) {
+                            StorySetting source = settingDao.getByTitle(rel.getSourceName());
+                            if (source != null) sourceId = (long) source.getId();
+                        }
+
+                        // 查找目标ID（可能是新建的实体或已有实体）
+                        Long targetId = entityIdMap.get(rel.getTargetName());
+                        if (targetId == null) {
+                            StorySetting target = settingDao.getByTitle(rel.getTargetName());
+                            if (target != null) targetId = (long) target.getId();
+                        }
+
+                        if (sourceId != null && targetId != null) {
+                            // 检查关系是否已存在
+                            if (!isRelationExists(sourceId.intValue(), targetId.intValue(), rel.getRelationshipType())) {
+                                SettingRelationship newRel = new SettingRelationship();
+                                newRel.setStoryId(storyId);
+                                newRel.setSourceSettingId(sourceId.intValue());
+                                newRel.setTargetSettingId(targetId.intValue());
+                                newRel.setRelationshipType(rel.getRelationshipType());
+                                newRel.setDescription(rel.getDescription());
+                                newRel.setDirected(rel.isDirected());
+                                relationshipDao.insert(newRel);
+                                savedRelations++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            String message = "";
+            if (savedEntities > 0) message += "创建了 " + savedEntities + " 个新实体\n";
+            if (savedRelations > 0) message += "添加了 " + savedRelations + " 条关系";
+            if (message.isEmpty()) {
+                Toast.makeText(requireContext(), "没有需要保存的内容", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(requireContext(), message.trim(), Toast.LENGTH_LONG).show();
+                refreshGraph();
+                // 同时刷新左侧面板的设定列表
+                if (getActivity() instanceof StoryWorkspaceActivity) {
+                    ((StoryWorkspaceActivity) getActivity()).refreshSettingsView();
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("PlotGraphFragment", "保存关系提取结果失败: " + e.getMessage(), e);
+            if (getContext() != null) {
+                Toast.makeText(requireContext(), "保存失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         }
     }
-    
+
     private boolean isRelationExists(int sourceId, int targetId, String type) {
         List<SettingRelationship> relations = relationshipDao.getBySettingId(sourceId);
         if (relations != null) {
@@ -745,7 +759,7 @@ public class PlotGraphFragment extends BaseFragment {
         }
         super.onDestroyView();
     }
-    
+
     /**
      * 获取主分类的默认子分类
      */

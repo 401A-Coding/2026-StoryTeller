@@ -181,16 +181,62 @@ public class RelationExtractor {
         sb.append("\n");
         
         // 正文
-        sb.append("# 正文片段（摘录）\n");
+        sb.append("# 正文片段（等距采样·卷章标签）\n");
         String content = story != null ? story.getContent() : "";
         if (!TextUtils.isEmpty(content)) {
-            String[] paragraphs = content.split("\n\n");
-            int maxParagraphs = Math.min(paragraphs.length, 15);
-            for (int i = 0; i < maxParagraphs; i++) {
-                String para = paragraphs[i].trim();
-                if (para.length() > 20) {
-                    sb.append("【正文片段】\n");
-                    sb.append(para.substring(0, Math.min(para.length(), 500))).append("\n\n");
+            String[] rawParagraphs = content.split("\n\n");
+            // 采样配置：提升覆盖范围与单段深度，采用等距采样避免仅截取开头
+            int maxParagraphs = 50;          // 从 15 提升至 50 段
+            int maxCharPerParagraph = 800;  // 从 500 提升至 800 字符
+            int minParagraphLength = 20;     // 过滤短段落阈值
+
+            // 第一遍：解析卷章结构，过滤出有效正文段落，建立卷章映射
+            // 每个元素：{正文, 卷标题, 章标题, 正文序号(从0开始)}
+            String currentVolume = "";    // 如 "# 第1卷 楔子"
+            String currentChapter = "";   // 如 "## 第1章 穿越"
+            java.util.List<Object[]> contentList = new java.util.ArrayList<>();
+            int contentIdx = 0;
+            for (int i = 0; i < rawParagraphs.length; i++) {
+                String para = rawParagraphs[i].trim();
+                if (para.startsWith("# ") && !para.startsWith("## ")) {
+                    // 卷标题：更新当前卷
+                    currentVolume = para;
+                } else if (para.startsWith("## ")) {
+                    // 章标题：更新当前章
+                    currentChapter = para;
+                } else if (para.length() > minParagraphLength) {
+                    // 有效正文段落
+                    contentList.add(new Object[]{para, currentVolume, currentChapter, contentIdx});
+                    contentIdx++;
+                }
+            }
+
+            int validCount = contentList.size();
+            if (validCount == 0) {
+                sb.append("(暂无有效正文内容)\n");
+            } else {
+                // 决定本次输出哪些段落下标
+                int[] sampleIndices;
+                if (validCount <= maxParagraphs) {
+                    // 有效段落数不足，全输出
+                    sampleIndices = new int[validCount];
+                    for (int i = 0; i < validCount; i++) sampleIndices[i] = i;
+                } else {
+                    // 等距采样：保证恰好采样到 maxParagraphs 个有效段落
+                    int step = validCount / maxParagraphs;
+                    sampleIndices = new int[maxParagraphs];
+                    for (int i = 0; i < maxParagraphs; i++) sampleIndices[i] = i * step;
+                }
+                // 统一输出：附加卷章标签
+                for (int sampleIdx : sampleIndices) {
+                    Object[] item = contentList.get(sampleIdx);
+                    String para = (String) item[0];
+                    String vol = (String) item[1];
+                    String chap = (String) item[2];
+                    int idx = (int) item[3];
+                    sb.append("【").append(vol).append(" / ").append(chap).append(" - 第")
+                      .append(idx + 1).append("段】\n");
+                    sb.append(para.substring(0, Math.min(para.length(), maxCharPerParagraph))).append("\n\n");
                 }
             }
         } else {

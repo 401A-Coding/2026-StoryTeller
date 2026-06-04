@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 23;  // 版本23：添加剧情版本树存储
+    private static final int DB_VERSION = 24;  // 版本24：补全story_setting表缺失的image_path列
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -448,6 +448,16 @@ public class DBHelper extends SQLiteOpenHelper {
             // 版本23：添加剧情版本树字段
             try {
                 db.execSQL("ALTER TABLE " + TABLE_STORY + " ADD COLUMN " + COL_STORY_PLOT_TREE + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+        }
+        if (oldVersion < 24) {
+            // 版本24：补全story_setting表中可能缺失的image_path列
+            // 此前版本22升级时虽然有ALTER TABLE逻辑，但部分用户的数据库表结构中仍缺少该列
+            // 此处再次执行补全，使用try-catch确保幂等性
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY_SETTING + " ADD COLUMN " + COL_STORY_SETTING_IMAGE_PATH + " TEXT");
             } catch (Exception e) {
                 // 字段可能已存在
             }
