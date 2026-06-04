@@ -58,7 +58,12 @@ public enum TaskType {
     /**
      * 分支走向AI建议
      */
-    BRANCH_SUGGEST("branch_suggest", "分支走向AI建议");
+    BRANCH_SUGGEST("branch_suggest", "分支走向AI建议"),
+
+    /**
+     * 发展方向AI建议
+     */
+    DIRECTION_SUGGEST("direction_suggest", "发展方向AI建议");
     
     private final String code;
     private final String description;

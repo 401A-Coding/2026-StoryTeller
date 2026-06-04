@@ -39,6 +39,8 @@ import java.util.List;
 public class StoryWorkspaceActivity extends BaseActivity implements ArchitectureFragment.OnArchitectureChangedListener {
 
     public static final String EXTRA_STORY_ID = "extra_story_id";
+    /** 从剧情树方向卡片"应用到正文"传入的下一章方向信息 */
+    public static final String EXTRA_NEXT_CHAPTER_DIRECTION = "extra_next_chapter_direction";
 
     // UI组件
     private DrawerLayout drawerLayout;
@@ -54,6 +56,7 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
     private StoryDao storyDao;
     private Story currentStory;
     private int storyId;
+    private String pendingDirection; // 从剧情树传入的下一章方向
 
     @Override
     protected int getLayoutId() {
@@ -182,9 +185,13 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             }
         });
 
-        // 获取作品ID
+        // 获取作品ID和下一章方向信息
         Intent intent = getIntent();
         storyId = intent.getIntExtra(EXTRA_STORY_ID, -1);
+        String nextChapterDirection = intent.getStringExtra(EXTRA_NEXT_CHAPTER_DIRECTION);
+        if (!TextUtils.isEmpty(nextChapterDirection)) {
+            pendingDirection = nextChapterDirection;
+        }
 
         if (storyId > 0) {
             currentStory = storyDao.getStoryById(storyId);
@@ -203,12 +210,21 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             // 初始化左侧信息面板
             initStoryInfoPanel();
             
-            // 初始化右侧AI面板
+            // 初始化右侧AI面板（传入方向）
             initAIPanel();
             
             // 设置ViewPager适配器
             pagerAdapter = new WorkspacePagerAdapter(this, storyId);
             viewPager.setAdapter(pagerAdapter);
+
+            // 如果有下一章方向信息，传递给WritingFragment和AI面板
+            if (!TextUtils.isEmpty(nextChapterDirection)) {
+                viewPager.postDelayed(() -> {
+                    passDirectionToWritingAgent(nextChapterDirection);
+                    // 自动打开AI面板并填充方向
+                    passDirectionToAIPanel(nextChapterDirection);
+                }, 500);
+            }
 
             // 关联TabLayout和ViewPager2
             new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
@@ -401,6 +417,30 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
         finish();
     }
     
+    /**
+     * 传递发展方向信息到写作Agent
+     */
+    private void passDirectionToWritingAgent(String directionText) {
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof WritingFragment) {
+                ((WritingFragment) fragment).setNextChapterDirection(directionText);
+                return;
+            }
+        }
+    }
+
+    /**
+     * 传递发展方向到AI面板并自动打开
+     */
+    private void passDirectionToAIPanel(String directionText) {
+        if (aiPanelFragment != null && !TextUtils.isEmpty(directionText)) {
+            aiPanelFragment.setNextChapterDirection(directionText);
+            // 自动打开AI面板
+            openAIPanel();
+        }
+    }
+
     /**
      * 导航到指定章节
      * @param volumeIndex 卷索引

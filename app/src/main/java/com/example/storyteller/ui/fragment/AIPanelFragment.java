@@ -78,6 +78,7 @@ public class AIPanelFragment extends BaseFragment {
     private String currentModel = ModelConfig.DEFAULT_MODEL;
     private String prefillMessage;
     private boolean hasStartedConversation = false;
+    private String nextChapterDirection; // 从剧情树方向卡片传入的方向信息
     
     // Callback
     private OnCloseListener closeListener;
@@ -1011,6 +1012,23 @@ public class AIPanelFragment extends BaseFragment {
             etMessage.requestFocus();
         }
     }
+
+    /**
+     * 设置下一章发展方向（从剧情树方向卡片传入）
+     * 存储方向信息并注入到AI对话上下文中，同时预填充输入框
+     */
+    public void setNextChapterDirection(String directionText) {
+        this.nextChapterDirection = directionText;
+        android.util.Log.d("AIPanelFragment", "收到下一章发展方向: " + directionText);
+        // 预填充输入框，让用户可以直接发送
+        if (etMessage != null && !TextUtils.isEmpty(directionText)) {
+            String prefillMsg = "请根据以下发展方向续写下一章：\n" + directionText;
+            etMessage.setText(prefillMsg);
+            etMessage.requestFocus();
+            // 光标移到末尾
+            etMessage.setSelection(etMessage.getText().length());
+        }
+    }
     
     /**
      * 根据当前模式获取对应的 System Prompt
@@ -1134,6 +1152,12 @@ public class AIPanelFragment extends BaseFragment {
                     // 写作模式：使用原有的buildStoryContext逻辑
                     List<Volume> volumes = parseVolumesFromStory(story);
                     context.append(AgentCommandExecutor.buildStoryContext(story, volumes));
+                    // 注入下一章发展方向（从剧情树传入）
+                    if (!TextUtils.isEmpty(nextChapterDirection)) {
+                        context.append("\n【下一章发展方向】\n");
+                        context.append(nextChapterDirection).append("\n");
+                        context.append("请严格遵循以上发展方向来续写下一章内容。\n");
+                    }
                     break;
             }
             

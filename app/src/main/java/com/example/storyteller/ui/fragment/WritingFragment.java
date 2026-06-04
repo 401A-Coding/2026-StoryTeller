@@ -90,6 +90,9 @@ public class WritingFragment extends BaseFragment {
     // 标记是否有正在编辑的EditText（用于防止切换Tab时自动保存）
     private EditText currentEditingEditText = null;
 
+    // 从剧情树"应用到正文"传入的下一章方向信息
+    private String nextChapterDirection;
+
     public static WritingFragment newInstance(int storyId) {
         WritingFragment fragment = new WritingFragment();
         Bundle args = new Bundle();
@@ -1452,6 +1455,32 @@ public class WritingFragment extends BaseFragment {
      */
     public List<Volume> getVolumes() {
         return volumes;
+    }
+
+    /**
+     * 接收从剧情树"应用到正文"传来的下一章方向信息
+     * 存储方向信息并在写作参考卡片中显示，同时传递给AI助手
+     */
+    public void setNextChapterDirection(String directionText) {
+        android.util.Log.d("WritingFragment", "收到下一章方向: " + directionText);
+        this.nextChapterDirection = directionText;
+        // 在写作参考卡片中显示方向信息
+        if (!TextUtils.isEmpty(directionText)) {
+            showDirectionOnReferenceCard(directionText);
+        }
+    }
+
+    /**
+     * 在写作参考卡片中显示发展方向信息
+     */
+    private void showDirectionOnReferenceCard(String directionText) {
+        if (cardWritingReference == null || tvWritingReferenceMainLine == null) return;
+        cardWritingReference.setVisibility(View.VISIBLE);
+        tvWritingReferenceMainLine.setVisibility(View.VISIBLE);
+        // 截断长文本
+        String displayText = directionText.length() > 200
+                ? directionText.substring(0, 200) + "…" : directionText;
+        tvWritingReferenceMainLine.setText("📌 下一章方向：" + displayText);
     }
     
     /**

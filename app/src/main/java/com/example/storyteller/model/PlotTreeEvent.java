@@ -11,12 +11,14 @@ public class PlotTreeEvent {
     private List<String> tags;
     private long createTime;
     private long updateTime;
+    private boolean isDirection; // true表示该事件为"发展方向"（未落地的剧情卡片）
 
     public PlotTreeEvent() {
         long now = System.currentTimeMillis();
         this.createTime = now;
         this.updateTime = now;
         this.tags = new ArrayList<>();
+        this.isDirection = false;
     }
 
     public PlotTreeEvent(int id, String title, String summary) {
@@ -24,6 +26,13 @@ public class PlotTreeEvent {
         this.id = id;
         this.title = title;
         this.summary = summary;
+    }
+
+    /** 创建一个发展方向事件 */
+    public static PlotTreeEvent createDirection(int id, String title, String summary) {
+        PlotTreeEvent e = new PlotTreeEvent(id, title, summary);
+        e.isDirection = true;
+        return e;
     }
 
     public int getId() {
@@ -81,5 +90,8 @@ public class PlotTreeEvent {
     public void setUpdateTime(long updateTime) {
         this.updateTime = updateTime;
     }
+
+    public boolean isDirection() { return isDirection; }
+    public void setDirection(boolean direction) { isDirection = direction; }
 }
 
