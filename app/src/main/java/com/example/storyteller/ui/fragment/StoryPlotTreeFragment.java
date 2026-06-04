@@ -47,6 +47,8 @@ import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.Cell;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ColumnHeader;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ForkTarget;
 import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.TimelineRow;
+import com.example.storyteller.utils.PromptManager;
+import com.example.storyteller.utils.TaskType;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -83,6 +85,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
     private PlotTreeCanvasView canvasPlotTree;
 
     private final Gson gson = new Gson();
+    private PromptManager promptManager;
     private StoryDao storyDao;
     private CharacterDao characterDao;
     private StorySettingDao storySettingDao;
@@ -136,6 +139,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
 
     @Override
     protected void initData() {
+        promptManager = new PromptManager(requireContext());
         storyDao = new StoryDao(requireContext());
         characterDao = new CharacterDao(requireContext());
         storySettingDao = new StorySettingDao(requireContext());
@@ -148,6 +152,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
+        if (canvasPlotTree != null) canvasPlotTree.onThemeChanged();
         if (storyId > 0) loadStory();
     }
     private void showOverflowMenu(View anchor) {
@@ -1291,25 +1296,19 @@ public class StoryPlotTreeFragment extends BaseFragment {
     }
 
     private String buildSinglePassPrompt(Story story, List<ChapterContext> chapters) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("你是一位专业的小说编辑。请对以下小说章节进行剧情梳理，为每一章生成简洁的剧情摘要。\n\n");
-        sb.append("小说标题：").append(story.getTitle() != null ? story.getTitle() : "").append("\n\n");
-        sb.append("章节列表：\n");
+        StringBuilder chaptersContent = new StringBuilder();
         for (int i = 0; i < chapters.size(); i++) {
             ChapterContext ctx = chapters.get(i);
-            sb.append("第").append(i + 1).append("章《").append(ctx.title).append("》\n");
-            sb.append("内容：").append(ctx.content).append("\n\n");
+            chaptersContent.append("第").append(i + 1).append("章《").append(ctx.title).append("》\n");
+            chaptersContent.append("内容：").append(ctx.content).append("\n\n");
         }
-        sb.append("\n请返回严格的JSON数组格式，每个元素包含：\n");
-        sb.append("  \"chapterTitle\": 章节标题\n");
-        sb.append("  \"chapterLabel\": 章节标签如\"第1卷 第1章\"\n");
-        sb.append("  \"briefSummary\": 一句话剧情摘要（不超过50字）\n");
-        sb.append("  \"detailSummary\": 详细摘要（不超过200字）\n");
-        sb.append("  \"keyEvents\": 关键剧情事件列表（每个10字内）\n");
-        sb.append("  \"characters\": 出场人物列表\n");
-        sb.append("\n例如：[{\"chapterTitle\":\"开篇\",\"chapterLabel\":\"第1卷 第1章\",\"briefSummary\":\"主角在书店发现神秘古籍\",\"detailSummary\":\"...\",\"keyEvents\":[\"发现古籍\",\"遭遇追杀\"],\"characters\":[\"主角\",\"书店老板\"]}]\n");
-        sb.append("\n请只返回JSON数组，不要包含markdown代码块标记。");
-        return sb.toString();
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("story_title", story.getTitle() != null ? story.getTitle() : "");
+        variables.put("chapters_content", chaptersContent.toString());
+
+        String prompt = promptManager.getTaskPrompt(TaskType.PLOT_TREE_SUMMARY.getCode(), variables);
+        return TextUtils.isEmpty(prompt) ? "" : prompt;
     }
 
     private List<PlotChapterSummary> parseSinglePassResponse(String responseText, List<ChapterContext> chapters) {
