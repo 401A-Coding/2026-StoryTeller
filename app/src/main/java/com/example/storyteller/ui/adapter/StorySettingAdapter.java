@@ -97,6 +97,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         this.exportListener = listener;
     }
     
+    public void setOnSourceUrlClickListener(OnSourceUrlClickListener listener) {
+        this.sourceUrlListener = listener;
+    }
+    
     /**
      * 进入/退出多选模式
      */
