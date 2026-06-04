@@ -78,19 +78,6 @@
         android:elevation="4dp">
 
         <TextView
-            android:id="@+id/btn_add_event"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="新增"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
             android:id="@+id/btn_switch_branch"
             android:layout_width="0dp"
             android:layout_height="40dp"

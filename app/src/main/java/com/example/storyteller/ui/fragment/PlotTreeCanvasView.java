@@ -31,24 +31,38 @@ public class PlotTreeCanvasView extends View {
     public interface Listener {
         void onCardClick(PlotTreeEvent event, int branchColor);
         void onForkNodeClick(PlotTreeEvent sourceEvent);
+        /** 方向事件卡片被点击 */
+        void onDirectionClick(PlotTreeEvent event, int branchId, int directionIndex);
+        /** 分支列底部的"+"按钮被点击，用于新建发展方向 */
+        void onDirectionAddClick(int branchId, int branchColor);
     }
 
     // ── Hit testing ────────────────────────────────────────
     private static class HitInfo {
         static final int TYPE_CARD = 0;
         static final int TYPE_FORK_NODE = 1;
+        static final int TYPE_DIRECTION_CARD = 2;
+        static final int TYPE_DIRECTION_ADD = 3;
         final RectF rect;
         final int type;
         final PlotTreeEvent event;
         final int rowIndex;
         final int branchColor;
+        final int branchId;
+        final int colIndex;
 
         HitInfo(RectF rect, int type, PlotTreeEvent event, int rowIndex, int branchColor) {
+            this(rect, type, event, rowIndex, branchColor, 0, -1);
+        }
+
+        HitInfo(RectF rect, int type, PlotTreeEvent event, int rowIndex, int branchColor, int branchId, int colIndex) {
             this.rect = rect;
             this.type = type;
             this.event = event;
             this.rowIndex = rowIndex;
             this.branchColor = branchColor;
+            this.branchId = branchId;
+            this.colIndex = colIndex;
         }
     }
 
@@ -62,6 +76,7 @@ public class PlotTreeCanvasView extends View {
     private static final float ARROW_SIZE_DP = 8f;
     private static final float COLOR_BAR_WIDTH_DP = 4f;
     private static final float FORK_LABEL_SIZE_DP = 10f;
+    private static final float DIRECTION_ADD_RADIUS_DP = 14f;
 
     private float density;
     private float cardWidth;
@@ -74,6 +89,7 @@ public class PlotTreeCanvasView extends View {
     private float arrowSize;
     private float colorBarWidth;
     private float forkLabelSize;
+    private float directionAddRadius;
 
     private List<ColumnHeader> columnHeaders = new ArrayList<>();
     private List<TimelineRow> rows = new ArrayList<>();
@@ -133,6 +149,7 @@ public class PlotTreeCanvasView extends View {
         arrowSize = ARROW_SIZE_DP * density;
         colorBarWidth = COLOR_BAR_WIDTH_DP * density;
         forkLabelSize = FORK_LABEL_SIZE_DP * density;
+        directionAddRadius = DIRECTION_ADD_RADIUS_DP * density;
 
         // Create paints (colors set by applyColors)
         cardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -221,14 +238,32 @@ public class PlotTreeCanvasView extends View {
 
     private void calculateLayout() {
         int colCount = Math.max(1, columnHeaders.size());
-        int rowCount = rows.size();
         float colW = cardWidth + cardMargin * 2;
         float rowH = cardHeight + cardMargin * 2;
+
+        // 计算各列最大高度：每列的大加号紧跟最后一个卡片下方
+        float maxBottom = headerHeight + rows.size() * rowH;
+        for (int c = 0; c < colCount; c++) {
+            int lastRow = findLastContentRow(c);
+            if (lastRow >= 0) {
+                // 最后一个卡片下方留 rowH 空间放➕按钮
+                float colBottom = headerHeight + (lastRow + 1.5f) * rowH;
+                if (colBottom > maxBottom) maxBottom = colBottom;
+            }
+        }
         totalWidth = (int)(colCount * colW);
-        totalHeight = (int)(headerHeight + rowCount * rowH);
+        totalHeight = (int)(maxBottom + cardMargin);
         setMinimumWidth(totalWidth);
         setMinimumHeight(totalHeight);
         rebuildHitRects(colCount, colW, rowH);
+    }
+
+    /** 查找指定列最后一个有内容的行索引，无内容返回-1 */
+    private int findLastContentRow(int col) {
+        for (int r = rows.size() - 1; r >= 0; r--) {
+            if (hasColContent(rows.get(r), col)) return r;
+        }
+        return -1;
     }
 
     private void rebuildHitRects(int colCount, float colW, float rowH) {
@@ -259,13 +294,15 @@ public class PlotTreeCanvasView extends View {
                 if (!row.cells.isEmpty() && row.cells.get(0) != null && row.cells.get(0).event != null) {
                     Cell cell = row.cells.get(0);
                     RectF rect = new RectF(cardMargin, rowY, colCount * colW - cardMargin, rowY + cardHeight);
-                    hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                    int type = cell.isDirection() ? HitInfo.TYPE_DIRECTION_CARD : HitInfo.TYPE_CARD;
+                    hitInfos.add(new HitInfo(rect, type, cell.event, r, cell.branchColor, cell.branchId, 0));
                 }
             } else if (row.rowType == TimelineRow.TYPE_FORK) {
                 if (!row.cells.isEmpty() && row.cells.get(0) != null && row.cells.get(0).event != null) {
                     Cell cell = row.cells.get(0);
                     RectF rect = new RectF(cardMargin, rowY, colW - cardMargin, rowY + cardHeight);
-                    hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                    int type = cell.isDirection() ? HitInfo.TYPE_DIRECTION_CARD : HitInfo.TYPE_CARD;
+                    hitInfos.add(new HitInfo(rect, type, cell.event, r, cell.branchColor, cell.branchId, 0));
                 }
             } else if (row.rowType == TimelineRow.TYPE_SPLIT) {
                 for (int c = 0; c < colCount; c++) {
@@ -274,10 +311,24 @@ public class PlotTreeCanvasView extends View {
                         float left = c * colW + cardMargin;
                         float right = (c + 1) * colW - cardMargin;
                         RectF rect = new RectF(left, rowY, right, rowY + cardHeight);
-                        hitInfos.add(new HitInfo(rect, HitInfo.TYPE_CARD, cell.event, r, cell.branchColor));
+                        int type = cell.isDirection() ? HitInfo.TYPE_DIRECTION_CARD : HitInfo.TYPE_CARD;
+                        hitInfos.add(new HitInfo(rect, type, cell.event, r, cell.branchColor, cell.branchId, c));
                     }
                 }
             }
+        }
+
+        // Direction add button hit rects — 每列紧跟最后一个卡片下方
+        for (int c = 0; c < colCount; c++) {
+            int lastRow = findLastContentRow(c);
+            if (lastRow < 0) continue;
+            int branchId = columnHeaders.get(c).branchId;
+            int branchColor = columnHeaders.get(c).branchColor;
+            float cx = c * colW + colW / 2f;
+            float addBtnY = headerHeight + (lastRow + 1) * rowH + rowH / 2f;
+            RectF nodeRect = new RectF(cx - directionAddRadius, addBtnY - directionAddRadius,
+                    cx + directionAddRadius, addBtnY + directionAddRadius);
+            hitInfos.add(new HitInfo(nodeRect, HitInfo.TYPE_DIRECTION_ADD, null, lastRow + 1, branchColor, branchId, c));
         }
     }
 
@@ -319,8 +370,12 @@ public class PlotTreeCanvasView extends View {
                         if (hit.rect.contains(x, y)) {
                             if (hit.type == HitInfo.TYPE_CARD) {
                                 listener.onCardClick(hit.event, hit.branchColor);
+                            } else if (hit.type == HitInfo.TYPE_DIRECTION_CARD) {
+                                listener.onDirectionClick(hit.event, hit.branchId, hit.colIndex >= 0 ? hit.colIndex : 0);
                             } else if (hit.type == HitInfo.TYPE_FORK_NODE) {
                                 listener.onForkNodeClick(hit.event);
+                            } else if (hit.type == HitInfo.TYPE_DIRECTION_ADD) {
+                                listener.onDirectionAddClick(hit.branchId, hit.branchColor);
                             }
                             performClick();
                             return true;
@@ -386,6 +441,7 @@ public class PlotTreeCanvasView extends View {
         }
 
         drawConnectingLines(canvas, colW, rowH);
+        drawDirectionAddButtons(canvas, colCount, colW, rowH);
     }
 
     private void drawSharedRow(Canvas canvas, TimelineRow row, float rowY, int colCount, float colW) {
@@ -395,7 +451,7 @@ public class PlotTreeCanvasView extends View {
         float left = cardMargin;
         float right = colCount * colW - cardMargin;
         drawCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
-                cell.event.getTitle(), cell.event.getSummary(), cell.branchColor);
+                cell.event.getTitle(), cell.event.getSummary(), cell.branchColor, cell.isDirection());
     }
 
     private void drawForkRow(Canvas canvas, TimelineRow row, float rowY, int colCount, float colW) {
@@ -406,7 +462,7 @@ public class PlotTreeCanvasView extends View {
         float left = cardMargin;
         float right = colW - cardMargin;
         drawCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
-                cell.event.getTitle(), cell.event.getSummary(), cell.branchColor);
+                cell.event.getTitle(), cell.event.getSummary(), cell.branchColor, cell.isDirection());
 
         Map<String, ForkTarget> targetMap = new HashMap<>();
         if (row.forkTargets != null) {
@@ -457,7 +513,7 @@ public class PlotTreeCanvasView extends View {
                     placeholderCount++;
                 } else if (cell.event != null) {
                     drawCard(canvas, new RectF(left, rowY, right, rowY + cardHeight),
-                            cell.event.getTitle(), cell.event.getSummary(), cell.branchColor);
+                            cell.event.getTitle(), cell.event.getSummary(), cell.branchColor, cell.isDirection());
                 } else {
                     float cx = left + (right - left) / 2f;
                     canvas.drawLine(cx, rowY, cx, rowY + cardHeight, dashLinePaint);
@@ -501,7 +557,11 @@ public class PlotTreeCanvasView extends View {
         }
     }
 
-    private void drawCard(Canvas canvas, RectF rect, String title, String summary, int accentColor) {
+    private void drawCard(Canvas canvas, RectF rect, String title, String summary, int accentColor, boolean isDirection) {
+        if (isDirection) {
+            drawDirectionCard(canvas, rect, title, summary, accentColor);
+            return;
+        }
         canvas.drawRoundRect(rect, cardRadius, cardRadius, cardBgPaint);
 
         RectF bar = new RectF(rect.left, rect.top + cardRadius,
@@ -525,6 +585,91 @@ public class PlotTreeCanvasView extends View {
         if (!TextUtils.isEmpty(summary)) {
             String es = ellipsize(summaryPaint, summary, maxWidth);
             canvas.drawText(es, textX, ty + tfm.descent - tfm.ascent + 4f * density, summaryPaint);
+        }
+    }
+
+    /** 绘制方向事件卡片：虚线边框 + 半透明背景，区别于普通事件 */
+    private void drawDirectionCard(Canvas canvas, RectF rect, String title, String summary, int accentColor) {
+        // 半透明背景
+        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bgPaint.setColor((accentColor & 0x00FFFFFF) | 0x18000000);
+        bgPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(rect, cardRadius, cardRadius, bgPaint);
+
+        // 左侧彩色条
+        RectF bar = new RectF(rect.left, rect.top + cardRadius,
+                rect.left + colorBarWidth, rect.bottom - cardRadius);
+        Paint barPaint = new Paint();
+        barPaint.setColor(accentColor);
+        barPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(bar, colorBarWidth / 2f, colorBarWidth / 2f, barPaint);
+
+        // 虚线边框
+        Paint dashStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dashStroke.setStyle(Paint.Style.STROKE);
+        dashStroke.setStrokeWidth(1f * density);
+        dashStroke.setColor((accentColor & 0x00FFFFFF) | 0x80000000);
+        dashStroke.setPathEffect(new DashPathEffect(new float[]{6f * density, 4f * density}, 0));
+        canvas.drawRoundRect(rect, cardRadius, cardRadius, dashStroke);
+
+        // "发展方向" 标签
+        float textX = rect.left + colorBarWidth + cardPadding;
+        float maxWidth = rect.width() - colorBarWidth - cardPadding * 2;
+        Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        labelPaint.setTextSize(9f * density);
+        labelPaint.setColor((accentColor & 0x00FFFFFF) | 0xAA000000);
+        String label = "方向";
+        canvas.drawText(label, textX, rect.top + cardPadding + 9f * density, labelPaint);
+
+        // 标题
+        float titleX = textX + labelPaint.measureText(label) + 4f * density;
+        float titleMax = maxWidth - labelPaint.measureText(label) - 4f * density;
+        String t = TextUtils.isEmpty(title) ? "未命名方向" : title;
+        String et = ellipsize(titlePaint, t, titleMax);
+        Paint.FontMetrics tfm = titlePaint.getFontMetrics();
+        canvas.drawText(et, titleX, rect.top + cardPadding - tfm.ascent, titlePaint);
+
+        // 摘要（第二行）
+        if (!TextUtils.isEmpty(summary)) {
+            String es = ellipsize(summaryPaint, summary, maxWidth);
+            canvas.drawText(es, textX, rect.top + cardPadding - tfm.ascent + tfm.descent - tfm.ascent + 4f * density, summaryPaint);
+        }
+    }
+
+    /** 在每个分支列紧跟最后一个卡片下方绘制大号"+"按钮 */
+    private void drawDirectionAddButtons(Canvas canvas, int colCount, float colW, float rowH) {
+        for (int c = 0; c < colCount; c++) {
+            int lastRow = findLastContentRow(c);
+            if (lastRow < 0) continue;
+            int branchColor = columnHeaders.get(c).branchColor;
+            float cx = c * colW + colW / 2f;
+            float addBtnY = headerHeight + (lastRow + 1) * rowH + rowH / 2f;
+
+            // 连接线：最后一行底部到大+按钮
+            float lineTop = headerHeight + lastRow * rowH + rowH;
+            canvas.drawLine(cx, lineTop, cx, addBtnY - directionAddRadius, linePaint);
+
+            // 大+按钮圆形背景
+            Paint addBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+            addBg.setColor((branchColor & 0x00FFFFFF) | 0x20000000);
+            addBg.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(cx, addBtnY, directionAddRadius, addBg);
+
+            // 边框
+            Paint addStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+            addStroke.setStyle(Paint.Style.STROKE);
+            addStroke.setStrokeWidth(1.5f * density);
+            addStroke.setColor(branchColor);
+            canvas.drawCircle(cx, addBtnY, directionAddRadius, addStroke);
+
+            // "+" 文字
+            TextPaint addTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            addTextPaint.setTextSize(18f * density);
+            addTextPaint.setColor(branchColor);
+            addTextPaint.setFakeBoldText(true);
+            addTextPaint.setTextAlign(Paint.Align.CENTER);
+            Paint.FontMetrics afm = addTextPaint.getFontMetrics();
+            canvas.drawText("+", cx, addBtnY - (afm.ascent + afm.descent) / 2f, addTextPaint);
         }
     }
 
@@ -622,6 +767,30 @@ public class PlotTreeCanvasView extends View {
                     for (ForkTarget ft : row.forkTargets) {
                         if (ft.branchName.equals(h.branchName)) return true;
                     }
+                }
+                return false;
+        }
+        return false;
+    }
+
+    /** 检查指定行列是否有方向事件卡片 */
+    private boolean isDirectionRow(TimelineRow row, int col) {
+        if (row == null) return false;
+        switch (row.rowType) {
+            case TimelineRow.TYPE_SHARED:
+                if (col == 0 && !row.cells.isEmpty() && row.cells.get(0) != null) {
+                    return row.cells.get(0).isDirection();
+                }
+                return false;
+            case TimelineRow.TYPE_FORK:
+                if (col == 0 && !row.cells.isEmpty() && row.cells.get(0) != null) {
+                    return row.cells.get(0).isDirection();
+                }
+                return false;
+            case TimelineRow.TYPE_SPLIT:
+                if (col < row.cells.size() && row.cells.get(col) != null) {
+                    Cell c = row.cells.get(col);
+                    return c.event != null && c.isDirection();
                 }
                 return false;
         }

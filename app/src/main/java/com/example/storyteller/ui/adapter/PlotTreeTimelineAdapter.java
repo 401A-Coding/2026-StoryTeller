@@ -40,16 +40,22 @@ public class PlotTreeTimelineAdapter extends RecyclerView.Adapter<PlotTreeTimeli
         public int branchColor;
         public String forkOrigin;
         public String description;  // 走向说明
+        public int branchId;        // 分支ID，用于方向操作回调
 
         public ColumnHeader(String branchName, int branchColor, String forkOrigin) {
-            this(branchName, branchColor, forkOrigin, "");
+            this(branchName, branchColor, forkOrigin, "", 0);
         }
 
         public ColumnHeader(String branchName, int branchColor, String forkOrigin, String description) {
+            this(branchName, branchColor, forkOrigin, description, 0);
+        }
+
+        public ColumnHeader(String branchName, int branchColor, String forkOrigin, String description, int branchId) {
             this.branchName = branchName;
             this.branchColor = branchColor;
             this.forkOrigin = forkOrigin;
             this.description = description != null ? description : "";
+            this.branchId = branchId;
         }
     }
 
@@ -68,11 +74,19 @@ public class PlotTreeTimelineAdapter extends RecyclerView.Adapter<PlotTreeTimeli
         public int branchColor;
         public String description;   // 走向说明（占位卡片使用）
         public boolean isPlaceholder; // 是否为走向说明占位卡片
+        public int directionIndex = -1; // 方向事件在branch.events中的索引，>=0表示方向占位
+        public int branchId;          // 所属分支ID
 
         public Cell(PlotTreeEvent event, int branchColor) {
             this.event = event;
             this.branchColor = branchColor;
             this.isPlaceholder = false;
+            this.directionIndex = -1;
+        }
+
+        public Cell(PlotTreeEvent event, int branchColor, int branchId) {
+            this(event, branchColor);
+            this.branchId = branchId;
         }
 
         /** Create a placeholder cell that shows branch direction description */
@@ -85,6 +99,11 @@ public class PlotTreeTimelineAdapter extends RecyclerView.Adapter<PlotTreeTimeli
 
         public static Cell empty() {
             return new Cell(null, Color.TRANSPARENT);
+        }
+
+        /** 该Cell是否为方向事件卡片 */
+        public boolean isDirection() {
+            return event != null && event.isDirection();
         }
     }
 
