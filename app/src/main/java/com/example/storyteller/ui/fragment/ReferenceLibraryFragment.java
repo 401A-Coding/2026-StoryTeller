@@ -56,21 +56,8 @@ public class ReferenceLibraryFragment extends BaseFragment {
         adapter.setListener(new ImportedNovelAdapter.Listener() {
             @Override
             public void onNovelClick(@NonNull ImportedNovel novel) {
-                // 点击跳转到浏览器打开原书籍URL
-                String url = novel.getSourceUrl();
-                if (url != null && !url.isEmpty()) {
-                    try {
-                        android.content.Intent browserIntent = new android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse(url)
-                        );
-                        startActivity(browserIntent);
-                    } catch (Exception e) {
-                        Toast.makeText(requireContext(), "无法打开链接", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    Toast.makeText(requireContext(), "无来源链接", Toast.LENGTH_SHORT).show();
-                }
+                // 跳转到小说详情页
+                openNovelDetail(novel);
             }
             
             @Override
@@ -475,6 +462,7 @@ public class ReferenceLibraryFragment extends BaseFragment {
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_TAGS, novel.getTags());
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_WORD_COUNT, novel.getTotalWords());
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_IMPORT_TIME, novel.getImportTime());
+        intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_SOURCE_URL, novel.getSourceUrl());
         
         // 传递完整的卷结构（structureJson）
         if (novel.getStructureJson() != null) {
