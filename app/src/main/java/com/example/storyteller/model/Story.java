@@ -19,6 +19,8 @@ public class Story {
     private String description;
     // 剧情梳理快照 JSON
     private String plotSummaryJson;
+    // 剧情版本树 JSON
+    private String plotTreeJson;
     // 书架分类：全部/创作中/已完成/已收藏
     private String category;
     // 封面颜色（十六进制颜色值，作为封面图片未设置时的备用背景）
@@ -47,6 +49,7 @@ public class Story {
         this.structure = null;
         this.description = null;
         this.plotSummaryJson = null;
+        this.plotTreeJson = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
@@ -66,6 +69,7 @@ public class Story {
         this.structure = null;
         this.description = null;
         this.plotSummaryJson = null;
+        this.plotTreeJson = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
@@ -85,6 +89,7 @@ public class Story {
         this.structure = structure;
         this.description = description;
         this.plotSummaryJson = plotSummaryJson;
+        this.plotTreeJson = null;
         this.category = "创作中";
         this.coverColor = getDefaultCoverColor(title);
         this.coverPath = null;
@@ -104,6 +109,7 @@ public class Story {
         this.structure = structure;
         this.description = description;
         this.plotSummaryJson = null;
+        this.plotTreeJson = null;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = null;
@@ -123,6 +129,7 @@ public class Story {
         this.structure = structure;
         this.description = description;
         this.plotSummaryJson = plotSummaryJson;
+        this.plotTreeJson = null;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = coverPath;
@@ -142,6 +149,7 @@ public class Story {
         this.structure = structure;
         this.description = description;
         this.plotSummaryJson = plotSummaryJson;
+        this.plotTreeJson = null;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = coverPath;
@@ -161,6 +169,7 @@ public class Story {
         this.structure = structure;
         this.description = description;
         this.plotSummaryJson = plotSummaryJson;
+        this.plotTreeJson = null;
         this.category = category;
         this.coverColor = coverColor;
         this.coverPath = coverPath;
@@ -227,6 +236,8 @@ public class Story {
     public void setDescription(String description) { this.description = description; }
     public String getPlotSummaryJson() { return plotSummaryJson; }
     public void setPlotSummaryJson(String plotSummaryJson) { this.plotSummaryJson = plotSummaryJson; }
+    public String getPlotTreeJson() { return plotTreeJson; }
+    public void setPlotTreeJson(String plotTreeJson) { this.plotTreeJson = plotTreeJson; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
     public String getCoverColor() { return coverColor; }

@@ -29,11 +29,14 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
+        values.put(DBHelper.COL_STORY_PLOT_TREE, story.getPlotTreeJson());
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
+        values.put(DBHelper.COL_STORY_OUTLINE_DATA, story.getOutlineData());
+        values.put(DBHelper.COL_STORY_GLOBAL_OUTLINE, story.getGlobalOutline());
         return db.insert(DBHelper.TABLE_STORY, null, values);
     }
 
@@ -47,11 +50,14 @@ public class StoryDao {
         values.put(DBHelper.COL_STORY_STRUCTURE, story.getStructure());
         values.put(DBHelper.COL_STORY_DESCRIPTION, story.getDescription());
         values.put(DBHelper.COL_STORY_PLOT_SUMMARY, story.getPlotSummaryJson());
+        values.put(DBHelper.COL_STORY_PLOT_TREE, story.getPlotTreeJson());
         values.put(DBHelper.COL_STORY_CATEGORY, story.getCategory());
         values.put(DBHelper.COL_STORY_COVER_COLOR, story.getCoverColor());
         values.put(DBHelper.COL_STORY_COVER_PATH, story.getCoverPath());
         values.put(DBHelper.COL_STORY_WORD_COUNT, story.getWordCount());
         values.put(DBHelper.COL_STORY_SERIES_NAME, story.getSeriesName());
+        values.put(DBHelper.COL_STORY_OUTLINE_DATA, story.getOutlineData());
+        values.put(DBHelper.COL_STORY_GLOBAL_OUTLINE, story.getGlobalOutline());
         values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, story.getLastEditTime());
         
         return db.update(
@@ -165,6 +171,39 @@ public class StoryDao {
                 DBHelper.COL_STORY_ID + "=?",
                 new String[]{String.valueOf(storyId)}
         );
+    }
+
+    public int updatePlotTree(int storyId, String plotTreeJson) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.COL_STORY_PLOT_TREE, plotTreeJson);
+        values.put(DBHelper.COL_STORY_LAST_EDIT_TIME, System.currentTimeMillis());
+        return db.update(
+                DBHelper.TABLE_STORY,
+                values,
+                DBHelper.COL_STORY_ID + "=?",
+                new String[]{String.valueOf(storyId)}
+        );
+    }
+
+    public long duplicateStory(Story sourceStory, String newTitle) {
+        if (sourceStory == null) {
+            return -1;
+        }
+        Story duplicated = new Story(newTitle, sourceStory.getContent(), sourceStory.getGenre(), System.currentTimeMillis());
+        duplicated.setStructure(sourceStory.getStructure());
+        duplicated.setDescription(sourceStory.getDescription());
+        duplicated.setPlotSummaryJson(sourceStory.getPlotSummaryJson());
+        duplicated.setPlotTreeJson(sourceStory.getPlotTreeJson());
+        duplicated.setCategory(sourceStory.getCategory());
+        duplicated.setCoverColor(sourceStory.getCoverColor());
+        duplicated.setCoverPath(sourceStory.getCoverPath());
+        duplicated.setWordCount(sourceStory.getWordCount());
+        duplicated.setSeriesName(sourceStory.getSeriesName());
+        duplicated.setOutlineData(sourceStory.getOutlineData());
+        duplicated.setGlobalOutline(sourceStory.getGlobalOutline());
+        duplicated.setLastEditTime(System.currentTimeMillis());
+        return insertStory(duplicated);
     }
 
     public int deleteStory(int storyId) {
@@ -486,6 +525,12 @@ public class StoryDao {
             plotSummaryJson = cursor.getString(plotSummaryIndex);
         }
 
+        String plotTreeJson = null;
+        int plotTreeIndex = cursor.getColumnIndex(DBHelper.COL_STORY_PLOT_TREE);
+        if (plotTreeIndex >= 0 && !cursor.isNull(plotTreeIndex)) {
+            plotTreeJson = cursor.getString(plotTreeIndex);
+        }
+
         String category = "创作中";
         int categoryIndex = cursor.getColumnIndex(DBHelper.COL_STORY_CATEGORY);
         if (categoryIndex >= 0 && !cursor.isNull(categoryIndex)) {
@@ -540,6 +585,7 @@ public class StoryDao {
         }
 
         Story story = new Story(id, title, content, genre, createTime, lastEditTime, isCollected, structure, description, plotSummaryJson, category, coverColor, coverPath, wordCount, seriesName, outlineData, globalOutline);
+        story.setPlotTreeJson(plotTreeJson);
         return story;
     }
 }

@@ -1,0 +1,1391 @@
+package com.example.storyteller.ui.fragment;
+
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
+import android.widget.PopupMenu;
+import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.TextView;
+import android.widget.Toast;
+
+
+import com.example.storyteller.R;
+import com.example.storyteller.base.BaseFragment;
+import com.example.storyteller.data.local.db.CharacterDao;
+import com.example.storyteller.data.local.db.SettingRelationshipDao;
+import com.example.storyteller.data.local.db.StoryDao;
+import com.example.storyteller.data.local.db.StoryDocumentDao;
+import com.example.storyteller.data.local.db.StorySettingDao;
+import com.example.storyteller.data.remote.ApiClient;
+import com.example.storyteller.model.Chapter;
+import com.example.storyteller.model.Character;
+import com.example.storyteller.model.PlotChapterSummary;
+import com.example.storyteller.model.PlotSummarySnapshot;
+import com.example.storyteller.model.PlotTreeBranch;
+import com.example.storyteller.model.PlotTreeEvent;
+import com.example.storyteller.model.PlotTreeWorkspaceSnapshot;
+import com.example.storyteller.model.SettingRelationship;
+import com.example.storyteller.model.Story;
+import com.example.storyteller.model.StoryDocument;
+import com.example.storyteller.model.StorySetting;
+import com.example.storyteller.model.Volume;
+import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
+import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.Cell;
+import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ColumnHeader;
+import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.ForkTarget;
+import com.example.storyteller.ui.adapter.PlotTreeTimelineAdapter.TimelineRow;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Locale;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+public class StoryPlotTreeFragment extends BaseFragment {
+    private static final String ARG_STORY_ID = "arg_story_id";
+    private static final Type VOLUME_LIST_TYPE = new TypeToken<List<Volume>>() {}.getType();
+    private static final int MODE_CURRENT_BRANCH = 0;
+    private static final int MODE_ALL_BRANCHES = 1;
+    private static final int MAX_BRANCH_COLS = 8;
+
+    private static final String[] BRANCH_COLORS_HEX = {
+        "#2196F3", "#4CAF50", "#9C27B0", "#FF9800", "#00BCD4", "#E91E63", "#3F51B5", "#009688"
+    };
+    private static final int[] BRANCH_COLORS_INT = {
+        0xFF2196F3, 0xFF4CAF50, 0xFF9C27B0, 0xFFFF9800,
+        0xFF00BCD4, 0xFFE91E63, 0xFF3F51B5, 0xFF009688
+    };
+
+    private TextView tvStoryTitle;
+    private TextView tvBranchInfo;
+    private HorizontalScrollView hsvTimeline;
+    private PlotTreeCanvasView canvasPlotTree;
+
+    private final Gson gson = new Gson();
+    private StoryDao storyDao;
+    private CharacterDao characterDao;
+    private StorySettingDao storySettingDao;
+    private SettingRelationshipDao relationshipDao;
+    private StoryDocumentDao documentDao;
+
+    private Story currentStory;
+    private PlotTreeWorkspaceSnapshot currentSnapshot;
+    private PlotSummarySnapshot cachedPlotSummary;
+    private int displayMode = MODE_ALL_BRANCHES;
+    private int summaryGenerationToken = 0;
+    private int storyId;
+
+    public static StoryPlotTreeFragment newInstance(int storyId) {
+        StoryPlotTreeFragment fragment = new StoryPlotTreeFragment();
+        Bundle args = new Bundle();
+        args.putInt(ARG_STORY_ID, storyId);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    @Override
+    protected int getLayoutId() {
+        return R.layout.fragment_story_plot_tree;
+    }
+
+    @Override
+    protected void initView(View view) {
+        tvStoryTitle = view.findViewById(R.id.tv_plot_tree_story_title);
+        tvBranchInfo = view.findViewById(R.id.tv_plot_tree_branch_info);
+        hsvTimeline = view.findViewById(R.id.hsv_timeline);
+        canvasPlotTree = view.findViewById(R.id.canvas_plot_tree);
+
+        view.findViewById(R.id.btn_add_event).setOnClickListener(v -> showEventEditorDialog(null, -1));
+        view.findViewById(R.id.btn_switch_branch).setOnClickListener(this::showBranchMenu);
+        view.findViewById(R.id.btn_ai_summary).setOnClickListener(v -> showAiSummaryDialog());
+        view.findViewById(R.id.btn_export).setOnClickListener(v -> refreshPlotTree());
+        view.findViewById(R.id.btn_overflow).setOnClickListener(this::showOverflowMenu);
+
+        canvasPlotTree.setListener(new PlotTreeCanvasView.Listener() {
+            @Override
+            public void onCardClick(PlotTreeEvent event, int branchColor) {
+                showCardDetailDialog(event);
+            }
+            @Override
+            public void onForkNodeClick(PlotTreeEvent sourceEvent) {
+                showForkNodeCreateDialog(sourceEvent);
+            }
+        });
+    }
+
+    @Override
+    protected void initData() {
+        storyDao = new StoryDao(requireContext());
+        characterDao = new CharacterDao(requireContext());
+        storySettingDao = new StorySettingDao(requireContext());
+        relationshipDao = new SettingRelationshipDao(requireContext());
+        documentDao = new StoryDocumentDao(requireContext());
+        if (getArguments() != null) { storyId = getArguments().getInt(ARG_STORY_ID, -1); }
+        loadStory();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (storyId > 0) loadStory();
+    }
+    private void showOverflowMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor, Gravity.TOP | Gravity.END);
+        popup.getMenu().add(0, 2, 0, "分支操作");
+        popup.getMenu().add(0, 5, 0, "导出");
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 2: showBranchActionDialog(); return true;
+                case 5: showExportDialog(); return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void showBranchMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor, Gravity.TOP | Gravity.START);
+        popup.getMenu().add(0, 1, 0, "切换分支");
+        popup.getMenu().add(0, 2, 0, displayMode == MODE_ALL_BRANCHES ? "返回单分支" : "查看全部走向");
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: showBranchSwitchDialog(); return true;
+                case 2: toggleDisplayMode(); return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void loadStory() {
+        currentStory = storyDao.getStoryById(storyId);
+        cachedPlotSummary = null;
+        if (currentStory == null) {
+            tvStoryTitle.setText("剧情树");
+            tvBranchInfo.setText("");
+            return;
+        }
+        tvStoryTitle.setText("《" + currentStory.getTitle() + "》剧情树");
+        currentSnapshot = loadOrCreateSnapshot(currentStory);
+        loadAllBranchOverviews();
+        refreshDisplay();
+    }
+
+    private PlotTreeWorkspaceSnapshot loadOrCreateSnapshot(Story story) {
+        PlotTreeWorkspaceSnapshot snapshot = null;
+        if (story != null && !TextUtils.isEmpty(story.getPlotTreeJson())) {
+            try { snapshot = gson.fromJson(story.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class); }
+            catch (Exception ignored) { snapshot = null; }
+        }
+        if (snapshot == null || snapshot.getBranches() == null || snapshot.getBranches().isEmpty()) {
+            snapshot = buildInitialSnapshot(story);
+            currentSnapshot = snapshot;
+            persistSnapshot();
+        }
+        return snapshot;
+    }
+
+    private PlotTreeWorkspaceSnapshot buildInitialSnapshot(Story story) {
+        PlotTreeWorkspaceSnapshot snapshot = new PlotTreeWorkspaceSnapshot();
+        PlotTreeBranch mainline = new PlotTreeBranch();
+        mainline.setId(1);
+        mainline.setName("主线版本");
+        mainline.setDescription("根据当前小说内容初始化的主线时间线");
+        mainline.setMainline(true);
+        mainline.setEvents(buildInitialEvents(story, snapshot));
+        if (mainline.getEvents().isEmpty()) {
+            mainline.getEvents().add(newEvent(snapshot, safeTitle(story), "先补充第一个关键剧情事件。"));
+        }
+        snapshot.getBranches().add(mainline);
+        snapshot.setActiveBranchId(mainline.getId());
+        snapshot.setUpdateTime(System.currentTimeMillis());
+        return snapshot;
+    }
+
+    private List<PlotTreeEvent> buildInitialEvents(Story story, PlotTreeWorkspaceSnapshot workspace) {
+        List<PlotTreeEvent> events = new ArrayList<>();
+        if (story == null) return events;
+        if (!TextUtils.isEmpty(story.getPlotSummaryJson())) {
+            try {
+                PlotSummarySnapshot ps = gson.fromJson(story.getPlotSummaryJson(), PlotSummarySnapshot.class);
+                if (ps != null && ps.getChapterSummaries() != null) {
+                    for (PlotChapterSummary cs : ps.getChapterSummaries()) {
+                        if (cs == null) continue;
+                        String title = !TextUtils.isEmpty(cs.getChapterTitle())
+                                ? cs.getChapterTitle()
+                                : (!TextUtils.isEmpty(cs.getChapterLabel()) ? cs.getChapterLabel() : "章节事件");
+                        String summary = !TextUtils.isEmpty(cs.getBriefSummary())
+                                ? cs.getBriefSummary()
+                                : (!TextUtils.isEmpty(cs.getDetailSummary())
+                                    ? trimText(cs.getDetailSummary(), 50) : "");
+                        List<String> tags = new ArrayList<>();
+                        if (cs.getKeyEvents() != null && !cs.getKeyEvents().isEmpty()) {
+                            tags.addAll(cs.getKeyEvents());
+                        }
+                        PlotTreeEvent ev = newEvent(workspace, title, summary);
+                        if (!tags.isEmpty()) ev.setTags(tags);
+                        events.add(ev);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!events.isEmpty()) return events;
+        List<Volume> volumes = parseStoryVolumes(story);
+        for (Volume vol : volumes) {
+            if (vol == null || vol.getChapters() == null) continue;
+            for (Chapter ch : vol.getChapters()) {
+                if (ch == null) continue;
+                String title = TextUtils.isEmpty(ch.getTitle()) ? "章节事件" : ch.getTitle();
+                String summary = TextUtils.isEmpty(ch.getContent()) ? "待补充" : trimText(ch.getContent(), 50);
+                events.add(newEvent(workspace, title, summary));
+            }
+        }
+        if (!events.isEmpty()) return events;
+        if (!TextUtils.isEmpty(story.getDescription()))
+            events.add(newEvent(workspace, safeTitle(story), trimText(story.getDescription(), 50)));
+        return events;
+    }
+
+    private PlotTreeEvent newEvent(PlotTreeWorkspaceSnapshot ws, String title, String summary) {
+        int id = ws.getNextEventId();
+        ws.setNextEventId(id + 1);
+        return new PlotTreeEvent(id, title, summary);
+    }
+    private void refreshDisplay() {
+        if (currentSnapshot == null) return;
+        PlotTreeBranch activeBranch = getActiveBranch();
+        if (activeBranch != null) {
+            int count = activeBranch.getEvents() != null ? activeBranch.getEvents().size() : 0;
+            tvBranchInfo.setText("当前分支：" + safeText(activeBranch.getName()) + " · 共 " + count + " 个事件");
+        }
+        List<ColumnHeader> headers = new ArrayList<>();
+        List<TimelineRow> rows;
+        if (displayMode == MODE_CURRENT_BRANCH) {
+            rows = buildSingleBranchTimeline(activeBranch, headers);
+        } else {
+            rows = buildAllBranchesTimeline(headers);
+        }
+        canvasPlotTree.setData(headers, rows);
+        if (displayMode == MODE_ALL_BRANCHES && currentSnapshot != null) {
+            int branchCount = currentSnapshot.getBranches() != null ? currentSnapshot.getBranches().size() : 0;
+            tvBranchInfo.setText("全部走向 · 共 " + branchCount + " 个本地分支");
+        }
+    }
+
+    private List<TimelineRow> buildSingleBranchTimeline(PlotTreeBranch branch, List<ColumnHeader> headers) {
+        headers.add(new ColumnHeader(safeText(branch != null ? branch.getName() : "主线"), BRANCH_COLORS_INT[0], ""));
+        List<TimelineRow> rows = new ArrayList<>();
+        if (branch == null || branch.getEvents() == null) return rows;
+        for (PlotTreeEvent event : branch.getEvents()) {
+            rows.add(TimelineRow.shared(new Cell(event, BRANCH_COLORS_INT[0])));
+        }
+        return rows;
+    }
+
+    private List<TimelineRow> buildAllBranchesTimeline(List<ColumnHeader> headers) {
+        List<TimelineRow> rows = new ArrayList<>();
+        PlotTreeBranch mainline = getMainlineBranch();
+        if (mainline == null || mainline.getEvents() == null || mainline.getEvents().isEmpty()) {
+            headers.add(new ColumnHeader("暂无事件", BRANCH_COLORS_INT[0], ""));
+            return rows;
+        }
+        List<PlotTreeEvent> mlEvents = mainline.getEvents();
+        List<PlotTreeBranch> branchList = new ArrayList<>();
+        Map<Integer, Integer> forkPosMap = new LinkedHashMap<>();
+        for (PlotTreeBranch b : currentSnapshot.getBranches()) {
+            if (b == null || b.isMainline()) continue;
+            branchList.add(b);
+            int forkPos = -1;
+            for (int i = 0; i < mlEvents.size(); i++) {
+                if (mlEvents.get(i).getId() == b.getSourceEventId()) { forkPos = i; break; }
+            }
+            // Fallback: match by title when event IDs were rebuilt
+            if (forkPos < 0 && b.getEvents() != null && !b.getEvents().isEmpty()) {
+                String forkTitle = null;
+                for (PlotTreeEvent be : b.getEvents()) {
+                    if (be.getId() == b.getSourceEventId()) { forkTitle = be.getTitle(); break; }
+                }
+                if (forkTitle != null && !forkTitle.isEmpty()) {
+                    for (int i = 0; i < mlEvents.size(); i++) {
+                        if (forkTitle.equals(mlEvents.get(i).getTitle())) { forkPos = i; break; }
+                    }
+                }
+            }
+            // Second fallback: find the last branch event title that matches mainline
+            // (branch copies events up to the fork point, so the last match is closest to fork)
+            if (forkPos < 0 && b.getEvents() != null && !b.getEvents().isEmpty()) {
+                int bestMatch = -1;
+                for (int ei = 0; ei < b.getEvents().size(); ei++) {
+                    String evTitle = b.getEvents().get(ei).getTitle();
+                    if (evTitle == null || evTitle.isEmpty()) continue;
+                    for (int mi = 0; mi < mlEvents.size(); mi++) {
+                        if (evTitle.equals(mlEvents.get(mi).getTitle())) {
+                            bestMatch = Math.max(bestMatch, mi);
+                            break;
+                        }
+                    }
+                }
+                if (bestMatch >= 0) forkPos = bestMatch;
+            }
+            // Third fallback: default to first mainline event position so branch is visible
+            if (forkPos < 0) {
+                forkPos = 0;
+            }
+            forkPosMap.put(b.getId(), forkPos);
+        }
+        if (branchList.isEmpty()) return buildSingleBranchTimeline(mainline, headers);
+
+        // 分叉越靠下（forkPos越大）的分支离主线越近（col越小），形成树的视觉层次
+        branchList.sort((a, b) -> {
+            int fpA = forkPosMap.getOrDefault(a.getId(), 0);
+            int fpB = forkPosMap.getOrDefault(b.getId(), 0);
+            return Integer.compare(fpB, fpA);
+        });
+
+        Map<Integer, Integer> colMap = new LinkedHashMap<>();
+        colMap.put(mainline.getId(), 0);
+        int nextCol = 1;
+        for (PlotTreeBranch b : branchList) {
+            if (nextCol >= MAX_BRANCH_COLS) break;
+            colMap.put(b.getId(), nextCol);
+            nextCol++;
+        }
+        int totalCols = nextCol;
+
+        headers.add(new ColumnHeader("主线版本", BRANCH_COLORS_INT[0], ""));
+        int colIdx = 1;
+        for (PlotTreeBranch b : branchList) {
+            if (colIdx >= MAX_BRANCH_COLS) break;
+            int fp = forkPosMap.getOrDefault(b.getId(), -1);
+            String origin = fp >= 0 && fp < mlEvents.size()
+                    ? "分叉自：" + safeText(mlEvents.get(fp).getTitle()) : "";
+            headers.add(new ColumnHeader(b.getName(), BRANCH_COLORS_INT[colIdx % BRANCH_COLORS_INT.length], origin));
+            colIdx++;
+        }
+
+        Set<Integer> forkPositions = new HashSet<>();
+        for (int fp : forkPosMap.values()) { if (fp >= 0 && fp < mlEvents.size()) forkPositions.add(fp); }
+        // DEBUG
+        android.util.Log.d("PlotTree", "=== buildAllBranchesTimeline ===");
+        android.util.Log.d("PlotTree", "mlEvents count: " + mlEvents.size());
+        for (int ei = 0; ei < mlEvents.size(); ei++) {
+            android.util.Log.d("PlotTree", "  mlEvent[" + ei + "] id=" + mlEvents.get(ei).getId() + " title=" + mlEvents.get(ei).getTitle());
+        }
+        for (PlotTreeBranch dbgB : branchList) {
+            int dbgFp = forkPosMap.getOrDefault(dbgB.getId(), -1);
+            int dbgEc = dbgB.getEvents() != null ? dbgB.getEvents().size() : 0;
+            android.util.Log.d("PlotTree", "Branch id=" + dbgB.getId() + " name=" + dbgB.getName() + " srcEvId=" + dbgB.getSourceEventId() + " forkPos=" + dbgFp + " evCount=" + dbgEc);
+            if (dbgB.getEvents() != null) {
+                for (int ei2 = 0; ei2 < dbgB.getEvents().size(); ei2++) {
+                    android.util.Log.d("PlotTree", "  brEv[" + ei2 + "] id=" + dbgB.getEvents().get(ei2).getId() + " title=" + dbgB.getEvents().get(ei2).getTitle());
+                }
+            }
+        }
+
+        int maxBranchLen = 0;
+        for (PlotTreeBranch b : branchList) {
+            if (b.getEvents() != null) {
+                int fp = forkPosMap.getOrDefault(b.getId(), -1);
+                maxBranchLen = Math.max(maxBranchLen, b.getEvents().size());
+            }
+        }
+
+        int maxDepth = Math.max(mlEvents.size(), maxBranchLen);
+        for (int depth = 0; depth < maxDepth; depth++) {
+            if (forkPositions.contains(depth)) {
+                PlotTreeEvent forkEvent = mlEvents.get(depth);
+                Cell cell = new Cell(forkEvent, BRANCH_COLORS_INT[0]);
+                List<ForkTarget> targets = new ArrayList<>();
+                for (PlotTreeBranch b : branchList) {
+                    int fp = forkPosMap.getOrDefault(b.getId(), -1);
+                    if (fp == depth) {
+                        Integer bc = colMap.get(b.getId());
+                        if (bc != null) {
+                            targets.add(new ForkTarget(b.getName(), BRANCH_COLORS_INT[bc % BRANCH_COLORS_INT.length]));
+                        }
+                    }
+                }
+                rows.add(TimelineRow.fork(cell, targets.isEmpty() ? null : targets, forkEvent.getId()));
+                continue;
+            }
+
+            List<Cell> cells = new ArrayList<>();
+            int activeCount = 0;
+            for (int c = 0; c < totalCols; c++) {
+                if (c == 0) {
+                    if (depth < mlEvents.size()) {
+                        cells.add(new Cell(mlEvents.get(depth), BRANCH_COLORS_INT[0]));
+                        activeCount++;
+                    } else {
+                        cells.add(Cell.empty());
+                    }
+                } else {
+                    PlotTreeBranch branchForCol = null;
+                    for (PlotTreeBranch b : branchList) {
+                        Integer bc = colMap.get(b.getId());
+                        if (bc != null && bc == c) { branchForCol = b; break; }
+                    }
+                    if (branchForCol != null) {
+                        int fp = forkPosMap.getOrDefault(branchForCol.getId(), -1);
+                        int eventIdx = depth;
+                        android.util.Log.d("PlotTree", "SPLIT depth=" + depth + " col=" + c + " fp=" + fp + " eIdx=" + eventIdx + " evSize=" + (branchForCol.getEvents() != null ? branchForCol.getEvents().size() : 0));
+                        if (fp >= 0 && depth > fp && eventIdx >= 0
+                                && branchForCol.getEvents() != null
+                                && eventIdx < branchForCol.getEvents().size()) {
+                            cells.add(new Cell(branchForCol.getEvents().get(eventIdx),
+                                    BRANCH_COLORS_INT[c % BRANCH_COLORS_INT.length]));
+                            activeCount++;
+                        } else {
+                            cells.add(Cell.empty());
+                        }
+                    } else {
+                        cells.add(Cell.empty());
+                    }
+                }
+            }
+            rows.add(TimelineRow.split(cells));
+        }
+        return rows;
+    }
+    private PlotSummarySnapshot loadPlotSummarySnapshot() {
+        if (cachedPlotSummary != null) return cachedPlotSummary;
+        if (currentStory == null || TextUtils.isEmpty(currentStory.getPlotSummaryJson())) return null;
+        try { cachedPlotSummary = gson.fromJson(currentStory.getPlotSummaryJson(), PlotSummarySnapshot.class); }
+        catch (Exception e) { cachedPlotSummary = null; }
+        return cachedPlotSummary;
+    }
+
+    private void toggleDisplayMode() {
+        displayMode = (displayMode == MODE_CURRENT_BRANCH) ? MODE_ALL_BRANCHES : MODE_CURRENT_BRANCH;
+        if (displayMode == MODE_ALL_BRANCHES) loadAllBranchOverviews();
+        refreshDisplay();
+    }
+
+    private void refreshPlotTree() {
+        if (storyId <= 0) { Toast.makeText(requireContext(), "刷新失败：未加载作品", Toast.LENGTH_SHORT).show(); return; }
+        currentStory = storyDao.getStoryById(storyId);
+        cachedPlotSummary = null;
+        if (currentStory == null) { loadStory(); return; }
+        currentSnapshot = null;
+        if (!TextUtils.isEmpty(currentStory.getPlotTreeJson())) {
+            try { currentSnapshot = gson.fromJson(currentStory.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class); }
+            catch (Exception e) { e.printStackTrace(); }
+        }
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null || currentSnapshot.getBranches().isEmpty()) {
+            currentSnapshot = buildInitialSnapshot(currentStory);
+            persistSnapshot();
+        }
+        syncStoryMainline(currentStory);
+        if (!TextUtils.isEmpty(currentStory.getPlotTreeJson())) {
+            try { currentSnapshot = gson.fromJson(currentStory.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class); }
+            catch (Exception e) { e.printStackTrace(); }
+        }
+        if (currentSnapshot != null && currentSnapshot.getBranches() != null) {
+            for (PlotTreeBranch b : currentSnapshot.getBranches()) {
+                if (b != null && b.hasExportedChild()) {
+                    Story childStory = storyDao.getStoryById(b.getExportedStoryId());
+                    if (childStory != null) syncStoryMainline(childStory);
+                }
+            }
+        }
+        loadAllBranchOverviews();
+        refreshDisplay();
+        Toast.makeText(requireContext(), "已刷新", Toast.LENGTH_SHORT).show();
+    }
+
+    private void syncStoryMainline(Story story) {
+        if (story == null || TextUtils.isEmpty(story.getPlotTreeJson())) return;
+        PlotTreeWorkspaceSnapshot ws = null;
+        try { ws = gson.fromJson(story.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class); }
+        catch (Exception e) { return; }
+        if (ws == null || ws.getBranches() == null) return;
+        PlotTreeBranch mainline = null;
+        for (PlotTreeBranch b : ws.getBranches()) {
+            if (b != null && b.isMainline()) { mainline = b; break; }
+        }
+        if (mainline == null || mainline.getEvents() == null) return;
+        List<Volume> volumes = parseStoryVolumes(story);
+        List<Chapter> allChapters = new ArrayList<>();
+        for (Volume v : volumes) {
+            if (v != null && v.getChapters() != null) allChapters.addAll(v.getChapters());
+        }
+        int existingCount = mainline.getEvents().size();
+        if (existingCount >= allChapters.size()) return;
+
+        PlotSummarySnapshot ps = null;
+        if (!TextUtils.isEmpty(story.getPlotSummaryJson())) {
+            try { ps = gson.fromJson(story.getPlotSummaryJson(), PlotSummarySnapshot.class); }
+            catch (Exception ignored) {}
+        }
+
+        for (int i = existingCount; i < allChapters.size(); i++) {
+            Chapter ch = allChapters.get(i);
+            String title;
+            String summary;
+            List<String> tags = new ArrayList<>();
+            if (ps != null && ps.getChapterSummaries() != null && i < ps.getChapterSummaries().size()) {
+                PlotChapterSummary cs = ps.getChapterSummaries().get(i);
+                title = !TextUtils.isEmpty(cs.getChapterTitle()) ? cs.getChapterTitle()
+                        : (!TextUtils.isEmpty(cs.getChapterLabel()) ? cs.getChapterLabel() : "章节事件");
+                summary = !TextUtils.isEmpty(cs.getBriefSummary()) ? cs.getBriefSummary()
+                        : (!TextUtils.isEmpty(cs.getDetailSummary()) ? trimText(cs.getDetailSummary(), 50) : "");
+                if (cs.getKeyEvents() != null && !cs.getKeyEvents().isEmpty()) tags.addAll(cs.getKeyEvents());
+            } else {
+                title = TextUtils.isEmpty(ch.getTitle()) ? "章节事件" : ch.getTitle();
+                summary = TextUtils.isEmpty(ch.getContent()) ? "待补充" : trimText(ch.getContent(), 50);
+            }
+            PlotTreeEvent ev = new PlotTreeEvent(ws.getNextEventId(), title, summary);
+            ws.setNextEventId(ws.getNextEventId() + 1);
+            if (!tags.isEmpty()) ev.setTags(tags);
+            mainline.getEvents().add(ev);
+        }
+        ws.setUpdateTime(System.currentTimeMillis());
+        story.setPlotTreeJson(gson.toJson(ws));
+        storyDao.updatePlotTree(story.getId(), gson.toJson(ws));
+    }
+
+
+    private void refreshPlotSummary() {
+        if (currentStory == null) return;
+        currentStory = storyDao.getStoryById(storyId);
+        cachedPlotSummary = null;
+        if (currentStory == null) return;
+        showAiSummaryDialog();
+    }
+
+    private void loadAllBranchOverviews() {
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null) return;
+        for (PlotTreeBranch branch : currentSnapshot.getBranches()) {
+            if (branch == null) continue;
+            branch.setChildBranches(null);
+            branch.setChildSummary(null);
+            branch.setChildStoryWordCount(0);
+            if (branch.hasExportedChild()) {
+                Story childStory = storyDao.getStoryById(branch.getExportedStoryId());
+                if (childStory != null) {
+                    branch.setChildSummary(childStory.getTitle());
+                    branch.setChildStoryWordCount(childStory.getWordCount());
+                    // 合并而非覆盖：保留分叉点前的事件（ID正确用于fork检测），追加导出故事的新事件
+                    syncExportedBranchEvents(branch, childStory);
+                    branch.setChildBranches(loadStoryBranches(childStory));
+                }
+            }
+        }
+    }
+
+    private List<PlotTreeBranch> loadStoryBranches(Story story) {
+        List<PlotTreeBranch> result = new ArrayList<>();
+        if (story == null || TextUtils.isEmpty(story.getPlotTreeJson())) return result;
+        try {
+            PlotTreeWorkspaceSnapshot snapshot = gson.fromJson(story.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class);
+            if (snapshot != null && snapshot.getBranches() != null) {
+                for (PlotTreeBranch branch : snapshot.getBranches()) {
+                    if (branch != null) { branch.setChildBranches(null); branch.setChildSummary(null); result.add(branch); }
+                }
+            }
+        } catch (Exception ignored) {}
+        return result;
+    }
+
+    /**
+     * 将导出故事的新事件合并到分支中。
+     * 保留分叉点及之前的事件（ID 正确，用于 forkPos 检测），
+     * 仅从导出故事追加分叉点之后的新事件。
+     */
+    private void syncExportedBranchEvents(PlotTreeBranch branch, Story exportedStory) {
+        if (TextUtils.isEmpty(exportedStory.getPlotTreeJson())) return;
+        if (branch.getEvents() == null) branch.setEvents(new ArrayList<>());
+        try {
+            PlotTreeWorkspaceSnapshot es = gson.fromJson(exportedStory.getPlotTreeJson(), PlotTreeWorkspaceSnapshot.class);
+            if (es == null || es.getBranches() == null) return;
+            PlotTreeBranch exMainline = null;
+            for (PlotTreeBranch eb : es.getBranches()) {
+                if (eb != null && eb.isMainline()) { exMainline = eb; break; }
+            }
+            if (exMainline == null || exMainline.getEvents() == null || exMainline.getEvents().isEmpty()) return;
+            List<PlotTreeEvent> exEvents = exMainline.getEvents();
+
+            // 定位分叉点：在分支当前事件中查找 sourceEventId 对应的事件
+            int forkPos = -1;
+            List<PlotTreeEvent> curEvents = branch.getEvents();
+            if (curEvents != null && branch.getSourceEventId() > 0) {
+                for (int i = 0; i < curEvents.size(); i++) {
+                    if (curEvents.get(i).getId() == branch.getSourceEventId()) {
+                        forkPos = i;
+                        break;
+                    }
+                }
+            }
+            // 若找不到分叉点（旧数据无 sourceEventId），保留所有现有事件不做合并
+            if (forkPos < 0) return;
+
+            // 保留 forkPos+1 个原有事件（ID 正确），其余用导出故事的新事件替换
+            List<PlotTreeEvent> merged = new ArrayList<>(curEvents.subList(0, Math.min(forkPos + 1, curEvents.size())));
+            for (int i = forkPos + 1; i < exEvents.size(); i++) {
+                merged.add(copyEvent(exEvents.get(i)));
+            }
+            branch.setEvents(merged);
+        } catch (Exception ignored) {}
+    }
+
+    private PlotTreeBranch getMainlineBranch() {
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null) return null;
+        for (PlotTreeBranch b : currentSnapshot.getBranches()) { if (b != null && b.isMainline()) return b; }
+        return currentSnapshot.getBranches().isEmpty() ? null : currentSnapshot.getBranches().get(0);
+    }
+
+    private PlotTreeBranch getActiveBranch() {
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null) return null;
+        for (PlotTreeBranch branch : currentSnapshot.getBranches()) {
+            if (branch != null && branch.getId() == currentSnapshot.getActiveBranchId()) return branch;
+        }
+        return currentSnapshot.getBranches().isEmpty() ? null : currentSnapshot.getBranches().get(0);
+    }
+
+    private PlotTreeBranch findBranchById(int branchId) {
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null) return null;
+        for (PlotTreeBranch b : currentSnapshot.getBranches()) { if (b != null && b.getId() == branchId) return b; }
+        return null;
+    }
+
+    /** Find which branch owns the given event, and its position within that branch. */
+    private PlotTreeBranch findEventOwner(PlotTreeEvent event, int[] outPos) {
+        if (event == null || currentSnapshot == null || currentSnapshot.getBranches() == null) return null;
+        for (PlotTreeBranch b : currentSnapshot.getBranches()) {
+            if (b == null || b.getEvents() == null) continue;
+            for (int i = 0; i < b.getEvents().size(); i++) {
+                if (b.getEvents().get(i).getId() == event.getId()) {
+                    outPos[0] = i;
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+    private void showCardDetailDialog(PlotTreeEvent event) {
+        if (event == null) return;
+        int[] posHolder = new int[]{-1};
+        PlotTreeBranch owner = findEventOwner(event, posHolder);
+        if (owner == null) return;
+
+        LinearLayout layout = buildFormLayout();
+        EditText etTitle = buildEditText("事件标题");
+        EditText etSummary = buildEditText("事件摘要 / 主线推进");
+        EditText etNote = buildEditText("补充说明（可选）");
+        EditText etTags = buildEditText("标签，使用顿号/逗号分隔（可选）");
+        layout.addView(etTitle); layout.addView(etSummary); layout.addView(etNote); layout.addView(etTags);
+        etTitle.setText(event.getTitle());
+        etSummary.setText(event.getSummary());
+        etNote.setText(event.getNote());
+        etTags.setText(event.getTags() == null ? "" : TextUtils.join("、", event.getTags()));
+
+        PlotTreeBranch ownerBranch = owner;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
+                .setTitle("剧情事件详情")
+                .setView(layout).setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String title = trimToEmpty(etTitle.getText() == null ? null : etTitle.getText().toString());
+                    String summary = trimToEmpty(etSummary.getText() == null ? null : etSummary.getText().toString());
+                    if (TextUtils.isEmpty(title)) {
+                        Toast.makeText(requireContext(), "请先输入事件标题", Toast.LENGTH_SHORT).show(); return;
+                    }
+                    event.setTitle(title); event.setSummary(summary);
+                    event.setNote(trimToEmpty(etNote.getText() == null ? null : etNote.getText().toString()));
+                    event.setTags(splitTags(etTags.getText() == null ? null : etTags.getText().toString()));
+                    event.setUpdateTime(System.currentTimeMillis());
+                    if (ownerBranch != null) ownerBranch.setUpdateTime(System.currentTimeMillis());
+                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                });
+
+        // 全部走向模式下，提供跳转至该事件所属分支的入口
+        if (displayMode == MODE_ALL_BRANCHES) {
+            builder.setNeutralButton("查看此分支：" + safeText(ownerBranch.getName()), (dialog, which) -> {
+                currentSnapshot.setActiveBranchId(ownerBranch.getId());
+                persistSnapshot();
+                displayMode = MODE_CURRENT_BRANCH;
+                refreshDisplay();
+            });
+        }
+
+        builder.show();
+    }
+
+    private void showForkNodeCreateDialog(PlotTreeEvent sourceEvent) {
+        if (sourceEvent == null) return;
+        // Fork node is always between mainline events — find the event's position
+        int[] posHolder = new int[]{-1};
+        PlotTreeBranch owner = findEventOwner(sourceEvent, posHolder);
+        if (owner == null || posHolder[0] < 0) return;
+        showCreateBranchDialog(sourceEvent, posHolder[0]);
+    }
+
+    private void showEventActionDialog(PlotTreeEvent event, int position) {
+        if (event == null) return;
+        PlotTreeBranch branch = getActiveBranch();
+        if (branch == null || branch.getEvents() == null) return;
+        int pos = position;
+        if (pos < 0) {
+            for (int i = 0; i < branch.getEvents().size(); i++) {
+                if (branch.getEvents().get(i).getId() == event.getId()) { pos = i; break; }
+            }
+        }
+        int finalPos = pos;
+        new AlertDialog.Builder(requireContext())
+                .setTitle(safeText(event.getTitle()))
+                .setItems(new String[]{"编辑事件", "在后面插入事件", "从这里创建分支", "删除该事件"}, (dialog, which) -> {
+                    if (which == 0) showEventEditorDialog(event, finalPos);
+                    else if (which == 1) showEventEditorDialog(null, finalPos + 1);
+                    else if (which == 2) showCreateBranchDialog(event, finalPos);
+                    else if (which == 3) deleteEvent(finalPos);
+                }).show();
+    }
+
+    private void showEventEditorDialog(PlotTreeEvent event, int insertPosition) {
+        LinearLayout layout = buildFormLayout();
+        EditText etTitle = buildEditText("事件标题");
+        EditText etSummary = buildEditText("事件摘要 / 主线推进");
+        EditText etNote = buildEditText("补充说明（可选）");
+        EditText etTags = buildEditText("标签，使用顿号/逗号分隔（可选）");
+        layout.addView(etTitle); layout.addView(etSummary); layout.addView(etNote); layout.addView(etTags);
+        if (event != null) {
+            etTitle.setText(event.getTitle());
+            etSummary.setText(event.getSummary());
+            etNote.setText(event.getNote());
+            etTags.setText(event.getTags() == null ? "" : TextUtils.join("、", event.getTags()));
+        }
+        new AlertDialog.Builder(requireContext())
+                .setTitle(event == null ? "新增剧情事件" : "编辑剧情事件")
+                .setView(layout).setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    PlotTreeBranch branch = getActiveBranch();
+                    if (branch == null) return;
+                    String title = trimToEmpty(etTitle.getText() == null ? null : etTitle.getText().toString());
+                    String summary = trimToEmpty(etSummary.getText() == null ? null : etSummary.getText().toString());
+                    if (TextUtils.isEmpty(title)) { Toast.makeText(requireContext(), "请先输入事件标题", Toast.LENGTH_SHORT).show(); return; }
+                    if (event == null) {
+                        PlotTreeEvent newEvent = newEvent(currentSnapshot, title, summary);
+                        newEvent.setNote(trimToEmpty(etNote.getText() == null ? null : etNote.getText().toString()));
+                        newEvent.setTags(splitTags(etTags.getText() == null ? null : etTags.getText().toString()));
+                        int tp = insertPosition < 0 ? branch.getEvents().size() : Math.min(insertPosition, branch.getEvents().size());
+                        branch.getEvents().add(tp, newEvent);
+                    } else {
+                        event.setTitle(title); event.setSummary(summary);
+                        event.setNote(trimToEmpty(etNote.getText() == null ? null : etNote.getText().toString()));
+                        event.setTags(splitTags(etTags.getText() == null ? null : etTags.getText().toString()));
+                        event.setUpdateTime(System.currentTimeMillis());
+                    }
+                    branch.setUpdateTime(System.currentTimeMillis());
+                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                }).show();
+    }
+
+    private void deleteEvent(int position) {
+        PlotTreeBranch branch = getActiveBranch();
+        if (branch == null || branch.getEvents() == null || position < 0 || position >= branch.getEvents().size()) return;
+        branch.getEvents().remove(position);
+        branch.setUpdateTime(System.currentTimeMillis());
+        persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+    }
+
+    private void showCreateBranchDialog(PlotTreeEvent event, int position) {
+        LinearLayout layout = buildFormLayout();
+        EditText etName = buildEditText("新分支名称");
+        EditText etDescr = buildEditText("新分支走向说明");
+        layout.addView(etName); layout.addView(etDescr);
+        etName.setText(safeText(event.getTitle()) + " 分支");
+        new AlertDialog.Builder(requireContext())
+                .setTitle("从当前事件创建分支").setView(layout).setNegativeButton("取消", null)
+                .setPositiveButton("创建", (dialog, which) -> {
+                    PlotTreeBranch activeBranch = getActiveBranch();
+                    if (activeBranch == null) return;
+                    String branchName = trimToEmpty(etName.getText() == null ? null : etName.getText().toString());
+                    if (TextUtils.isEmpty(branchName)) { Toast.makeText(requireContext(), "请输入分支名称", Toast.LENGTH_SHORT).show(); return; }
+                    PlotTreeBranch newBranch = new PlotTreeBranch();
+                    newBranch.setId(currentSnapshot.getNextBranchId());
+                    currentSnapshot.setNextBranchId(currentSnapshot.getNextBranchId() + 1);
+                    newBranch.setName(branchName);
+                    newBranch.setDescription(trimToEmpty(etDescr.getText() == null ? null : etDescr.getText().toString()));
+                    newBranch.setMainline(false);
+                    newBranch.setSourceBranchId(activeBranch.getId());
+                    newBranch.setSourceEventId(event.getId());
+                    List<PlotTreeEvent> copied = new ArrayList<>();
+                    for (int i = 0; i <= position && i < activeBranch.getEvents().size(); i++)
+                        copied.add(copyEvent(activeBranch.getEvents().get(i)));
+                    newBranch.setEvents(copied);
+                    currentSnapshot.getBranches().add(newBranch);
+                    if (activeBranch.getChildBranchIds() == null) activeBranch.setChildBranchIds(new ArrayList<>());
+                    activeBranch.getChildBranchIds().add(newBranch.getId());
+                    currentSnapshot.setActiveBranchId(newBranch.getId());
+                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                }).show();
+    }
+    private void showBranchSwitchDialog() {
+        if (currentSnapshot == null || currentSnapshot.getBranches() == null || currentSnapshot.getBranches().isEmpty()) return;
+        List<PlotTreeBranch> branches = currentSnapshot.getBranches();
+        String[] names = new String[branches.size()];
+        int checked = 0;
+        for (int i = 0; i < branches.size(); i++) {
+            PlotTreeBranch branch = branches.get(i);
+            names[i] = branch.getName() + (branch.isMainline() ? "（主线）" : "");
+            if (branch.hasExportedChild()) {
+                Story exported = storyDao.getStoryById(branch.getExportedStoryId());
+                names[i] += exported != null ? " → 导出《" + exported.getTitle() + "》" : " 已导出";
+            }
+            if (branch.getId() == currentSnapshot.getActiveBranchId()) checked = i;
+        }
+        new AlertDialog.Builder(requireContext())
+                .setTitle("切换剧情分支")
+                .setSingleChoiceItems(names, checked, (dialog, which) -> {
+                    currentSnapshot.setActiveBranchId(branches.get(which).getId());
+                    persistSnapshot();
+                    displayMode = MODE_CURRENT_BRANCH;
+                    refreshDisplay();
+                    dialog.dismiss();
+                }).setNegativeButton("取消", null).show();
+    }
+
+    private void showBranchActionDialog() {
+        PlotTreeBranch branch = getActiveBranch();
+        if (branch == null) return;
+        List<String> options = new ArrayList<>();
+        options.add("编辑分支信息");
+        if (branch.hasExportedChild()) {
+            Story child = storyDao.getStoryById(branch.getExportedStoryId());
+            if (child != null) options.add("打开导出作品《" + child.getTitle() + "》");
+        }
+        if (!branch.isMainline()) options.add("删除当前分支");
+        new AlertDialog.Builder(requireContext())
+                .setTitle(branch.getName())
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    String option = options.get(which);
+                    if ("编辑分支信息".equals(option)) showEditBranchDialog(branch);
+                    else if (option != null && option.startsWith("打开导出作品")) {
+                        int childId = branch.getExportedStoryId();
+                        if (childId > 0) {
+                            Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+                            intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, childId);
+                            startActivity(intent);
+                        }
+                    } else if ("删除当前分支".equals(option)) deleteCurrentBranch(branch);
+                }).show();
+    }
+
+    private void showEditBranchDialog(PlotTreeBranch branch) {
+        LinearLayout layout = buildFormLayout();
+        EditText etName = buildEditText("分支名称");
+        EditText etDescr = buildEditText("分支说明");
+        etName.setText(branch.getName()); etDescr.setText(branch.getDescription());
+        layout.addView(etName); layout.addView(etDescr);
+        new AlertDialog.Builder(requireContext())
+                .setTitle("编辑分支").setView(layout).setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    branch.setName(trimToEmpty(etName.getText() == null ? null : etName.getText().toString()));
+                    branch.setDescription(trimToEmpty(etDescr.getText() == null ? null : etDescr.getText().toString()));
+                    branch.setUpdateTime(System.currentTimeMillis());
+                    persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                }).show();
+    }
+
+    private void deleteCurrentBranch(PlotTreeBranch branch) {
+        if (branch == null || branch.isMainline() || currentSnapshot == null) return;
+        if (branch.getSourceBranchId() > 0) {
+            for (PlotTreeBranch b : currentSnapshot.getBranches()) {
+                if (b != null && b.getId() == branch.getSourceBranchId() && b.getChildBranchIds() != null) {
+                    b.getChildBranchIds().remove(Integer.valueOf(branch.getId()));
+                    break;
+                }
+            }
+        }
+        currentSnapshot.getBranches().remove(branch);
+        currentSnapshot.setActiveBranchId(1);
+        persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+    }
+
+    private void showExportDialog() {
+        PlotTreeBranch branch = getActiveBranch();
+        if (currentStory == null || branch == null) return;
+        EditText editText = buildEditText("导出后的小说标题");
+        editText.setText(currentStory.getTitle() + " - " + branch.getName());
+        new AlertDialog.Builder(requireContext())
+                .setTitle("导出当前分支").setView(editText).setNegativeButton("取消", null)
+                .setPositiveButton("导出", (dialog, which) ->
+                        exportBranch(editText.getText() == null ? "" : editText.getText().toString().trim())).show();
+    }
+
+    private void exportBranch(String title) {
+        PlotTreeBranch branch = getActiveBranch();
+        if (currentStory == null || branch == null || TextUtils.isEmpty(title)) {
+            Toast.makeText(requireContext(), "导出标题不能为空", Toast.LENGTH_SHORT).show(); return;
+        }
+        int branchEventPos = findSourceEventPositionInMainline(branch);
+        long newStoryId = storyDao.duplicateStory(currentStory, title);
+        if (newStoryId <= 0) { Toast.makeText(requireContext(), "导出失败，请稍后重试", Toast.LENGTH_SHORT).show(); return; }
+        int targetStoryId = (int) newStoryId;
+        Story exportedStory = storyDao.getStoryById(targetStoryId);
+        if (exportedStory != null && branchEventPos >= 0) {
+            String trimmed = trimStructureToEventPos(currentStory.getStructure(), branchEventPos + 1);
+            exportedStory.setStructure(trimmed);
+            exportedStory.setWordCount(countWordsInStructure(trimmed));
+            storyDao.updateStory(exportedStory);
+        }
+        copyRelatedData(currentStory.getId(), targetStoryId);
+        PlotTreeWorkspaceSnapshot exported = new PlotTreeWorkspaceSnapshot();
+        PlotTreeBranch exportedBranch = copyBranch(branch);
+        exportedBranch.setId(1); exportedBranch.setMainline(true);
+        exportedBranch.setSourceBranchId(0); exportedBranch.setSourceEventId(0);
+        exportedBranch.setName("主线版本");
+        exportedBranch.setDescription("从《" + currentStory.getTitle() + "》分支 \"" + branch.getName() + "\" 导出，继承分支点前的事件。");
+        exportedBranch.setExportedStoryId(0);
+        exported.getBranches().add(exportedBranch);
+        exported.setActiveBranchId(1); exported.setNextBranchId(2);
+        exported.setNextEventId(findMaxEventId(exportedBranch) + 1);
+        storyDao.updatePlotTree(targetStoryId, gson.toJson(exported));
+        branch.setExportedStoryId(targetStoryId);
+        branch.setUpdateTime(System.currentTimeMillis()); persistSnapshot();
+        new AlertDialog.Builder(requireContext())
+                .setTitle("导出成功")
+                .setMessage("已将当前分支导出为新作品《" + title + "》。\n\n章节已裁剪到分支点，可前往新作品从分支点继续创作。")
+                .setNegativeButton("稍后", null)
+                .setPositiveButton("打开", (dialog, which) -> {
+                    Intent intent = new Intent(requireContext(), StoryWorkspaceActivity.class);
+                    intent.putExtra(StoryWorkspaceActivity.EXTRA_STORY_ID, targetStoryId);
+                    startActivity(intent);
+                }).show();
+    }
+    private int findSourceEventPositionInMainline(PlotTreeBranch branch) {
+        if (currentSnapshot == null || branch == null) return -1;
+        PlotTreeBranch mainline = getMainlineBranch();
+        if (mainline == null || mainline.getEvents() == null || branch.getSourceEventId() <= 0) return -1;
+        for (int i = 0; i < mainline.getEvents().size(); i++) {
+            if (mainline.getEvents().get(i).getId() == branch.getSourceEventId()) return i;
+        }
+        return -1;
+    }
+
+    private String trimStructureToEventPos(String structureJson, int eventPos) {
+        if (TextUtils.isEmpty(structureJson) || eventPos < 0) return structureJson;
+        try {
+            List<Volume> volumes = gson.fromJson(structureJson, VOLUME_LIST_TYPE);
+            if (volumes == null || volumes.isEmpty()) return structureJson;
+            int chapterCount = 0;
+            List<Volume> trimmedVolumes = new ArrayList<>();
+            for (Volume volume : volumes) {
+                if (volume == null) continue;
+                Volume trimmedVol = new Volume();
+                trimmedVol.setTitle(volume.getTitle()); trimmedVol.setSummary(volume.getSummary());
+                List<Chapter> trimmedChapters = new ArrayList<>();
+                if (volume.getChapters() != null) {
+                    for (Chapter chapter : volume.getChapters()) {
+                        if (chapter == null) continue;
+                        if (chapterCount < eventPos) {
+                            Chapter kc = new Chapter();
+                            kc.setTitle(chapter.getTitle()); kc.setContent(chapter.getContent());
+                            trimmedChapters.add(kc); chapterCount++;
+                        } else if (chapterCount == eventPos) {
+                            Chapter bc = new Chapter();
+                            bc.setTitle(chapter.getTitle()); bc.setContent("");
+                            trimmedChapters.add(bc); chapterCount++;
+                        }
+                    }
+                }
+                trimmedVol.setChapters(trimmedChapters); trimmedVolumes.add(trimmedVol);
+                if (chapterCount > eventPos) break;
+            }
+            return gson.toJson(trimmedVolumes);
+        } catch (Exception ignored) { return structureJson; }
+    }
+
+    private int countWordsInStructure(String structureJson) {
+        if (TextUtils.isEmpty(structureJson)) return 0;
+        try {
+            List<Volume> volumes = gson.fromJson(structureJson, VOLUME_LIST_TYPE);
+            int total = 0;
+            if (volumes != null) {
+                for (Volume v : volumes) {
+                    if (v.getChapters() != null) for (Chapter c : v.getChapters())
+                        if (c.getContent() != null) total += c.getContent().length();
+                }
+            }
+            return total;
+        } catch (Exception e) { return 0; }
+    }
+
+    private void copyRelatedData(int sourceStoryId, int targetStoryId) {
+        characterDao.replaceCharactersForStory(targetStoryId, copyCharacters(sourceStoryId, targetStoryId));
+        copyDocuments(sourceStoryId, targetStoryId);
+        copySettingsAndRelations(sourceStoryId, targetStoryId);
+    }
+
+    private List<Character> copyCharacters(int sourceStoryId, int targetStoryId) {
+        List<Character> sourceCharacters = characterDao.getCharactersByStoryId(sourceStoryId);
+        List<Character> copied = new ArrayList<>();
+        for (Character c : sourceCharacters)
+            copied.add(new Character(targetStoryId, c.getName(), c.getProfile(), c.getDetail(), c.getAvatarResId()));
+        return copied;
+    }
+
+    private void copyDocuments(int sourceStoryId, int targetStoryId) {
+        List<StoryDocument> documents = documentDao.getDocumentsByStory(sourceStoryId);
+        for (StoryDocument doc : documents)
+            documentDao.insertDocument(new StoryDocument(targetStoryId, doc.getTitle(), doc.getContent(), doc.getCategory()));
+    }
+
+    private void copySettingsAndRelations(int sourceStoryId, int targetStoryId) {
+        List<StorySetting> settings = storySettingDao.getByStoryId(sourceStoryId);
+        List<SettingRelationship> relationships = relationshipDao.getByStoryId(sourceStoryId);
+        Map<Integer, Integer> idMap = new HashMap<>();
+        for (StorySetting s : settings) {
+            StorySetting clone = copySetting(s, targetStoryId);
+            long newId = storySettingDao.insert(clone);
+            if (newId > 0) idMap.put(s.getId(), (int) newId);
+        }
+        for (SettingRelationship r : relationships) {
+            Integer ns = idMap.get(r.getSourceSettingId()), nt = idMap.get(r.getTargetSettingId());
+            if (ns == null || nt == null) continue;
+            SettingRelationship clone = new SettingRelationship();
+            clone.setStoryId(targetStoryId); clone.setSourceSettingId(ns); clone.setTargetSettingId(nt);
+            clone.setRelationshipType(r.getRelationshipType()); clone.setDescription(r.getDescription());
+            clone.setSourceType(r.getSourceType()); clone.setConfidence(r.getConfidence());
+            clone.setDirected(r.isDirected());
+            clone.setCreateTime(System.currentTimeMillis()); clone.setUpdateTime(System.currentTimeMillis());
+            relationshipDao.insert(clone);
+        }
+    }
+
+    private StorySetting copySetting(StorySetting src, int targetStoryId) {
+        StorySetting c = new StorySetting();
+        c.setStoryId(targetStoryId); c.setCategory(src.getCategory()); c.setSubCategory(src.getSubCategory());
+        c.setTitle(src.getTitle()); c.setSummary(src.getSummary()); c.setDetail(src.getDetail());
+        c.setAttributes(src.getAttributes()); c.setTags(src.getTags()); c.setAliases(src.getAliases());
+        c.setSpecificAttributes(src.getSpecificAttributes()); c.setSourceMaterialId(src.getSourceMaterialId());
+        c.setSourceType(src.getSourceType()); c.setSourceUrl(src.getSourceUrl());
+        c.setSourceTitle(src.getSourceTitle()); c.setAiConfidence(src.getAiConfidence());
+        c.setRawJson(src.getRawJson()); c.setImportTime(src.getImportTime());
+        c.setLastSyncTime(src.getLastSyncTime()); c.setSyncEnabled(src.isSyncEnabled());
+        c.setHasUpdates(src.isHasUpdates());
+        c.setCreateTime(System.currentTimeMillis()); c.setUpdateTime(System.currentTimeMillis());
+        c.setFavorite(src.isFavorite()); c.setUsageCount(src.getUsageCount());
+        c.setImagePath(src.getImagePath());
+        return c;
+    }
+
+    private PlotTreeBranch copyBranch(PlotTreeBranch branch) {
+        PlotTreeBranch clone = new PlotTreeBranch();
+        clone.setName(branch.getName()); clone.setDescription(branch.getDescription());
+        clone.setMainline(branch.isMainline()); clone.setSourceBranchId(branch.getSourceBranchId());
+        clone.setSourceEventId(branch.getSourceEventId()); clone.setExportedStoryId(branch.getExportedStoryId());
+        List<PlotTreeEvent> copiedEvents = new ArrayList<>();
+        for (PlotTreeEvent e : branch.getEvents()) copiedEvents.add(copyEvent(e));
+        clone.setEvents(copiedEvents);
+        return clone;
+    }
+
+    private PlotTreeEvent copyEvent(PlotTreeEvent source) {
+        PlotTreeEvent clone = new PlotTreeEvent();
+        clone.setId(source.getId()); clone.setTitle(source.getTitle()); clone.setSummary(source.getSummary());
+        clone.setNote(source.getNote());
+        clone.setTags(source.getTags() == null ? new ArrayList<>() : new ArrayList<>(source.getTags()));
+        clone.setCreateTime(source.getCreateTime()); clone.setUpdateTime(source.getUpdateTime());
+        return clone;
+    }
+
+    private int findMaxEventId(PlotTreeBranch branch) {
+        int max = 0;
+        if (branch.getEvents() == null) return max;
+        for (PlotTreeEvent e : branch.getEvents()) max = Math.max(max, e.getId());
+        return max;
+    }
+
+    private void persistSnapshot() {
+        if (currentStory == null || currentSnapshot == null) return;
+        currentSnapshot.setUpdateTime(System.currentTimeMillis());
+        String json = gson.toJson(currentSnapshot);
+        currentStory.setPlotTreeJson(json);
+        storyDao.updatePlotTree(currentStory.getId(), json);
+    }
+
+    private List<Volume> parseStoryVolumes(Story story) {
+        if (story == null || TextUtils.isEmpty(story.getStructure())) return new ArrayList<>();
+        try {
+            List<Volume> volumes = gson.fromJson(story.getStructure(), VOLUME_LIST_TYPE);
+            return volumes == null ? new ArrayList<>() : volumes;
+        } catch (Exception ignored) { return new ArrayList<>(); }
+    }
+
+    private LinearLayout buildFormLayout() {
+        LinearLayout layout = new LinearLayout(requireContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int)(16 * requireContext().getResources().getDisplayMetrics().density);
+        layout.setPadding(padding, padding, padding, padding / 2);
+        return layout;
+    }
+
+    private EditText buildEditText(String hint) {
+        EditText editText = new EditText(requireContext());
+        editText.setHint(hint);
+        return editText;
+    }
+
+    private List<String> splitTags(String raw) {
+        List<String> tags = new ArrayList<>();
+        if (TextUtils.isEmpty(raw)) return tags;
+        for (String part : raw.split("[、,，;；\\n]+")) {
+            String trimmed = trimToEmpty(part);
+            if (!TextUtils.isEmpty(trimmed)) tags.add(trimmed);
+        }
+        return tags;
+    }
+
+    private String trimText(String text, int maxLength) {
+        if (TextUtils.isEmpty(text)) return "";
+        String trimmed = text.trim();
+        return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength) + "\u2026";
+    }
+
+    private String trimToEmpty(String text) { return text == null ? "" : text.trim(); }
+    private String safeText(String text) { return TextUtils.isEmpty(text) ? "未命名" : text.trim(); }
+    private String safeTitle(Story story) {
+        return story == null || TextUtils.isEmpty(story.getTitle()) ? "故事主线" : story.getTitle().trim();
+    }
+    private static class ChapterContext {
+        int volumeIndex; int chapterIndex; String chapterLabel; String title; String content;
+        ChapterContext(int vi, int ci, String label, String t, String c) {
+            volumeIndex = vi; chapterIndex = ci;
+            chapterLabel = label != null ? label : "";
+            title = t != null ? t : "";
+            content = c != null ? c : "";
+        }
+    }
+
+    private void showAiSummaryDialog() {
+        if (currentStory == null) { Toast.makeText(requireContext(), "请先加载作品", Toast.LENGTH_SHORT).show(); return; }
+        List<ChapterContext> chapters = buildChapterContexts(currentStory);
+        if (chapters.isEmpty()) { Toast.makeText(requireContext(), "当前作品没有章节，请先创建内容", Toast.LENGTH_SHORT).show(); return; }
+        if (chapters.size() > 12) {
+            Toast.makeText(requireContext(), "章节过多（" + chapters.size() + "章），请到完整版剧情梳理处理", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        LinearLayout layout = buildFormLayout();
+        TextView tvHint = new TextView(requireContext());
+        tvHint.setText("共 " + chapters.size() + " 章，选择模型后开始生成");
+        tvHint.setTextSize(14); tvHint.setPadding(0, 0, 0, 16);
+        layout.addView(tvHint);
+
+        RadioGroup rgModel = new RadioGroup(requireContext());
+        rgModel.setOrientation(LinearLayout.HORIZONTAL);
+        String[] modelIds = {"flash", "pro", "m2.5"};
+        String[] modelNames = {"Flash (快速)", "Pro (深度)", "MiniMax M2.5"};
+        for (int i = 0; i < modelIds.length; i++) {
+            RadioButton rb = new RadioButton(requireContext());
+            rb.setId(View.generateViewId()); rb.setText(modelNames[i]); rb.setTag(modelIds[i]);
+            rb.setPadding(0, 0, 24, 0);
+            if (i == 0) rb.setChecked(true);
+            rgModel.addView(rb);
+        }
+        layout.addView(rgModel);
+
+        ProgressBar progressBar = new ProgressBar(requireContext());
+        progressBar.setVisibility(View.GONE); progressBar.setPadding(0, 16, 0, 0);
+        layout.addView(progressBar);
+        TextView tvProgress = new TextView(requireContext());
+        tvProgress.setTextSize(13); tvProgress.setPadding(0, 8, 0, 0); tvProgress.setVisibility(View.GONE);
+        layout.addView(tvProgress);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("AI 剧情梳理").setView(layout)
+                .setNegativeButton("取消", null).setPositiveButton("开始生成", null).create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                int checkedId = rgModel.getCheckedRadioButtonId();
+                RadioButton checkedRb = rgModel.findViewById(checkedId);
+                String selectedModel = checkedRb != null ? (String) checkedRb.getTag() : "flash";
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
+                progressBar.setVisibility(View.VISIBLE); tvProgress.setVisibility(View.VISIBLE);
+                tvProgress.setText("正在生成剧情梳理...");
+                int token = ++summaryGenerationToken;
+                String prompt = buildSinglePassPrompt(currentStory, chapters);
+                ApiClient.RequestOptions opts = new ApiClient.RequestOptions().setMaxTokens(4000);
+                ApiClient.getInstance().generateStory(prompt, selectedModel, requireContext(), opts, new ApiClient.Callback() {
+                    @Override
+                    public void onSuccess(String responseText) {
+                        requireActivity().runOnUiThread(() -> {
+                            if (token != summaryGenerationToken) return;
+                            List<PlotChapterSummary> summaries = parseSinglePassResponse(responseText, chapters);
+                            persistPlotSummary(summaries);
+                            dialog.dismiss();
+                            onAiSummarySuccess();
+                        });
+                    }
+                    @Override
+                    public void onFailure(Exception e) {
+                        requireActivity().runOnUiThread(() -> {
+                            if (token != summaryGenerationToken) return;
+                            dialog.dismiss();
+                            Toast.makeText(requireContext(), "生成失败：" + (e != null ? e.getMessage() : "未知错误"), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                });
+            });
+        });
+        dialog.show();
+    }
+
+    private void onAiSummarySuccess() {
+        cachedPlotSummary = null;
+        currentStory = storyDao.getStoryById(storyId);
+        if (currentStory == null) return;
+        currentSnapshot = loadOrCreateSnapshot(currentStory);
+        PlotTreeBranch mainline = getMainlineBranch();
+        if (mainline != null) {
+            List<PlotTreeEvent> newEvents = buildInitialEvents(currentStory, currentSnapshot);
+            mainline.setEvents(newEvents);
+            persistSnapshot();
+        }
+        loadAllBranchOverviews();
+        refreshDisplay();
+        Toast.makeText(requireContext(), "剧情梳理已更新", Toast.LENGTH_SHORT).show();
+    }
+
+
+    private List<ChapterContext> buildChapterContexts(Story story) {
+        List<ChapterContext> result = new ArrayList<>();
+        if (story == null) return result;
+        List<Volume> volumes = parseStoryVolumes(story);
+        for (int vi = 0; vi < volumes.size(); vi++) {
+            Volume vol = volumes.get(vi);
+            if (vol == null || vol.getChapters() == null) continue;
+            for (int ci = 0; ci < vol.getChapters().size(); ci++) {
+                Chapter ch = vol.getChapters().get(ci);
+                if (ch == null) continue;
+                String label = "第" + (vi + 1) + "卷 第" + (ci + 1) + "章";
+                String content = ch.getContent();
+                if (content != null && content.length() > 2000) content = content.substring(0, 2000);
+                result.add(new ChapterContext(vi, ci, label, ch.getTitle(), content));
+            }
+        }
+        return result;
+    }
+
+    private String buildSinglePassPrompt(Story story, List<ChapterContext> chapters) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的小说编辑。请对以下小说章节进行剧情梳理，为每一章生成简洁的剧情摘要。\n\n");
+        sb.append("小说标题：").append(story.getTitle() != null ? story.getTitle() : "").append("\n\n");
+        sb.append("章节列表：\n");
+        for (int i = 0; i < chapters.size(); i++) {
+            ChapterContext ctx = chapters.get(i);
+            sb.append("第").append(i + 1).append("章《").append(ctx.title).append("》\n");
+            sb.append("内容：").append(ctx.content).append("\n\n");
+        }
+        sb.append("\n请返回严格的JSON数组格式，每个元素包含：\n");
+        sb.append("  \"chapterTitle\": 章节标题\n");
+        sb.append("  \"chapterLabel\": 章节标签如\"第1卷 第1章\"\n");
+        sb.append("  \"briefSummary\": 一句话剧情摘要（不超过50字）\n");
+        sb.append("  \"detailSummary\": 详细摘要（不超过200字）\n");
+        sb.append("  \"keyEvents\": 关键剧情事件列表（每个10字内）\n");
+        sb.append("  \"characters\": 出场人物列表\n");
+        sb.append("\n例如：[{\"chapterTitle\":\"开篇\",\"chapterLabel\":\"第1卷 第1章\",\"briefSummary\":\"主角在书店发现神秘古籍\",\"detailSummary\":\"...\",\"keyEvents\":[\"发现古籍\",\"遭遇追杀\"],\"characters\":[\"主角\",\"书店老板\"]}]\n");
+        sb.append("\n请只返回JSON数组，不要包含markdown代码块标记。");
+        return sb.toString();
+    }
+
+    private List<PlotChapterSummary> parseSinglePassResponse(String responseText, List<ChapterContext> chapters) {
+        List<PlotChapterSummary> result = new ArrayList<>();
+        if (TextUtils.isEmpty(responseText)) return result;
+        try {
+            String json = responseText.trim();
+            if (json.startsWith("`")) {
+                int end = json.indexOf("\n```\n");
+                if (end > 0) json = json.substring(end + 1);
+                if (json.endsWith("`")) json = json.substring(0, json.length() - 3);
+                json = json.trim();
+            }
+            JSONArray arr;
+            try {
+                arr = new JSONArray(json);
+            } catch (Exception firstTry) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\[[\\s\\S]*\\]").matcher(json);
+                if (m.find()) {
+                    arr = new JSONArray(m.group());
+                } else {
+                    JSONObject root = new JSONObject(json);
+                    String key = root.has("data") ? "data" : (root.has("result") ? "result" : (root.has("chapters") ? "chapters" : ""));
+                    if (!TextUtils.isEmpty(key)) arr = root.getJSONArray(key);
+                    else throw firstTry;
+                }
+            }
+            
+            // Process parsed JSON array into PlotChapterSummary list
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.getJSONObject(i);
+                PlotChapterSummary cs = new PlotChapterSummary();
+                cs.setChapterTitle(obj.optString("chapterTitle", ""));
+                cs.setChapterLabel(obj.optString("chapterLabel", ""));
+                cs.setBriefSummary(obj.optString("briefSummary", ""));
+                cs.setDetailSummary(obj.optString("detailSummary", ""));
+                if (obj.has("keyEvents")) {
+                    JSONArray keArr = obj.getJSONArray("keyEvents");
+                    List<String> keList = new ArrayList<>();
+                    for (int j = 0; j < keArr.length(); j++) keList.add(keArr.getString(j));
+                    cs.setKeyEvents(keList);
+                }
+                if (obj.has("characters")) {
+                    JSONArray chArr = obj.getJSONArray("characters");
+                    List<String> chList = new ArrayList<>();
+                    for (int j = 0; j < chArr.length(); j++) chList.add(chArr.getString(j));
+                    cs.setCharacters(chList);
+                }
+                if (i < chapters.size()) {
+                    ChapterContext ctx = chapters.get(i);
+                    cs.setVolumeIndex(ctx.volumeIndex);
+                    cs.setChapterIndex(ctx.chapterIndex);
+                }
+                cs.setSource("ai-summary");
+                result.add(cs);
+            }
+
+        } catch (Exception e) {
+            for (ChapterContext ctx : chapters) {
+                PlotChapterSummary cs = new PlotChapterSummary();
+                cs.setChapterTitle(ctx.title); cs.setChapterLabel(ctx.chapterLabel);
+                cs.setBriefSummary(trimText(ctx.content, 50));
+                cs.setVolumeIndex(ctx.volumeIndex); cs.setChapterIndex(ctx.chapterIndex);
+                cs.setSource("fallback"); result.add(cs);
+            }
+        }
+        return result;
+    }
+
+    private void persistPlotSummary(List<PlotChapterSummary> summaries) {
+        if (currentStory == null || summaries == null) return;
+        PlotSummarySnapshot snapshot = new PlotSummarySnapshot();
+        snapshot.setSchemaVersion(3); snapshot.setModel("ai-summary"); snapshot.setDetailLevel("standard");
+        snapshot.setGeneratedAt(System.currentTimeMillis()); snapshot.setChapterSummaries(summaries);
+        String json = gson.toJson(snapshot);
+        currentStory.setPlotSummaryJson(json);
+        storyDao.updatePlotSummary(currentStory.getId(), json);
+    }
+}
