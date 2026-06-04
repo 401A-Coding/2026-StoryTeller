@@ -216,6 +216,8 @@ public class StoryWorkspaceActivity extends BaseActivity implements Architecture
             // 设置ViewPager适配器
             pagerAdapter = new WorkspacePagerAdapter(this, storyId);
             viewPager.setAdapter(pagerAdapter);
+            // 禁用左右滑动切换Tab，避免与剧情树/关系图的横向滚动冲突
+            viewPager.setUserInputEnabled(false);
 
             // 如果有下一章方向信息，传递给WritingFragment和AI面板
             if (!TextUtils.isEmpty(nextChapterDirection)) {

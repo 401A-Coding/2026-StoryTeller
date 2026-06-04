@@ -14,6 +14,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
@@ -121,7 +122,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
 
         view.findViewById(R.id.btn_switch_branch).setOnClickListener(this::showBranchMenu);
         view.findViewById(R.id.btn_ai_summary).setOnClickListener(v -> showAiSummaryDialog());
-        view.findViewById(R.id.btn_export).setOnClickListener(v -> refreshPlotTree());
+        view.findViewById(R.id.fab_refresh).setOnClickListener(v -> refreshPlotTree());
         view.findViewById(R.id.btn_overflow).setOnClickListener(this::showOverflowMenu);
 
         canvasPlotTree.setListener(new PlotTreeCanvasView.Listener() {
@@ -1765,10 +1766,120 @@ public class StoryPlotTreeFragment extends BaseFragment {
 
     private void showAiSummaryDialog() {
         if (currentStory == null) { Toast.makeText(requireContext(), "请先加载作品", Toast.LENGTH_SHORT).show(); return; }
-        List<ChapterContext> chapters = buildChapterContexts(currentStory);
-        if (chapters.isEmpty()) { Toast.makeText(requireContext(), "当前作品没有章节，请先创建内容", Toast.LENGTH_SHORT).show(); return; }
+        List<ChapterContext> allChapters = buildChapterContexts(currentStory);
+        if (allChapters.isEmpty()) { Toast.makeText(requireContext(), "当前作品没有章节，请先创建内容", Toast.LENGTH_SHORT).show(); return; }
+
+        // 先选梳理模式
+        List<String> options = new ArrayList<>();
+        // 检测是否有新增/更新章节
+        List<ChapterContext> newChapters = collectNewChapters(allChapters);
+        if (!newChapters.isEmpty()) {
+            options.add("梳理更新内容（" + newChapters.size() + "章）");
+        }
+        options.add("选择章节范围");
+        options.add("梳理全部章节（" + allChapters.size() + "章）");
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("AI 剧情梳理")
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    String selected = options.get(which);
+                    if (selected.startsWith("梳理更新内容")) {
+                        if (newChapters.isEmpty()) {
+                            Toast.makeText(requireContext(), "没有新增或更新的章节", Toast.LENGTH_SHORT).show();
+                        } else if (newChapters.size() > 12) {
+                            Toast.makeText(requireContext(), "新增章节过多（" + newChapters.size() + "章），请选择章节范围", Toast.LENGTH_SHORT).show();
+                        } else {
+                            showModelSelectionDialog(newChapters);
+                        }
+                    } else if (selected.startsWith("选择章节范围")) {
+                        showRangePickerDialog(allChapters);
+                    } else {
+                        showModelSelectionDialog(allChapters);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    /** 收集没有已有梳理的章节（新增或标题变更） */
+    private List<ChapterContext> collectNewChapters(List<ChapterContext> allChapters) {
+        PlotSummarySnapshot existing = loadPlotSummarySnapshot();
+        List<ChapterContext> result = new ArrayList<>();
+        if (existing == null || existing.getChapterSummaries() == null) {
+            // 没有任何梳理记录，全部都是新的
+            result.addAll(allChapters);
+        } else {
+            for (ChapterContext ctx : allChapters) {
+                boolean found = false;
+                for (PlotChapterSummary s : existing.getChapterSummaries()) {
+                    if (s == null) continue;
+                    // 按卷+章位置匹配
+                    if (s.getVolumeIndex() == ctx.volumeIndex && s.getChapterIndex() == ctx.chapterIndex) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) result.add(ctx);
+            }
+        }
+        return result;
+    }
+
+    /** 章节范围选择器 */
+    private void showRangePickerDialog(List<ChapterContext> allChapters) {
+        LinearLayout layout = buildFormLayout();
+        // 起始章节
+        TextView tvStart = new TextView(requireContext());
+        tvStart.setText("起始章节（含）："); tvStart.setTextSize(14);
+        layout.addView(tvStart);
+        NumberPicker npStart = new NumberPicker(requireContext());
+        npStart.setMinValue(1); npStart.setMaxValue(allChapters.size());
+        npStart.setValue(1);
+        layout.addView(npStart);
+        // 结束章节
+        TextView tvEnd = new TextView(requireContext());
+        tvEnd.setText("结束章节（含）："); tvEnd.setTextSize(14); tvEnd.setPadding(0, 12, 0, 0);
+        layout.addView(tvEnd);
+        NumberPicker npEnd = new NumberPicker(requireContext());
+        npEnd.setMinValue(1); npEnd.setMaxValue(allChapters.size());
+        npEnd.setValue(Math.min(allChapters.size(), 12));
+        layout.addView(npEnd);
+        // 联动：结束不能小于起始
+        npStart.setOnValueChangedListener((p, oldVal, newVal) -> {
+            if (newVal > npEnd.getValue()) npEnd.setValue(newVal);
+        });
+        npEnd.setOnValueChangedListener((p, oldVal, newVal) -> {
+            if (newVal < npStart.getValue()) npStart.setValue(newVal);
+        });
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("选择梳理章节范围")
+                .setView(layout)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确定", (d, w) -> {
+                    int start = npStart.getValue() - 1;
+                    int end = npEnd.getValue() - 1;
+                    int count = end - start + 1;
+                    if (count > 12) {
+                        Toast.makeText(requireContext(), "一次最多梳理12章，当前选了" + count + "章", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    List<ChapterContext> rangeChapters = new ArrayList<>();
+                    for (int i = start; i <= end && i < allChapters.size(); i++) {
+                        rangeChapters.add(allChapters.get(i));
+                    }
+                    showModelSelectionDialog(rangeChapters);
+                }).show();
+    }
+
+    /** 模型选择弹窗，选定后开始生成 */
+    private void showModelSelectionDialog(List<ChapterContext> chapters) {
+        if (chapters.isEmpty()) {
+            Toast.makeText(requireContext(), "没有需要梳理的章节", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (chapters.size() > 12) {
-            Toast.makeText(requireContext(), "章节过多（" + chapters.size() + "章），请到完整版剧情梳理处理", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "章节过多（" + chapters.size() + "章），请选择章节范围", Toast.LENGTH_SHORT).show();
             return;
         }
         LinearLayout layout = buildFormLayout();
@@ -1819,7 +1930,8 @@ public class StoryPlotTreeFragment extends BaseFragment {
                         requireActivity().runOnUiThread(() -> {
                             if (token != summaryGenerationToken) return;
                             List<PlotChapterSummary> summaries = parseSinglePassResponse(responseText, chapters);
-                            persistPlotSummary(summaries);
+                            // 仅更新选中的章节，保留已有梳理
+                            mergePlotSummary(summaries, chapters);
                             dialog.dismiss();
                             onAiSummarySuccess();
                         });
@@ -1836,6 +1948,29 @@ public class StoryPlotTreeFragment extends BaseFragment {
             });
         });
         dialog.show();
+    }
+
+    /** 合并新梳理结果到已有快照：仅替换/新增选中章节，保留未选中章节 */
+    private void mergePlotSummary(List<PlotChapterSummary> newSummaries, List<ChapterContext> selectedChapters) {
+        PlotSummarySnapshot existing = loadPlotSummarySnapshot();
+        List<PlotChapterSummary> merged = new ArrayList<>();
+        if (existing != null && existing.getChapterSummaries() != null) {
+            // 保留已有梳理中不在本次选择范围内的章节
+            for (PlotChapterSummary old : existing.getChapterSummaries()) {
+                if (old == null) continue;
+                boolean isSelected = false;
+                for (ChapterContext ctx : selectedChapters) {
+                    if (old.getVolumeIndex() == ctx.volumeIndex && old.getChapterIndex() == ctx.chapterIndex) {
+                        isSelected = true;
+                        break;
+                    }
+                }
+                if (!isSelected) merged.add(old);
+            }
+        }
+        // 追加新的梳理结果
+        merged.addAll(newSummaries);
+        persistPlotSummary(merged);
     }
 
     private void onAiSummarySuccess() {

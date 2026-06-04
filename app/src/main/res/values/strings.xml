@@ -172,7 +172,7 @@
     <string name="writing_reference_empty">暂无人物画像或剧情梳理，可先生成后再回来参考。</string>
     <string name="writing_reference_status_format">已接入 %1$d 位人物画像、%2$d 章剧情梳理。参考区不会随当前编辑实时更新。</string>
     <string name="writing_reference_status_character_only">已接入 %1$d 位人物画像。剧情梳理尚未生成，参考区不会随当前编辑实时更新。</string>
-    <string name="writing_reference_status_plot_only">已接入 %1$d 章剧情梳理。人物画像尚未生成，参考区不会随当前编辑实时更新。</string>
+    <string name="writing_reference_status_plot_only">已接入 %1$d 章剧情梳理。参考区不会随当前编辑实时更新。</string>
     <string name="writing_reference_overview_format">全书概览：%1$s</string>
     <string name="writing_reference_main_line_format">主线：%1$s</string>
     <string name="writing_reference_chapter_title">本章参考</string>
