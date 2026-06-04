@@ -44,8 +44,10 @@ public class NovelDetailActivity extends AppCompatActivity {
     public static final String EXTRA_NOVEL_STRUCTURE = "extra_novel_structure"; // 新增：卷结构JSON
     public static final String EXTRA_NOVEL_WORD_COUNT = "extra_novel_word_count";
     public static final String EXTRA_NOVEL_IMPORT_TIME = "extra_novel_import_time";
+    public static final String EXTRA_NOVEL_SOURCE_URL = "extra_novel_source_url";
 
     private ImportedNovel novel;
+    private String sourceUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +77,7 @@ public class NovelDetailActivity extends AppCompatActivity {
         novel.setTags(getIntent().getStringExtra(EXTRA_NOVEL_TAGS));
         novel.setTotalWords(getIntent().getIntExtra(EXTRA_NOVEL_WORD_COUNT, 0));
         novel.setImportTime(getIntent().getLongExtra(EXTRA_NOVEL_IMPORT_TIME, 0));
+        sourceUrl = getIntent().getStringExtra(EXTRA_NOVEL_SOURCE_URL);
     
         // 优先从 structureJson 中解析卷结构和章节数
         String structureJson = getIntent().getStringExtra(EXTRA_NOVEL_STRUCTURE);
@@ -150,9 +153,29 @@ public class NovelDetailActivity extends AppCompatActivity {
             ((android.widget.ImageView) findViewById(R.id.iv_cover)).setImageResource(R.drawable.ic_menu_book);
         }
 
-        // 标题
+        // 标题（点击跳转到浏览器打开原书籍URL）
         TextView tvTitle = findViewById(R.id.tv_title);
+        TextView tvLinkHint = findViewById(R.id.tv_link_hint);
         tvTitle.setText(novel.getTitle());
+        if (sourceUrl != null && !sourceUrl.isEmpty()) {
+            tvTitle.setClickable(true);
+            tvTitle.setFocusable(true);
+            tvTitle.setTextColor(ThemeColorUtils.getLinkColor(this));
+            tvLinkHint.setVisibility(View.VISIBLE);
+            View.OnClickListener openBrowserListener = v -> {
+                try {
+                    android.content.Intent browserIntent = new android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(sourceUrl)
+                    );
+                    startActivity(browserIntent);
+                } catch (Exception e) {
+                    Toast.makeText(this, "无法打开链接", Toast.LENGTH_SHORT).show();
+                }
+            };
+            tvTitle.setOnClickListener(openBrowserListener);
+            tvLinkHint.setOnClickListener(openBrowserListener);
+        }
 
         // 作者
         TextView tvAuthor = findViewById(R.id.tv_author);
@@ -202,12 +225,6 @@ public class NovelDetailActivity extends AppCompatActivity {
 
         // 章节列表
         setupChapterList();
-
-        // 开始仿写按钮
-        findViewById(R.id.btn_start_imitation).setOnClickListener(v -> {
-            Toast.makeText(this, "仿写功能开发中...", Toast.LENGTH_SHORT).show();
-            // TODO: 跳转到仿写页面
-        });
     }
 
     /**

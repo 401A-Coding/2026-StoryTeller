@@ -462,6 +462,7 @@ public class ReferenceLibraryFragment extends BaseFragment {
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_TAGS, novel.getTags());
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_WORD_COUNT, novel.getTotalWords());
         intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_IMPORT_TIME, novel.getImportTime());
+        intent.putExtra(com.example.storyteller.ui.activity.NovelDetailActivity.EXTRA_NOVEL_SOURCE_URL, novel.getSourceUrl());
         
         // 传递完整的卷结构（structureJson）
         if (novel.getStructureJson() != null) {

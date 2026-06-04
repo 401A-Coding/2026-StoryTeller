@@ -205,12 +205,25 @@ public class MaterialLibraryFragment extends BaseFragment {
         if (adapter == null) {
             adapter = new StorySettingAdapter(settings);
 
-            // 点击卡片跳转到详情
+            // 点击卡片跳转：有来源URL时打开浏览器，否则跳转到详情
             adapter.setOnSettingClickListener(setting -> {
-                Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
-                intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, setting.getId());
-                intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
-                startActivity(intent);
+                String url = setting.getSourceUrl();
+                if (setting.getStoryId() == 0 && url != null && !url.isEmpty()) {
+                    try {
+                        android.content.Intent browserIntent = new android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(url)
+                        );
+                        startActivity(browserIntent);
+                    } catch (Exception e) {
+                        android.widget.Toast.makeText(requireContext(), "无法打开链接", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Intent intent = new Intent(requireContext(), SettingDetailActivity.class);
+                    intent.putExtra(SettingDetailActivity.EXTRA_SETTING_ID, setting.getId());
+                    intent.putExtra(SettingDetailActivity.EXTRA_STORY_ID, currentStoryId);
+                    startActivity(intent);
+                }
             });
 
             // 删除按钮回调

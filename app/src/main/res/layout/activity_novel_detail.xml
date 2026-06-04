@@ -31,14 +31,32 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 标题 -->
-            <TextView
-                android:id="@+id/tv_title"
+            <!-- 标题（带链接提示） -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tv_link_hint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="🔗"
+                    android:textSize="16sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
             <TextView
                 android:id="@+id/tv_author"
                 android:layout_width="match_parent"
@@ -155,25 +173,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false" />
-
-        </LinearLayout>
-
-        <!-- 底部按钮 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:background="@color/background_card"
-            android:elevation="8dp">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_start_imitation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="开始仿写"
-                android:textSize="16sp"
-                app:cornerRadius="8dp" />
 
         </LinearLayout>
 
