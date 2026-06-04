@@ -47,8 +47,6 @@
                 android:textColor="@color/text_primary"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:clickable="true"
-                android:focusable="true"
                 android:text="设定标题" />
 
             <!-- 三点菜单按钮 -->

@@ -34,10 +34,6 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     public interface OnSettingClickListener {
         void onSettingClick(StorySetting setting);
     }
-    
-    public interface OnSourceUrlClickListener {
-        void onSourceUrlClick(StorySetting setting);
-    }
 
     public interface OnSettingDeleteListener {
         void onSettingDelete(StorySetting setting, int position);
@@ -62,7 +58,6 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     private String currentQuery = null;           // 搜索关键词
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     private OnSettingClickListener listener;
-    private OnSourceUrlClickListener sourceUrlListener;
     private OnSettingDeleteListener deleteListener;
     private OnSelectionModeChangeListener selectionModeListener;
     private OnImportListener importListener;
@@ -95,10 +90,6 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     
     public void setOnExportListener(OnExportListener listener) {
         this.exportListener = listener;
-    }
-    
-    public void setOnSourceUrlClickListener(OnSourceUrlClickListener listener) {
-        this.sourceUrlListener = listener;
     }
     
     /**
@@ -271,16 +262,8 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         StorySetting setting = displaySettings.get(position);
         
-        // 标题 - 有来源URL时显示为可点击链接样式
+        // 标题
         holder.tvTitle.setText(setting.getTitle());
-        boolean hasSourceUrl = setting.getStoryId() == 0 && setting.getSourceUrl() != null && !setting.getSourceUrl().isEmpty();
-        if (hasSourceUrl) {
-            holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            holder.tvTitle.setTextColor(holder.itemView.getContext().getColor(R.color.link_color));
-        } else {
-            holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() & ~android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            holder.tvTitle.setTextColor(holder.itemView.getContext().getColor(R.color.text_primary));
-        }
         
         // 分类标签
         String categoryText = setting.getCategory() + " · " + setting.getSubCategory();
@@ -349,19 +332,6 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onSettingClick(setting);
-                }
-            });
-            
-            // 标题点击 - 有来源URL时跳转浏览器，否则跳转详情
-            holder.tvTitle.setOnClickListener(v -> {
-                if (hasSourceUrl) {
-                    if (sourceUrlListener != null) {
-                        sourceUrlListener.onSourceUrlClick(setting);
-                    }
-                } else {
-                    if (listener != null) {
-                        listener.onSettingClick(setting);
-                    }
                 }
             });
             
