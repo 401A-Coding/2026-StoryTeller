@@ -47,6 +47,8 @@
                 android:textColor="@color/text_primary"
                 android:maxLines="1"
                 android:ellipsize="end"
+                android:clickable="true"
+                android:focusable="true"
                 android:text="设定标题" />
 
             <!-- 三点菜单按钮 -->
@@ -110,19 +112,6 @@
             app:chipSpacingHorizontal="4dp"
             app:chipSpacingVertical="2dp"
             android:visibility="gone" />
-
-        <!-- 来源URL链接 -->
-        <TextView
-            android:id="@+id/tv_setting_source_url"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textSize="11sp"
-            android:textColor="@color/link_color"
-            android:visibility="gone"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:text="🔗 查看原书籍" />
 
         <!-- 底部信息 -->
         <LinearLayout
