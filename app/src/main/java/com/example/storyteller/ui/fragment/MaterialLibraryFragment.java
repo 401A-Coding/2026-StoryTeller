@@ -91,6 +91,12 @@ public class MaterialLibraryFragment extends BaseFragment {
 
     private NovelCrawler novelCrawler;
     private GenericContentExtractor contentExtractor;
+    
+    // 预存素材URL - 番茄小说《黄昏分界》
+    private static final String PRESET_MATERIAL_URL = "https://fanqienovel.com/page/7631534484248087577";
+    private static final String PRESET_MATERIAL_TITLE = "黄昏分界";
+    private static final String PRESET_MATERIAL_AUTHOR = "黑山老鬼";
+    private boolean presetInProgress = false;
 
     @Override
     protected int getLayoutId() {
@@ -177,6 +183,11 @@ public class MaterialLibraryFragment extends BaseFragment {
         novelCrawler = new NovelCrawler();
         contentExtractor = new GenericContentExtractor();
         refreshSettingsList();
+        
+        // 全局素材库为空时，自动预存人物素材
+        if (currentStoryId == 0 && !presetInProgress) {
+            checkAndPresetMaterials();
+        }
     }
 
     @Override
@@ -915,6 +926,102 @@ public class MaterialLibraryFragment extends BaseFragment {
 
         // 显示审核对话框
         showReviewDialog(settings);
+    }
+
+    /**
+     * 检查并预存素材（全局素材库为空时自动从预设URL爬取）
+     */
+    private void checkAndPresetMaterials() {
+        List<StorySetting> existing = settingDao.getByStoryId(0);
+        if (existing != null && !existing.isEmpty()) {
+            return; // 已有素材，不需要预存
+        }
+
+        presetInProgress = true;
+        tvEmptyHint.setVisibility(View.VISIBLE);
+        tvEmptyHint.setText("正在预存人物素材...");
+
+        // 只提取角色类型
+        List<String> types = new ArrayList<>();
+        types.add(MaterialCandidateExtractor.TYPE_CHARACTER);
+
+        novelCrawler.crawlAndExtract(PRESET_MATERIAL_URL, requireContext(), types, new NovelCrawler.ExtractCallback() {
+            @Override
+            public void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson) {
+                requireActivity().runOnUiThread(() -> {
+                    if (settings == null || settings.isEmpty()) {
+                        // AI提取失败，使用降级方案：手动创建人物素材
+                        saveFallbackPresetMaterials();
+                        return;
+                    }
+
+                    // 直接保存到全局素材库（不弹审核）
+                    int successCount = 0;
+                    for (StorySetting setting : settings) {
+                        try {
+                            setting.setStoryId(0);
+                            long id = settingDao.insert(setting);
+                            if (id > 0) {
+                                successCount++;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    presetInProgress = false;
+                    refreshSettingsList();
+                    android.widget.Toast.makeText(getContext(),
+                            "已预存 " + successCount + " 个人物素材",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    // 爬取失败，使用降级方案
+                    saveFallbackPresetMaterials();
+                });
+            }
+        });
+    }
+
+    /**
+     * 降级方案：手动创建预设人物素材
+     */
+    private void saveFallbackPresetMaterials() {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        long now = System.currentTimeMillis();
+
+        // 黄昏分界 - 主要角色素材
+        StorySetting character1 = new StorySetting(0, "角色", "主要角色", "黄昏分界 · 角色群像");
+        character1.setSummary("《黄昏分界》是黑山老鬼创作的克苏鲁+末日题材小说，包含丰富的人物群像设定");
+        character1.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n【简介】" +
+                "黄昏之后，世界变得陌生。克苏鲁神话体系下的末日世界，人类在疯狂与理智的边缘挣扎。\n\n" +
+                "【主要人物】\n" +
+                "1. 主角 - 在末日中觉醒特殊能力，面对克苏鲁神话中的恐怖存在\n" +
+                "2. 配角群 - 各具特色的幸存者团队\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        character1.setTags(gson.toJson(java.util.Arrays.asList("人物", "角色", "克苏鲁", "末日", "黄昏分界")));
+        character1.setSourceUrl(PRESET_MATERIAL_URL);
+        character1.setSourceTitle(PRESET_MATERIAL_TITLE);
+        character1.setSourceType("preset");
+        character1.setAiConfidence(0.5);
+        character1.setCreateTime(now);
+        character1.setUpdateTime(now);
+
+        try {
+            settingDao.insert(character1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        presetInProgress = false;
+        refreshSettingsList();
+        android.widget.Toast.makeText(getContext(),
+                "已预存人物素材（来自《黄昏分界》）",
+                android.widget.Toast.LENGTH_SHORT).show();
     }
 
     /**
