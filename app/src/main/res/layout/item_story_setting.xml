@@ -49,6 +49,20 @@
                 android:ellipsize="end"
                 android:text="设定标题" />
 
+            <!-- 预设模板标识角标（来自 PresetTemplateManager 的示例素材） -->
+            <TextView
+                android:id="@+id/tv_preset_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/bg_preset_badge"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
+                android:text="模板"
+                android:visibility="gone" />
+
             <!-- 三点菜单按钮 -->
             <ImageView
                 android:id="@+id/btn_more_menu"

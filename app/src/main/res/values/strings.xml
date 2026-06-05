@@ -247,4 +247,34 @@
         <item>研究资料</item>
         <item>其他</item>
     </string-array>
+
+    <!-- 预设模板中心 -->
+    <string name="preset_center_title">模板中心</string>
+    <string name="preset_center_subtitle">内置示例设定，可一键安装到当前素材库</string>
+    <string name="preset_empty">暂无可用模板</string>
+    <string name="preset_status_unknown">未知</string>
+    <string name="preset_status_not_installed">未安装</string>
+    <string name="preset_status_installed_format">已安装 v%1$d</string>
+    <string name="preset_status_has_update_format">可更新 v%1$d → v%2$d</string>
+    <string name="preset_meta_latest_format">最新版 v%1$d</string>
+    <string name="preset_meta_installed_format">已安装 %1$d 项 · 最新版 v%2$d</string>
+    <string name="preset_action_install">安装</string>
+    <string name="preset_action_reinstall">重新安装</string>
+    <string name="preset_action_update_format">更新到 v%1$d</string>
+    <string name="preset_action_preview">预览</string>
+    <string name="preset_uninstall_title">卸载模板</string>
+    <string name="preset_uninstall_message_format">确定要卸载「%1$s」吗？\n将删除该模板在当前素材库中的所有素材。</string>
+    <string name="preset_uninstall_success_format">已卸载 %1$d 项素材</string>
+    <string name="preset_load_failed_format">模板加载失败：%1$s</string>
+    <string name="preset_install_summary_format">已安装 %1$d/%2$d</string>
+    <string name="preset_install_replaced_format">，覆盖 %1$d</string>
+    <string name="preset_install_skipped_format">，跳过 %1$d</string>
+    <string name="preset_install_renamed_format">，重命名 %1$d</string>
+    <string name="preset_install_failed_format">，失败 %1$d</string>
+    <string name="preset_preview_section_settings">包含素材</string>
+    <string name="preset_preview_source_format">参考：%1$s</string>
+    <string name="preset_preview_source_author_format">%1$s · %2$s</string>
+
+    <!-- 通用动作（与 action_save / action_back / action_close 等同前缀） -->
+    <string name="action_uninstall">卸载</string>
 </resources>
