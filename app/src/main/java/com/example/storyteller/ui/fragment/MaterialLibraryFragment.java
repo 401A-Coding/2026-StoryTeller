@@ -929,7 +929,7 @@ public class MaterialLibraryFragment extends BaseFragment {
     }
 
     /**
-     * 检查并预存素材（全局素材库为空时自动从预设URL爬取）
+     * 检查并预存素材（全局素材库为空时自动预存6大分类素材）
      */
     private void checkAndPresetMaterials() {
         List<StorySetting> existing = settingDao.getByStoryId(0);
@@ -941,55 +941,8 @@ public class MaterialLibraryFragment extends BaseFragment {
         tvEmptyHint.setVisibility(View.VISIBLE);
         tvEmptyHint.setText("正在预存素材...");
 
-        // 请求所有分类的素材
-        List<String> types = new ArrayList<>();
-        types.add(MaterialCandidateExtractor.TYPE_WORLD);
-        types.add(MaterialCandidateExtractor.TYPE_CHARACTER);
-        types.add(MaterialCandidateExtractor.TYPE_LOCATION);
-        types.add(MaterialCandidateExtractor.TYPE_PLOT);
-        types.add(MaterialCandidateExtractor.TYPE_SYSTEM);
-        types.add(MaterialCandidateExtractor.TYPE_CREATIVE_CONTROL);
-
-        novelCrawler.crawlAndExtract(PRESET_MATERIAL_URL, requireContext(), types, new NovelCrawler.ExtractCallback() {
-            @Override
-            public void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson) {
-                requireActivity().runOnUiThread(() -> {
-                    if (settings == null || settings.isEmpty()) {
-                        // AI提取失败，使用降级方案
-                        saveFallbackPresetMaterials();
-                        return;
-                    }
-
-                    // 直接保存到全局素材库（不弹审核）
-                    int successCount = 0;
-                    for (StorySetting setting : settings) {
-                        try {
-                            setting.setStoryId(0);
-                            long id = settingDao.insert(setting);
-                            if (id > 0) {
-                                successCount++;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    presetInProgress = false;
-                    refreshSettingsList();
-                    android.widget.Toast.makeText(getContext(),
-                            "已预存 " + successCount + " 个素材",
-                            android.widget.Toast.LENGTH_SHORT).show();
-                });
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                requireActivity().runOnUiThread(() -> {
-                    // 爬取失败，使用降级方案
-                    saveFallbackPresetMaterials();
-                });
-            }
-        });
+        // 直接使用降级方案创建6大分类素材（不依赖AI提取，确保素材完整）
+        saveFallbackPresetMaterials();
     }
 
     /**
