@@ -50,7 +50,9 @@ public class StorySettingDao {
         values.put(DBHelper.COL_STORY_SETTING_IS_FAVORITE, setting.isFavorite() ? 1 : 0);
         values.put(DBHelper.COL_STORY_SETTING_USAGE_COUNT, setting.getUsageCount());
         values.put(DBHelper.COL_STORY_SETTING_IMAGE_PATH, setting.getImagePath());
-        
+        values.put(DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID, setting.getPresetTemplateId());
+        values.put(DBHelper.COL_STORY_SETTING_PRESET_VERSION, setting.getPresetVersion());
+
         return db.insert(DBHelper.TABLE_STORY_SETTING, null, values);
     }
 
@@ -82,7 +84,9 @@ public class StorySettingDao {
         values.put(DBHelper.COL_STORY_SETTING_IS_FAVORITE, setting.isFavorite() ? 1 : 0);
         values.put(DBHelper.COL_STORY_SETTING_USAGE_COUNT, setting.getUsageCount());
         values.put(DBHelper.COL_STORY_SETTING_IMAGE_PATH, setting.getImagePath());
-        
+        values.put(DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID, setting.getPresetTemplateId());
+        values.put(DBHelper.COL_STORY_SETTING_PRESET_VERSION, setting.getPresetVersion());
+
         return db.update(DBHelper.TABLE_STORY_SETTING, values,
                 DBHelper.COL_STORY_SETTING_ID + "=?",
                 new String[]{String.valueOf(setting.getId())});
@@ -270,7 +274,85 @@ public class StorySettingDao {
         }
         return list;
     }
-    
+
+    /**
+     * 查询指定小说中属于某预设模板的全部素材。
+     *
+     * @param storyId    小说ID（0=全局素材库）
+     * @param templateId 模板ID
+     */
+    public List<StorySetting> getByPresetTemplateId(int storyId, String templateId) {
+        List<StorySetting> list = new ArrayList<>();
+        if (templateId == null) {
+            return list;
+        }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DBHelper.TABLE_STORY_SETTING,
+                null,
+                DBHelper.COL_STORY_SETTING_STORY_ID + "=? AND " +
+                DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID + "=?",
+                new String[]{String.valueOf(storyId), templateId},
+                null, null,
+                DBHelper.COL_STORY_SETTING_UPDATE_TIME + " DESC"
+        );
+        try {
+            while (cursor.moveToNext()) {
+                list.add(mapCursor(cursor));
+            }
+        } finally {
+            cursor.close();
+        }
+        return list;
+    }
+
+    /**
+     * 删除指定小说中属于某预设模板的全部素材（卸载模板时调用）。
+     * 不会级联删除已创建的关联关系，调用方需要自行处理。
+     *
+     * @return 受影响的行数
+     */
+    public int deleteByPresetTemplateId(int storyId, String templateId) {
+        if (templateId == null) {
+            return 0;
+        }
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        return db.delete(
+                DBHelper.TABLE_STORY_SETTING,
+                DBHelper.COL_STORY_SETTING_STORY_ID + "=? AND " +
+                DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID + "=?",
+                new String[]{String.valueOf(storyId), templateId});
+    }
+
+    /**
+     * 查询指定小说中某预设模板已安装的最高版本号；未安装时返回 0。
+     */
+    public int getMaxPresetVersion(int storyId, String templateId) {
+        if (templateId == null) {
+            return 0;
+        }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DBHelper.TABLE_STORY_SETTING,
+                new String[]{"MAX(" + DBHelper.COL_STORY_SETTING_PRESET_VERSION + ")"},
+                DBHelper.COL_STORY_SETTING_STORY_ID + "=? AND " +
+                DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID + "=?",
+                new String[]{String.valueOf(storyId), templateId},
+                null, null, null
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndex("MAX(" + DBHelper.COL_STORY_SETTING_PRESET_VERSION + ")");
+                if (idx >= 0 && !cursor.isNull(idx)) {
+                    return cursor.getInt(idx);
+                }
+            }
+            return 0;
+        } finally {
+            cursor.close();
+        }
+    }
+
     /**
      * 根据标题查询设定
      */
@@ -361,6 +443,8 @@ public class StorySettingDao {
         setting.setFavorite(cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_SETTING_IS_FAVORITE)) == 1);
         setting.setUsageCount(cursor.getInt(cursor.getColumnIndexOrThrow(DBHelper.COL_STORY_SETTING_USAGE_COUNT)));
         setting.setImagePath(getColumnString(cursor, DBHelper.COL_STORY_SETTING_IMAGE_PATH));
+        setting.setPresetTemplateId(getColumnString(cursor, DBHelper.COL_STORY_SETTING_PRESET_TEMPLATE_ID));
+        setting.setPresetVersion(getColumnInt(cursor, DBHelper.COL_STORY_SETTING_PRESET_VERSION, 0));
         return setting;
     }
 
@@ -378,5 +462,13 @@ public class StorySettingDao {
             return defaultValue;
         }
         return cursor.getDouble(index);
+    }
+
+    private int getColumnInt(Cursor cursor, String column, int defaultValue) {
+        int index = cursor.getColumnIndex(column);
+        if (index < 0 || cursor.isNull(index)) {
+            return defaultValue;
+        }
+        return cursor.getInt(index);
     }
 }
