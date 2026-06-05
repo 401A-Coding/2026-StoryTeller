@@ -18,15 +18,18 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.storyteller.R;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
+import com.example.storyteller.model.SeriesGroup;
 import com.example.storyteller.model.Story;
+import com.example.storyteller.ui.activity.SeriesDetailActivity;
 import com.example.storyteller.ui.activity.StoryWorkspaceActivity;
 import java.io.File;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHolder> {
+public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public static final String PREF_SELECTED_STORY_ID = "selected_story_id";
     public static final String PREF_SELECTED_STORY_TITLE = "selected_story_title";
@@ -35,6 +38,8 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     private final Context context;
     private List<Story> storyList;
+    private List<BookshelfDisplayItem> mixedItems;
+    private boolean useMixedMode = false;
     private final DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
     private OnStoryDeleteListener deleteListener;
     private OnStoryCategoryChangeListener categoryChangeListener;
@@ -78,16 +83,46 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         this.storyList = storyList;
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        if (useMixedMode && mixedItems != null && position < mixedItems.size()) {
+            BookshelfDisplayItem item = mixedItems.get(position);
+            return item.type == BookshelfDisplayItem.TYPE_SERIES_FOLDER ? 1 : 0;
+        }
+        return 0;
+    }
+
     @NonNull
     @Override
-    public StoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == 1) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_series_folder, parent, false);
+            return new SeriesFolderViewHolder(view);
+        }
         View view = LayoutInflater.from(context).inflate(R.layout.item_story_new, parent, false);
         return new StoryViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
-        Story story = storyList.get(position);
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (useMixedMode && mixedItems != null && position < mixedItems.size()) {
+            BookshelfDisplayItem item = mixedItems.get(position);
+            if (item.type == BookshelfDisplayItem.TYPE_SERIES_FOLDER && holder instanceof SeriesFolderViewHolder) {
+                bindSeriesFolder((SeriesFolderViewHolder) holder, item.seriesGroup);
+                return;
+            }
+            if (item.type == BookshelfDisplayItem.TYPE_STORY && holder instanceof StoryViewHolder) {
+                bindStory((StoryViewHolder) holder, item.story);
+                return;
+            }
+        }
+        // 传统模式（向后兼容）
+        if (storyList != null && position < storyList.size() && holder instanceof StoryViewHolder) {
+            bindStory((StoryViewHolder) holder, storyList.get(position));
+        }
+    }
+
+    private void bindStory(@NonNull StoryViewHolder holder, Story story) {
 
         // 设置封面背景：优先显示用户上传的图片，否则显示渐变背景
         String coverPath = story.getCoverPath();
@@ -158,6 +193,44 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
         // 三点菜单按钮
         holder.btnMoreMenu.setOnClickListener(v -> showMoreMenu(v, story));
+    }
+
+    /**
+     * 绑定系列文件夹视图
+     */
+    private void bindSeriesFolder(@NonNull SeriesFolderViewHolder holder, SeriesGroup group) {
+        String seriesName = group.getSeriesName();
+        holder.tvFolderSeriesName.setText(seriesName);
+        holder.tvSeriesTitleBottom.setText(seriesName);
+
+        int count = group.getStoryCount();
+        holder.tvFolderBookCount.setText(count + "本书");
+
+        // 摘要：显示各分支书名概览
+        StringBuilder summary = new StringBuilder();
+        List<Story> stories = group.getStories();
+        int maxShow = Math.min(stories.size(), 3);
+        for (int i = 0; i < maxShow; i++) {
+            if (i > 0) summary.append(" · ");
+            summary.append(stories.get(i).getTitle());
+        }
+        if (stories.size() > maxShow) {
+            summary.append(" …");
+        }
+        holder.tvFolderSummary.setText(summary.toString());
+
+        // 设置文件夹渐变色（统一的紫色调）
+        GradientDrawable gradient = new GradientDrawable();
+        gradient.setOrientation(GradientDrawable.Orientation.TL_BR);
+        gradient.setColors(new int[]{0xFF7C4DFF, 0xFF448AFF});
+        holder.vFolderBackground.setBackground(gradient);
+
+        // 点击进入系列详情
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, SeriesDetailActivity.class);
+            intent.putExtra(SeriesDetailActivity.EXTRA_SERIES_NAME, seriesName);
+            context.startActivity(intent);
+        });
     }
 
     /**
@@ -373,11 +446,23 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
 
     @Override
     public int getItemCount() {
+        if (useMixedMode && mixedItems != null) {
+            return mixedItems.size();
+        }
         return storyList == null ? 0 : storyList.size();
     }
 
     public void setData(List<Story> list) {
         this.storyList = list;
+        this.useMixedMode = false;
+        this.mixedItems = null;
+        notifyDataSetChanged();
+    }
+
+    public void setMixedData(List<BookshelfDisplayItem> items) {
+        this.mixedItems = items;
+        this.useMixedMode = true;
+        this.storyList = null;
         notifyDataSetChanged();
     }
 
@@ -405,6 +490,29 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
             tvDescription = itemView.findViewById(R.id.tv_description);
             tvStats = itemView.findViewById(R.id.tv_stats);
             tvTime = itemView.findViewById(R.id.tv_time);
+        }
+    }
+
+    public static class SeriesFolderViewHolder extends RecyclerView.ViewHolder {
+        View vFolderBackground;
+        View vStack1;
+        View vStack2;
+        TextView tvFolderIcon;
+        TextView tvFolderSeriesName;
+        TextView tvFolderBookCount;
+        TextView tvSeriesTitleBottom;
+        TextView tvFolderSummary;
+
+        public SeriesFolderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            vFolderBackground = itemView.findViewById(R.id.v_folder_background);
+            vStack1 = itemView.findViewById(R.id.v_stack_1);
+            vStack2 = itemView.findViewById(R.id.v_stack_2);
+            tvFolderIcon = itemView.findViewById(R.id.tv_folder_icon);
+            tvFolderSeriesName = itemView.findViewById(R.id.tv_folder_series_name);
+            tvFolderBookCount = itemView.findViewById(R.id.tv_folder_book_count);
+            tvSeriesTitleBottom = itemView.findViewById(R.id.tv_series_title_bottom);
+            tvFolderSummary = itemView.findViewById(R.id.tv_folder_summary);
         }
     }
 }
