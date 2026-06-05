@@ -1124,6 +1124,17 @@ public class StoryPlotTreeFragment extends BaseFragment {
         etSummary.setText(event.getSummary());
         layout.addView(etTitle); layout.addView(etSummary);
 
+        // 删除按钮
+        Button btnDelete = new Button(requireContext());
+        btnDelete.setText("删除此方向");
+        btnDelete.setTextColor(Color.WHITE);
+        btnDelete.setBackgroundColor(Color.parseColor("#E53935"));
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        btnParams.topMargin = (int)(12 * getResources().getDisplayMetrics().density);
+        btnDelete.setLayoutParams(btnParams);
+        layout.addView(btnDelete);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
                 .setTitle("编辑发展方向")
                 .setView(layout)
@@ -1175,7 +1186,26 @@ public class StoryPlotTreeFragment extends BaseFragment {
             }
         });
 
-        builder.show();
+        AlertDialog editDialog = builder.create();
+
+        // 删除按钮：确认后从分支事件列表中移除该方向事件
+        btnDelete.setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("删除发展方向")
+                    .setMessage("确定要删除「" + event.getTitle() + "」吗？此操作不可撤销。")
+                    .setPositiveButton("删除", (confirmDialog, w) -> {
+                        if (branch.getEvents() != null) {
+                            branch.getEvents().remove(event);
+                        }
+                        branch.setUpdateTime(System.currentTimeMillis());
+                        persistSnapshot(); loadAllBranchOverviews(); refreshDisplay();
+                        editDialog.dismiss();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+
+        editDialog.show();
     }
 
     /** 主线方向事件：直接传方向信息到当前作品 */
@@ -1502,6 +1532,15 @@ public class StoryPlotTreeFragment extends BaseFragment {
         if (newStoryId <= 0) { Toast.makeText(requireContext(), "导出失败，请稍后重试", Toast.LENGTH_SHORT).show(); return; }
         int targetStoryId = (int) newStoryId;
         Story exportedStory = storyDao.getStoryById(targetStoryId);
+        // 确保导出故事有系列名：优先用父故事的 seriesName，否则用父故事标题
+        if (exportedStory != null) {
+            String parentSeries = currentStory.getSeriesName();
+            if (TextUtils.isEmpty(parentSeries)) {
+                parentSeries = currentStory.getTitle();
+            }
+            exportedStory.setSeriesName(parentSeries);
+            storyDao.updateStory(exportedStory);
+        }
         if (exportedStory != null && branchEventPos >= 0) {
             String trimmed = trimStructureToEventPos(currentStory.getStructure(), branchEventPos + 1);
             // 走向说明作为新章节插入在分叉点之后

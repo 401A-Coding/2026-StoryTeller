@@ -20,8 +20,10 @@ import com.example.storyteller.R;
 import com.example.storyteller.base.BaseFragment;
 import com.example.storyteller.data.local.db.StoryDao;
 import com.example.storyteller.data.local.prefs.PrefsUtils;
+import com.example.storyteller.model.SeriesGroup;
 import com.example.storyteller.model.Story;
 import com.example.storyteller.ui.dialog.CreateStoryDialog;
+import com.example.storyteller.ui.adapter.BookshelfDisplayItem;
 import com.example.storyteller.ui.adapter.StoryAdapter;
 
 import java.io.File;
@@ -29,8 +31,10 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class BookshelfFragment extends BaseFragment {
     private StoryDao storyDao;
@@ -77,7 +81,11 @@ public class BookshelfFragment extends BaseFragment {
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
 
         storyDao = new StoryDao(requireContext());
-        adapter = new StoryAdapter(requireContext(), getFilteredStories());
+        adapter = new StoryAdapter(requireContext(), new ArrayList<>());
+
+        // 使用混合模式（支持系列文件夹）
+        List<BookshelfDisplayItem> mixedData = buildMixedData(getFilteredStories());
+        adapter.setMixedData(mixedData);
 
         // 设置删除监听
         adapter.setOnStoryDeleteListener(storyId -> refreshStories());
@@ -192,7 +200,9 @@ public class BookshelfFragment extends BaseFragment {
 
         List<Story> filteredStories = getFilteredStories();
 
-        adapter.setData(filteredStories);
+        // 构建混合数据（系列文件夹 + 独立书籍）
+        List<BookshelfDisplayItem> mixedData = buildMixedData(filteredStories);
+        adapter.setMixedData(mixedData);
 
         // 更新作品数量
         tvStoryCount.setText(getString(R.string.bookshelf_story_count_format, filteredStories.size()));
@@ -212,6 +222,54 @@ public class BookshelfFragment extends BaseFragment {
      */
     public void refreshStoriesPublic() {
         refreshStories();
+    }
+
+    /**
+     * 构建混合数据：将同系列故事折叠为文件夹卡片
+     * 规则：有 seriesName 且该系列有 >=2 本书时折叠为文件夹；其余保持独立卡片
+     */
+    private List<BookshelfDisplayItem> buildMixedData(List<Story> stories) {
+        List<BookshelfDisplayItem> items = new ArrayList<>();
+        if (stories == null || stories.isEmpty()) {
+            return items;
+        }
+
+        // 按 seriesName 分组（保持插入顺序）
+        Map<String, SeriesGroup> groupMap = new LinkedHashMap<>();
+        List<Story> ungroupedStories = new ArrayList<>();
+
+        for (Story story : stories) {
+            String seriesName = story.getSeriesName();
+            if (!TextUtils.isEmpty(seriesName)) {
+                SeriesGroup group = groupMap.get(seriesName);
+                if (group == null) {
+                    group = new SeriesGroup(seriesName);
+                    groupMap.put(seriesName, group);
+                }
+                group.addStory(story);
+            } else {
+                ungroupedStories.add(story);
+            }
+        }
+
+        // 输出：系列文件夹（>=2本才折叠）+ 独立书籍
+        for (SeriesGroup group : groupMap.values()) {
+            if (group.getStoryCount() >= 2) {
+                items.add(BookshelfDisplayItem.seriesFolder(group));
+            } else {
+                // 只有1本，不折叠，作为独立书籍展示
+                for (Story s : group.getStories()) {
+                    items.add(BookshelfDisplayItem.story(s));
+                }
+            }
+        }
+
+        // 无系列的书直接作为独立卡片
+        for (Story story : ungroupedStories) {
+            items.add(BookshelfDisplayItem.story(story));
+        }
+
+        return items;
     }
 
     /**
