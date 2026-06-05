@@ -11,6 +11,7 @@ import android.text.TextUtils;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ScaleGestureDetector;
 import android.util.AttributeSet;
 
 import com.example.storyteller.model.PlotTreeEvent;
@@ -117,6 +118,12 @@ public class PlotTreeCanvasView extends View {
     private int touchSlop;
     private boolean isClickCandidate;
 
+    // Scale / pinch-to-zoom
+    private ScaleGestureDetector scaleDetector;
+    private float scaleFactor = 1.0f;
+    private static final float MIN_SCALE = 0.3f;
+    private static final float MAX_SCALE = 3.0f;
+
     private Paint forkNodeBgPaint;
     private TextPaint forkNodeTextPaint;
     private Paint borderPaint;   // header border / fork node stroke
@@ -200,6 +207,19 @@ public class PlotTreeCanvasView extends View {
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(1f * density);
 
+        scaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                scaleFactor *= detector.getScaleFactor();
+                scaleFactor = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleFactor));
+                setMinimumWidth((int)(totalWidth * scaleFactor));
+                setMinimumHeight((int)(totalHeight * scaleFactor));
+                requestLayout();
+                invalidate();
+                return true;
+            }
+        });
+
         applyColors(context);
     }
 
@@ -253,8 +273,8 @@ public class PlotTreeCanvasView extends View {
         }
         totalWidth = (int)(colCount * colW);
         totalHeight = (int)(maxBottom + cardMargin);
-        setMinimumWidth(totalWidth);
-        setMinimumHeight(totalHeight);
+        setMinimumWidth((int)(totalWidth * scaleFactor));
+        setMinimumHeight((int)(totalHeight * scaleFactor));
         rebuildHitRects(colCount, colW, rowH);
     }
 
@@ -334,8 +354,8 @@ public class PlotTreeCanvasView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int w = Math.max(totalWidth, getSuggestedMinimumWidth());
-        int h = Math.max(totalHeight, getSuggestedMinimumHeight());
+        int w = Math.max((int)(totalWidth * scaleFactor), getSuggestedMinimumWidth());
+        int h = Math.max((int)(totalHeight * scaleFactor), getSuggestedMinimumHeight());
         setMeasuredDimension(resolveSize(w, widthMeasureSpec), resolveSize(h, heightMeasureSpec));
     }
 
@@ -343,17 +363,27 @@ public class PlotTreeCanvasView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         if (listener == null) return super.onTouchEvent(event);
 
+        scaleDetector.onTouchEvent(event);
+        if (scaleDetector.isInProgress()) {
+            isClickCandidate = false;
+            return true;
+        }
+
+        // Convert touch coords to unscaled canvas space for hit testing
+        float sx = event.getX() / scaleFactor;
+        float sy = event.getY() / scaleFactor;
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                downX = event.getX();
-                downY = event.getY();
+                downX = sx;
+                downY = sy;
                 isClickCandidate = true;
                 return true;
 
             case MotionEvent.ACTION_MOVE:
                 if (isClickCandidate) {
-                    float dx = Math.abs(event.getX() - downX);
-                    float dy = Math.abs(event.getY() - downY);
+                    float dx = Math.abs(sx - downX);
+                    float dy = Math.abs(sy - downY);
                     if (dx > touchSlop || dy > touchSlop) {
                         // Significant movement → this is a scroll, not a click
                         isClickCandidate = false;
@@ -364,10 +394,8 @@ public class PlotTreeCanvasView extends View {
 
             case MotionEvent.ACTION_UP:
                 if (isClickCandidate) {
-                    float x = event.getX();
-                    float y = event.getY();
                     for (HitInfo hit : hitInfos) {
-                        if (hit.rect.contains(x, y)) {
+                        if (hit.rect.contains(sx, sy)) {
                             if (hit.type == HitInfo.TYPE_CARD) {
                                 listener.onCardClick(hit.event, hit.branchColor);
                             } else if (hit.type == HitInfo.TYPE_DIRECTION_CARD) {
@@ -403,11 +431,14 @@ public class PlotTreeCanvasView extends View {
         super.onDraw(canvas);
         if (columnHeaders.isEmpty()) return;
 
+        canvas.save();
+        canvas.scale(scaleFactor, scaleFactor);
+
         int colCount = columnHeaders.size();
         float colW = cardWidth + cardMargin * 2;
 
-        canvas.drawRect(0, 0, getWidth(), headerHeight, headerBgPaint);
-        canvas.drawLine(0, headerHeight, getWidth(), headerHeight, borderPaint);
+        canvas.drawRect(0, 0, totalWidth, headerHeight, headerBgPaint);
+        canvas.drawLine(0, headerHeight, totalWidth, headerHeight, borderPaint);
 
         for (int c = 0; c < colCount; c++) {
             ColumnHeader h = columnHeaders.get(c);
@@ -442,6 +473,8 @@ public class PlotTreeCanvasView extends View {
 
         drawConnectingLines(canvas, colW, rowH);
         drawDirectionAddButtons(canvas, colCount, colW, rowH);
+
+        canvas.restore();
     }
 
     private void drawSharedRow(Canvas canvas, TimelineRow row, float rowY, int colCount, float colW) {

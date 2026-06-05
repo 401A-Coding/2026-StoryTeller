@@ -53,6 +53,9 @@
         <activity
             android:name=".ui.activity.PlotGraphActivity"
             android:label="关系图" />
+        <activity
+            android:name=".ui.activity.SeriesDetailActivity"
+            android:label="系列详情" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
