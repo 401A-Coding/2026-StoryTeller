@@ -583,7 +583,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_SETTING_UPDATE_TIME + " INTEGER NOT NULL, "
                 + COL_STORY_SETTING_IS_FAVORITE + " INTEGER DEFAULT 0, "
                 + COL_STORY_SETTING_USAGE_COUNT + " INTEGER DEFAULT 0, "
-                + "FOREIGN KEY (" + COL_STORY_SETTING_STORY_ID + ") REFERENCES " + 
+                + COL_STORY_SETTING_IMAGE_PATH + " TEXT, "
+                + "FOREIGN KEY (" + COL_STORY_SETTING_STORY_ID + ") REFERENCES " +
                 TABLE_STORY + "(" + COL_STORY_ID + ") ON DELETE CASCADE, "
                 + "FOREIGN KEY (" + COL_STORY_SETTING_SOURCE_MATERIAL_ID + ") REFERENCES " +
                 TABLE_GLOBAL_MATERIAL + "(" + COL_GLOBAL_MATERIAL_ID + ")"
