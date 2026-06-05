@@ -939,18 +939,23 @@ public class MaterialLibraryFragment extends BaseFragment {
 
         presetInProgress = true;
         tvEmptyHint.setVisibility(View.VISIBLE);
-        tvEmptyHint.setText("正在预存人物素材...");
+        tvEmptyHint.setText("正在预存素材...");
 
-        // 只提取角色类型
+        // 请求所有分类的素材
         List<String> types = new ArrayList<>();
+        types.add(MaterialCandidateExtractor.TYPE_WORLD);
         types.add(MaterialCandidateExtractor.TYPE_CHARACTER);
+        types.add(MaterialCandidateExtractor.TYPE_LOCATION);
+        types.add(MaterialCandidateExtractor.TYPE_PLOT);
+        types.add(MaterialCandidateExtractor.TYPE_SYSTEM);
+        types.add(MaterialCandidateExtractor.TYPE_CREATIVE_CONTROL);
 
         novelCrawler.crawlAndExtract(PRESET_MATERIAL_URL, requireContext(), types, new NovelCrawler.ExtractCallback() {
             @Override
             public void onSuccess(NovelSummary summary, List<StorySetting> settings, String rawJson) {
                 requireActivity().runOnUiThread(() -> {
                     if (settings == null || settings.isEmpty()) {
-                        // AI提取失败，使用降级方案：手动创建人物素材
+                        // AI提取失败，使用降级方案
                         saveFallbackPresetMaterials();
                         return;
                     }
@@ -972,7 +977,7 @@ public class MaterialLibraryFragment extends BaseFragment {
                     presetInProgress = false;
                     refreshSettingsList();
                     android.widget.Toast.makeText(getContext(),
-                            "已预存 " + successCount + " 个人物素材",
+                            "已预存 " + successCount + " 个素材",
                             android.widget.Toast.LENGTH_SHORT).show();
                 });
             }
@@ -988,31 +993,207 @@ public class MaterialLibraryFragment extends BaseFragment {
     }
 
     /**
-     * 降级方案：手动创建预设人物素材
+     * 降级方案：手动创建预设素材（涵盖世界、角色、地点、剧情等分类）
      */
     private void saveFallbackPresetMaterials() {
         com.google.gson.Gson gson = new com.google.gson.Gson();
         long now = System.currentTimeMillis();
+        int successCount = 0;
 
-        // 黄昏分界 - 主要角色素材
-        StorySetting character1 = new StorySetting(0, "角色", "主要角色", "黄昏分界 · 角色群像");
-        character1.setSummary("《黄昏分界》是黑山老鬼创作的克苏鲁+末日题材小说，包含丰富的人物群像设定");
-        character1.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n【简介】" +
-                "黄昏之后，世界变得陌生。克苏鲁神话体系下的末日世界，人类在疯狂与理智的边缘挣扎。\n\n" +
-                "【主要人物】\n" +
-                "1. 主角 - 在末日中觉醒特殊能力，面对克苏鲁神话中的恐怖存在\n" +
-                "2. 配角群 - 各具特色的幸存者团队\n\n" +
+        // ===== 1. 世界 - 时代背景 =====
+        StorySetting worldSetting = new StorySetting(0, "世界", "时代背景", "黄昏分界 · 克苏鲁末日世界");
+        worldSetting.setSummary("克苏鲁神话体系下的末日世界设定，黄昏之后世界变得陌生，人类在疯狂与理智的边缘挣扎");
+        worldSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【世界背景】\n" +
+                "黄昏之后，世界变得陌生。克苏鲁神话体系下的末日世界，古老的存在从沉睡中苏醒，人类文明濒临崩溃。\n\n" +
+                "【时代特征】\n" +
+                "- 旧日支配者复苏，世界规则被扭曲\n" +
+                "- 人类在疯狂与理智的边缘挣扎\n" +
+                "- 特殊能力觉醒者出现，成为对抗黑暗的希望\n" +
+                "- 社会秩序崩塌，弱肉强食的丛林法则盛行\n\n" +
+                "【核心冲突】\n" +
+                "人类与克苏鲁神话中恐怖存在的对抗，理智与疯狂的较量\n\n" +
                 "【来源】" + PRESET_MATERIAL_URL);
-        character1.setTags(gson.toJson(java.util.Arrays.asList("人物", "角色", "克苏鲁", "末日", "黄昏分界")));
-        character1.setSourceUrl(PRESET_MATERIAL_URL);
-        character1.setSourceTitle(PRESET_MATERIAL_TITLE);
-        character1.setSourceType("preset");
-        character1.setAiConfidence(0.5);
-        character1.setCreateTime(now);
-        character1.setUpdateTime(now);
+        worldSetting.setTags(gson.toJson(java.util.Arrays.asList("克苏鲁", "末日", "世界设定", "黄昏分界", "黑暗")));
+        worldSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        worldSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        worldSetting.setSourceType("preset");
+        worldSetting.setAiConfidence(0.5);
+        worldSetting.setCreateTime(now);
+        worldSetting.setUpdateTime(now);
 
         try {
-            settingDao.insert(character1);
+            long id = settingDao.insert(worldSetting);
+            if (id > 0) successCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ===== 2. 角色 - 主要角色 =====
+        StorySetting characterSetting = new StorySetting(0, "角色", "主要角色", "黄昏分界 · 角色群像");
+        characterSetting.setSummary("《黄昏分界》中在末日中觉醒特殊能力的主角团队，面对克苏鲁神话中的恐怖存在");
+        characterSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【主要人物】\n\n" +
+                "1. 主角\n" +
+                "   - 定位：末日觉醒者\n" +
+                "   - 能力：在末日中觉醒特殊能力，拥有对抗克苏鲁存在的力量\n" +
+                "   - 性格：坚韧不拔，在绝望中寻找希望\n" +
+                "   - 成长：从普通人逐渐成长为对抗黑暗的中坚力量\n\n" +
+                "2. 配角群\n" +
+                "   - 各具特色的幸存者团队\n" +
+                "   - 每个成员都有独特的背景故事和能力\n" +
+                "   - 在末日中相互扶持，共同面对恐怖存在\n\n" +
+                "3. 反派\n" +
+                "   - 克苏鲁神话中的恐怖存在\n" +
+                "   - 不可名状的古老支配者\n" +
+                "   - 扭曲现实的黑暗力量\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        characterSetting.setTags(gson.toJson(java.util.Arrays.asList("人物", "角色", "主角", "团队", "黄昏分界")));
+        characterSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        characterSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        characterSetting.setSourceType("preset");
+        characterSetting.setAiConfidence(0.5);
+        characterSetting.setCreateTime(now);
+        characterSetting.setUpdateTime(now);
+
+        try {
+            long id = settingDao.insert(characterSetting);
+            if (id > 0) successCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ===== 3. 地点 - 关键场景 =====
+        StorySetting locationSetting = new StorySetting(0, "地点", "关键场景", "黄昏分界 · 末日场景");
+        locationSetting.setSummary("克苏鲁末日世界中的关键场景，包括人类最后的避难所和黑暗笼罩的禁忌之地");
+        locationSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【关键场景】\n\n" +
+                "1. 人类避难所\n" +
+                "   - 类型：幸存者聚居地\n" +
+                "   - 特征：残存的人类文明最后的堡垒\n" +
+                "   - 氛围：压抑中带着希望，戒备森严\n\n" +
+                "2. 黑暗禁区\n" +
+                "   - 类型：被克苏鲁力量扭曲的区域\n" +
+                "   - 特征：空间规则异常，充满不可名状的恐怖\n" +
+                "   - 危险等级：极高，进入者可能永远迷失\n\n" +
+                "3. 觉醒之地\n" +
+                "   - 类型：特殊能量汇聚点\n" +
+                "   - 特征：能力觉醒者获得力量的地方\n" +
+                "   - 重要性：主角成长的关键地点\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        locationSetting.setTags(gson.toJson(java.util.Arrays.asList("地点", "场景", "避难所", "禁区", "黄昏分界")));
+        locationSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        locationSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        locationSetting.setSourceType("preset");
+        locationSetting.setAiConfidence(0.5);
+        locationSetting.setCreateTime(now);
+        locationSetting.setUpdateTime(now);
+
+        try {
+            long id = settingDao.insert(locationSetting);
+            if (id > 0) successCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ===== 4. 剧情 - 主线剧情 =====
+        StorySetting plotSetting = new StorySetting(0, "剧情", "主线剧情", "黄昏分界 · 剧情脉络");
+        plotSetting.setSummary("人类在克苏鲁末日世界中挣扎求生的主线剧情，从文明崩塌到觉醒反抗的史诗旅程");
+        plotSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【主线剧情】\n\n" +
+                "1. 开端：黄昏降临\n" +
+                "   - 世界突然陷入异变，克苏鲁存在苏醒\n" +
+                "   - 主角在灾难中觉醒特殊能力\n" +
+                "   - 社会秩序迅速崩塌\n\n" +
+                "2. 发展：末日求生\n" +
+                "   - 主角寻找其他幸存者，组建团队\n" +
+                "   - 探索被扭曲的世界，了解真相\n" +
+                "   - 与各种恐怖存在对抗\n\n" +
+                "3. 高潮：黑暗对决\n" +
+                "   - 团队力量壮大，直面克苏鲁存在\n" +
+                "   - 揭示末日背后的惊天秘密\n" +
+                "   - 理智与疯狂的终极较量\n\n" +
+                "4. 结局：希望或毁灭\n" +
+                "   - 人类命运的关键抉择\n" +
+                "   - 新世界的曙光或永恒的黑暗\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        plotSetting.setTags(gson.toJson(java.util.Arrays.asList("剧情", "主线", "末日", "克苏鲁", "黄昏分界")));
+        plotSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        plotSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        plotSetting.setSourceType("preset");
+        plotSetting.setAiConfidence(0.5);
+        plotSetting.setCreateTime(now);
+        plotSetting.setUpdateTime(now);
+
+        try {
+            long id = settingDao.insert(plotSetting);
+            if (id > 0) successCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ===== 5. 规则体系 - 力量体系 =====
+        StorySetting systemSetting = new StorySetting(0, "规则体系", "力量体系", "黄昏分界 · 力量体系");
+        systemSetting.setSummary("克苏鲁末日世界中的特殊能力觉醒体系，以及对抗不可名状存在的规则");
+        systemSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【力量体系】\n\n" +
+                "1. 觉醒者能力\n" +
+                "   - 来源：末日降临后部分人类觉醒的特殊能力\n" +
+                "   - 类型：多样化，因人而异\n" +
+                "   - 代价：使用能力会加速理智的流失\n\n" +
+                "2. 克苏鲁力量\n" +
+                "   - 来源：古老的外神与旧日支配者\n" +
+                "   - 特征：不可名状，超越人类理解\n" +
+                "   - 影响：扭曲现实，污染精神\n\n" +
+                "3. 理智值系统\n" +
+                "   - 设定：接触克苏鲁存在会消耗理智\n" +
+                "   - 后果：理智归零将彻底疯狂或异化\n" +
+                "   - 恢复：有限的恢复手段\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        systemSetting.setTags(gson.toJson(java.util.Arrays.asList("规则", "力量体系", "觉醒", "克苏鲁", "黄昏分界")));
+        systemSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        systemSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        systemSetting.setSourceType("preset");
+        systemSetting.setAiConfidence(0.5);
+        systemSetting.setCreateTime(now);
+        systemSetting.setUpdateTime(now);
+
+        try {
+            long id = settingDao.insert(systemSetting);
+            if (id > 0) successCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ===== 6. 创作控制 - 情感基调 =====
+        StorySetting creativeSetting = new StorySetting(0, "创作控制", "情感基调", "黄昏分界 · 创作风格");
+        creativeSetting.setSummary("克苏鲁+末日题材的黑暗压抑风格，在绝望中寻找希望的独特情感基调");
+        creativeSetting.setDetail("【小说】黄昏分界\n【作者】黑山老鬼\n\n" +
+                "【创作风格】\n\n" +
+                "1. 情感基调\n" +
+                "   - 主调：黑暗、压抑、绝望\n" +
+                "   - 辅调：在绝境中闪烁的人性光辉\n" +
+                "   - 氛围：克苏鲁式的不可名状恐怖\n\n" +
+                "2. 叙事视角\n" +
+                "   - 采用有限视角，保持神秘感\n" +
+                "   - 通过主角的认知逐步揭示世界真相\n" +
+                "   - 理智值变化影响叙事可靠性\n\n" +
+                "3. 语言风格\n" +
+                "   - 描写细腻，营造沉浸式恐怖氛围\n" +
+                "   - 对话简洁有力，突出人物性格\n" +
+                "   - 环境描写充满象征意义\n\n" +
+                "【来源】" + PRESET_MATERIAL_URL);
+        creativeSetting.setTags(gson.toJson(java.util.Arrays.asList("创作控制", "风格", "基调", "克苏鲁", "黄昏分界")));
+        creativeSetting.setSourceUrl(PRESET_MATERIAL_URL);
+        creativeSetting.setSourceTitle(PRESET_MATERIAL_TITLE);
+        creativeSetting.setSourceType("preset");
+        creativeSetting.setAiConfidence(0.5);
+        creativeSetting.setCreateTime(now);
+        creativeSetting.setUpdateTime(now);
+
+        try {
+            long id = settingDao.insert(creativeSetting);
+            if (id > 0) successCount++;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1020,7 +1201,7 @@ public class MaterialLibraryFragment extends BaseFragment {
         presetInProgress = false;
         refreshSettingsList();
         android.widget.Toast.makeText(getContext(),
-                "已预存人物素材（来自《黄昏分界》）",
+                "已预存 " + successCount + " 个素材（来自《黄昏分界》）",
                 android.widget.Toast.LENGTH_SHORT).show();
     }
 
