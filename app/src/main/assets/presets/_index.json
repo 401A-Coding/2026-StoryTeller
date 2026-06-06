@@ -1,0 +1,34 @@
+{
+  "templates": [
+    {
+      "id": "cosmic_horror_v1",
+      "name": "克苏鲁末日",
+      "description": "克苏鲁神话体系下的末日世界设定，参考《黄昏分界》",
+      "featured": true
+    },
+    {
+      "id": "xianxia_v1",
+      "name": "仙侠修真",
+      "description": "东方修仙世界，境界与宗门体系下的飞升之路",
+      "featured": false
+    },
+    {
+      "id": "western_fantasy_v1",
+      "name": "剑与魔法",
+      "description": "中世纪奇幻大陆，王国纷争与魔法冒险的史诗叙事",
+      "featured": false
+    },
+    {
+      "id": "cyberpunk_v1",
+      "name": "赛博朋克",
+      "description": "高科技低生活的未来都市，企业寡头与底层反抗",
+      "featured": false
+    },
+    {
+      "id": "urban_abilities_v1",
+      "name": "都市异能",
+      "description": "现代中国都市背景下，隐藏的觉醒者世界",
+      "featured": false
+    }
+  ]
+}

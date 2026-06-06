@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     // 数据库名称和版本
     private static final String DB_NAME = "storyteller.db";
-    private static final int DB_VERSION = 24;  // 版本24：补全story_setting表缺失的image_path列
+    private static final int DB_VERSION = 25;  // 版本25：为story_setting表添加预设模板标识列（preset_template_id/preset_version）
 
     // 故事表字段
     public static final String TABLE_STORY = "story";
@@ -120,6 +120,8 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String COL_STORY_SETTING_IS_FAVORITE = "is_favorite";
     public static final String COL_STORY_SETTING_USAGE_COUNT = "usage_count";
     public static final String COL_STORY_SETTING_IMAGE_PATH = "image_path";
+    public static final String COL_STORY_SETTING_PRESET_TEMPLATE_ID = "preset_template_id";
+    public static final String COL_STORY_SETTING_PRESET_VERSION = "preset_version";
 
     // 用户行为日志表字段
     public static final String TABLE_BEHAVIOR_LOG = "behavior_log";
@@ -462,6 +464,23 @@ public class DBHelper extends SQLiteOpenHelper {
                 // 字段可能已存在
             }
         }
+        if (oldVersion < 25) {
+            // 版本25：为story_setting表添加预设模板标识列
+            // 用于区分预存素材与用户原创/爬取/AI 提取的素材，为后续模板升级/卸载能力提供支持
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY_SETTING + " ADD COLUMN " + COL_STORY_SETTING_PRESET_TEMPLATE_ID + " TEXT");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_STORY_SETTING + " ADD COLUMN " + COL_STORY_SETTING_PRESET_VERSION + " INTEGER DEFAULT 0");
+            } catch (Exception e) {
+                // 字段可能已存在
+            }
+            // 创建索引以便按模板ID快速查询已安装素材
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_story_setting_preset_template ON " +
+                       TABLE_STORY_SETTING + "(" + COL_STORY_SETTING_PRESET_TEMPLATE_ID + ")");
+        }
     }
 
     /**
@@ -584,6 +603,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COL_STORY_SETTING_IS_FAVORITE + " INTEGER DEFAULT 0, "
                 + COL_STORY_SETTING_USAGE_COUNT + " INTEGER DEFAULT 0, "
                 + COL_STORY_SETTING_IMAGE_PATH + " TEXT, "
+                + COL_STORY_SETTING_PRESET_TEMPLATE_ID + " TEXT, "
+                + COL_STORY_SETTING_PRESET_VERSION + " INTEGER DEFAULT 0, "
                 + "FOREIGN KEY (" + COL_STORY_SETTING_STORY_ID + ") REFERENCES " +
                 TABLE_STORY + "(" + COL_STORY_ID + ") ON DELETE CASCADE, "
                 + "FOREIGN KEY (" + COL_STORY_SETTING_SOURCE_MATERIAL_ID + ") REFERENCES " +

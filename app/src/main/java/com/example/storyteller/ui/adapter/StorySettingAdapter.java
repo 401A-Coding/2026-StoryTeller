@@ -264,7 +264,10 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         
         // 标题
         holder.tvTitle.setText(setting.getTitle());
-        
+
+        // 预设模板标识角标：仅当该素材属于某个内置模板时显示
+        holder.tvPresetBadge.setVisibility(setting.isFromPreset() ? View.VISIBLE : View.GONE);
+
         // 分类标签
         String categoryText = setting.getCategory() + " · " + setting.getSubCategory();
         holder.tvCategory.setText(categoryText);
@@ -457,6 +460,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
         TextView tvSummary;
         TextView tvTime;
         TextView tvSource;
+        TextView tvPresetBadge;  // 预设模板标识角标
         ImageView btnMoreMenu;  // 三点菜单
         ImageView btnDelete;  // 删除按钮
         CheckBox cbSelect;  // 多选复选框
@@ -470,6 +474,7 @@ public class StorySettingAdapter extends RecyclerView.Adapter<StorySettingAdapte
             tvSummary = itemView.findViewById(R.id.tv_setting_summary);
             tvTime = itemView.findViewById(R.id.tv_setting_time);
             tvSource = itemView.findViewById(R.id.tv_setting_source);
+            tvPresetBadge = itemView.findViewById(R.id.tv_preset_badge);
             btnMoreMenu = itemView.findViewById(R.id.btn_more_menu);
             btnDelete = itemView.findViewById(R.id.btn_delete_setting);
             cbSelect = itemView.findViewById(R.id.cb_select);

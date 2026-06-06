@@ -41,6 +41,7 @@
             android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
+            <!-- 搜索框 -->
             <EditText
                 android:id="@+id/et_material_search"
                 android:layout_width="0dp"
@@ -51,14 +52,12 @@
                 android:inputType="text"
                 android:padding="12dp"
                 android:background="@drawable/bg_outline_edittext" />
-
             <Button
                 android:id="@+id/btn_create_material"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="+ 新建"
-                android:layout_marginStart="8dp" />
-
+                android:layout_marginStart="8dp"
+                android:text="+ 新建" />
         </LinearLayout>
 
         <!-- 主分类筛选器 -->
@@ -149,6 +148,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 功能按钮行：模板中心 / 导入网络素材 -->
     <LinearLayout
         android:id="@+id/layout_import_section"
         android:layout_width="match_parent"
@@ -159,11 +159,22 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_preset_template_center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="前往模板中心" />
+
         <Button
             android:id="@+id/btn_import"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:text="@string/action_import_material" />
+
     </LinearLayout>
 
     <!-- 底部批量操作栏 -->

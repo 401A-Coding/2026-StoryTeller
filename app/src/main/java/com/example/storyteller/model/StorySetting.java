@@ -44,7 +44,11 @@ public class StorySetting {
     private boolean isFavorite;       // 是否收藏
     private int usageCount;           // 使用次数（被AI引用的次数）
     private String imagePath;        // 配图路径
-    
+
+    // === 预设模板标识（用于支持模板升级/卸载）===
+    private String presetTemplateId; // 所属预设模板ID（如 cosmic_horror_v1）；非预存素材为 null
+    private int presetVersion;       // 所属预设模板的版本号；非预存素材为 0
+
     // === 构造方法 ===
     
     public StorySetting() {
@@ -58,6 +62,7 @@ public class StorySetting {
         this.lastSyncTime = 0;
         this.syncEnabled = false;
         this.hasUpdates = false;
+        this.presetVersion = 0;
     }
     
     public StorySetting(int storyId, String category, String subCategory, String title) {
@@ -273,11 +278,34 @@ public class StorySetting {
     public String getImagePath() {
         return imagePath;
     }
-    
+
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
     }
-    
+
+    public String getPresetTemplateId() {
+        return presetTemplateId;
+    }
+
+    public void setPresetTemplateId(String presetTemplateId) {
+        this.presetTemplateId = presetTemplateId;
+    }
+
+    public int getPresetVersion() {
+        return presetVersion;
+    }
+
+    public void setPresetVersion(int presetVersion) {
+        this.presetVersion = presetVersion;
+    }
+
+    /**
+     * 是否为预存模板素材
+     */
+    public boolean isFromPreset() {
+        return presetTemplateId != null && !presetTemplateId.isEmpty();
+    }
+
     /**
      * 增加使用次数
      */
