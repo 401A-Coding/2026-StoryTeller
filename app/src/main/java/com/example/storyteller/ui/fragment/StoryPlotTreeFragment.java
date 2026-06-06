@@ -666,17 +666,18 @@ public class StoryPlotTreeFragment extends BaseFragment {
         int regularCount = regularEvents.size();
         int totalChapters = allChapters.size();
 
-        // 没有方向事件且常规事件已足够，无需同步
-        if (directionEvents.isEmpty() && regularCount >= totalChapters) return;
-
         PlotSummarySnapshot ps = null;
         if (!TextUtils.isEmpty(story.getPlotSummaryJson())) {
             try { ps = gson.fromJson(story.getPlotSummaryJson(), PlotSummarySnapshot.class); }
             catch (Exception ignored) {}
         }
 
-        // 构建新事件列表：保留常规事件 + 用章节替换方向事件 + 保留多余方向事件
-        List<PlotTreeEvent> newEvents = new ArrayList<>(regularEvents);
+        // 构建新事件列表：保留常规事件（不超过章节数）+ 用章节替换方向事件 + 保留多余方向事件
+        int keepRegular = Math.min(regularCount, totalChapters);
+        List<PlotTreeEvent> newEvents = new ArrayList<>(regularEvents.subList(0, keepRegular));
+        android.util.Log.d("PlotTree", "SYNC keepRegular=" + keepRegular
+                + " regularCount=" + regularCount + " totalChapters=" + totalChapters
+                + " directionCount=" + directionEvents.size());
 
         // 为每个"新"章节创建事件（替换对应位置的方向事件）
         for (int i = regularCount; i < totalChapters; i++) {
@@ -703,7 +704,7 @@ public class StoryPlotTreeFragment extends BaseFragment {
         }
 
         // 保留未被替换的方向事件（方向比章节多的情况）
-        int consumedDirections = totalChapters - regularCount;
+        int consumedDirections = Math.max(0, totalChapters - regularCount);
         if (consumedDirections < directionEvents.size()) {
             for (int i = consumedDirections; i < directionEvents.size(); i++) {
                 newEvents.add(directionEvents.get(i));
